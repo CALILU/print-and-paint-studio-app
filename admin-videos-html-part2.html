@@ -1,0 +1,763 @@
+// Función para mostrar videos en formato de lista
+        function displayVideosAsList(videos, container) {
+            const table = document.createElement('table');
+            table.className = 'table table-striped table-hover';
+            
+            const thead = document.createElement('thead');
+            thead.innerHTML = `
+                <tr>
+                    <th><input type="checkbox" class="form-check-input" id="selectAllVideos" onclick="toggleAllVideos()"></th>
+                    <th>Miniatura</th>
+                    <th>Título</th>
+                    <th>Categoría</th>
+                    <th>Dificultad</th>
+                    <th>Técnicas</th>
+                    <th>Acciones</th>
+                </tr>
+            `;
+            
+            const tbody = document.createElement('tbody');
+            
+            videos.forEach(video => {
+                // Badge para dificultad
+                let difficultyText, difficultyClass;
+                switch(video.difficulty_level) {
+                    case 'beginner':
+                        difficultyText = 'Principiante';
+                        difficultyClass = 'badge-beginner';
+                        break;
+                    case 'intermediate':
+                        difficultyText = 'Intermedio';
+                        difficultyClass = 'badge-intermediate';
+                        break;
+                    case 'expert':
+                        difficultyText = 'Experto';
+                        difficultyClass = 'badge-expert';
+                        break;
+                    default:
+                        difficultyText = 'Principiante';
+                        difficultyClass = 'badge-beginner';
+                }
+                
+                // Determinar si tiene técnicas
+                const hasTechniques = video.techniques && video.techniques.length > 0;
+                
+                const row = document.createElement('tr');
+                row.setAttribute('data-id', video.id);
+                
+                row.innerHTML = `
+                    <td>
+                        <input type="checkbox" class="form-check-input video-selector" onclick="toggleVideoSelection(${video.id})">
+                    </td>
+                    <td>
+                        <img src="https://img.youtube.com/vi/${video.video_id}/mqdefault.jpg" alt="${video.title}" style="width: 120px; border-radius: 4px;">
+                    </td>
+                    <td>
+                        <strong>${video.title}</strong>
+                        <div class="small text-muted">ID: ${video.video_id}</div>
+                        <div class="small text-muted">Canal: ${video.channel || 'No especificado'}</div>
+                    </td>
+                    <td><span class="badge bg-secondary">${video.category || 'Sin categoría'}</span></td>
+                    <td><span class="badge ${difficultyClass}">${difficultyText}</span></td>
+                    <td>
+                        ${hasTechniques ? '<span class="badge bg-info">' + video.techniques.length + ' técnicas</span>' : '<span class="text-muted">Sin técnicas</span>'}
+                    </td>
+                    <td>
+                        <div class="btn-group">
+                            <button class="btn btn-sm btn-outline-primary" onclick="openPreview('${video.video_id}', ${video.id})" title="Vista previa">
+                                <i class="bi bi-eye"></i>
+                            </button>
+                            <button class="btn btn-sm btn-outline-success" onclick="editVideo(${video.id})" title="Editar">
+                                <i class="bi bi-pencil"></i>
+                            </button>
+                            <button class="btn btn-sm btn-outline-info" onclick="goToTechniques(${video.id})" title="Técnicas">
+                                <i class="bi bi-list-check"></i>
+                            </button>
+                            <button class="btn btn-sm btn-outline-danger" onclick="confirmDelete(${video.id})" title="Eliminar">
+                                <i class="bi bi-trash"></i>
+                            </button>
+                        </div>
+                    </td>
+                `;
+                
+                tbody.appendChild(row);
+            });
+            
+            table.appendChild(thead);
+            table.appendChild(tbody);
+            container.appendChild(table);
+        }
+        
+        // Función para seleccionar/deseleccionar un video
+        function toggleVideoSelection(videoId) {
+            if (selectedVideos.has(videoId)) {
+                selectedVideos.delete(videoId);
+            } else {
+                selectedVideos.add(videoId);
+            }
+            
+            updateBatchActions();
+        }
+        
+        // Función para seleccionar/deseleccionar todos los videos
+        function toggleAllVideos() {
+            const selectAllCheckbox = document.getElementById('selectAllVideos');
+            const videoCheckboxes = document.querySelectorAll('.video-selector');
+            
+            if (selectAllCheckbox.checked) {
+                // Seleccionar todos
+                videoCheckboxes.forEach(checkbox => {
+                    checkbox.checked = true;
+                    const videoId = parseInt(checkbox.closest('[data-id]').getAttribute('data-id'));
+                    selectedVideos.add(videoId);
+                });
+            } else {
+                // Deseleccionar todos
+                videoCheckboxes.forEach(checkbox => {
+                    checkbox.checked = false;
+                });
+                selectedVideos.clear();
+            }
+            
+            updateBatchActions();
+        }
+        
+        // Función para actualizar acciones por lote
+        function updateBatchActions() {
+            const batchActions = document.getElementById('batchActions');
+            const selectedCount = document.getElementById('selectedCount');
+            
+            selectedCount.textContent = selectedVideos.size;
+            
+            if (selectedVideos.size > 0) {
+                batchActions.style.display = 'block';
+            } else {
+                batchActions.style.display = 'none';
+            }
+        }
+        
+        // Función para limpiar la selección
+        function clearSelection() {
+            selectedVideos.clear();
+            
+            // Desmarcar todos los checkboxes
+            document.querySelectorAll('.video-selector').forEach(checkbox => {
+                checkbox.checked = false;
+            });
+            
+            // Ocultar acciones por lote
+            document.getElementById('batchActions').style.display = 'none';
+        }
+        
+        // Función para eliminar videos seleccionados
+        function deleteSelectedVideos() {
+            if (selectedVideos.size === 0) return;
+            
+            if (confirm(`¿Estás seguro de que deseas eliminar ${selectedVideos.size} videos? Esta acción no se puede deshacer.`)) {
+                // Convertir Set a Array para iterar
+                const videosToDelete = Array.from(selectedVideos);
+                
+                // Contador para seguimiento
+                let deleted = 0;
+                let errors = 0;
+                
+                // Función para eliminar un video y continuar con el siguiente
+                const deleteNext = (index) => {
+                    if (index >= videosToDelete.length) {
+                        // Todos los videos procesados
+                        fetchVideos();
+                        clearSelection();
+                        alert(`Eliminación completada: ${deleted} videos eliminados, ${errors} errores.`);
+                        return;
+                    }
+                    
+                    const videoId = videosToDelete[index];
+                    
+                    fetch(`/admin/videos/${videoId}`, {
+                        method: 'DELETE'
+                    })
+                    .then(response => {
+                        if (response.ok) {
+                            deleted++;
+                        } else {
+                            errors++;
+                            console.error(`Error al eliminar video ID ${videoId}`);
+                        }
+                        // Continuar con el siguiente video
+                        deleteNext(index + 1);
+                    })
+                    .catch(error => {
+                        errors++;
+                        console.error(`Error al eliminar video ID ${videoId}:`, error);
+                        // Continuar con el siguiente video
+                        deleteNext(index + 1);
+                    });
+                };
+                
+                // Comenzar el proceso de eliminación
+                deleteNext(0);
+            }
+        }
+        
+        // Función para filtrar videos
+        function filterVideos() {
+            let filteredVideos = [...allVideos];
+            
+            // Filtrar por término de búsqueda
+            if (currentSearchTerm) {
+                filteredVideos = filteredVideos.filter(video => {
+                    return (
+                        (video.title && video.title.toLowerCase().includes(currentSearchTerm)) ||
+                        (video.description && video.description.toLowerCase().includes(currentSearchTerm)) ||
+                        (video.channel && video.channel.toLowerCase().includes(currentSearchTerm))
+                    );
+                });
+            }
+            
+            // Filtrar por categoría
+            if (currentCategory !== 'all') {
+                filteredVideos = filteredVideos.filter(video => 
+                    (video.category || 'Sin categoría') === currentCategory
+                );
+            }
+            
+            // Filtrar por dificultad
+            if (currentDifficulty !== 'all') {
+                filteredVideos = filteredVideos.filter(video => 
+                    video.difficulty_level === currentDifficulty
+                );
+            }
+            
+            // Filtrar por videos con/sin técnicas
+            const filterHasTechniques = document.getElementById('filterHasTechniques').checked;
+            const filterNoTechniques = document.getElementById('filterNoTechniques').checked;
+            
+            if (filterHasTechniques && !filterNoTechniques) {
+                filteredVideos = filteredVideos.filter(video => 
+                    video.techniques && video.techniques.length > 0
+                );
+            } else if (!filterHasTechniques && filterNoTechniques) {
+                filteredVideos = filteredVideos.filter(video => 
+                    !video.techniques || video.techniques.length === 0
+                );
+            }
+            
+            // Actualizar contador de videos
+            if (document.getElementById('videoCount')) {
+                document.getElementById('videoCount').textContent = filteredVideos.length;
+            }
+            
+            // Mostrar videos filtrados
+            displayVideos(filteredVideos);
+        }
+        
+        // Función para buscar videos
+        function searchVideos() {
+            currentSearchTerm = document.getElementById('searchInput').value.toLowerCase();
+            updateActiveFilters();
+            filterVideos();
+        }
+        
+        // Función para abrir vista previa
+        async function openPreview(videoId, id) {
+            const iframe = document.getElementById('previewIframe');
+            iframe.src = `https://www.youtube.com/embed/${videoId}`;
+            
+            // Cargar técnicas
+            try {
+                const response = await fetch(`/api/videos/${id}/techniques`);
+                if (!response.ok) {
+                    throw new Error('Error al cargar técnicas');
+                }
+                
+                const techniques = await response.json();
+                const techniquesList = document.getElementById('previewTechniques');
+                
+                if (techniques.length === 0) {
+                    techniquesList.innerHTML = '<div class="alert alert-info">No hay técnicas registradas para este video.</div>';
+                } else {
+                    techniquesList.innerHTML = '';
+                    techniques.forEach(technique => {
+                        const startTime = formatTime(technique.start_time);
+                        const endTime = formatTime(technique.end_time);
+                        
+                        const item = document.createElement('div');
+                        item.className = 'technique-item';
+                        item.innerHTML = `
+                            <div class="technique-content">
+                                <strong>${technique.name}</strong> - 
+                                <span class="time-selector" onclick="playTechniqueSegment('${videoId}', ${technique.start_time}, ${technique.end_time}); highlightTechnique(this.closest('.technique-item'))">
+                                    <i class="bi bi-clock"></i> <span class="time-text">${startTime} - ${endTime}</span>
+                                </span>
+                            </div>
+                            <button class="btn btn-sm btn-outline-primary" onclick="playTechniqueSegment('${videoId}', ${technique.start_time}, ${technique.end_time}); highlightTechnique(this.closest('.technique-item'))">
+                                <i class="bi bi-play-fill"></i> Ver técnica
+                            </button>
+                        `;
+                        
+                        techniquesList.appendChild(item);
+                    });
+                }
+                
+                previewModal.show();
+                
+            } catch (error) {
+                console.error('Error:', error);
+                document.getElementById('previewTechniques').innerHTML = 
+                    `<div class="alert alert-danger">Error al cargar técnicas: ${error.message}</div>`;
+                previewModal.show();
+            }
+        }
+        
+        // Función para navegar a la pestaña de técnicas
+        function goToTechniques(videoId) {
+            // Guardar el ID del video
+            document.getElementById('technique_video_id').value = videoId;
+            
+            // Cargar las técnicas del video
+            loadTechniques(videoId);
+            
+            // Mostrar la pestaña de técnicas
+            document.getElementById('techniques-tab').style.display = 'block';
+            document.getElementById('techniques-tab').click();
+            
+            // Cargar el video para la vista previa
+            loadVideoForTechniques(videoId);
+        }
+        
+        // Función para cargar el video en la pestaña de técnicas
+        async function loadVideoForTechniques(videoId) {
+            try {
+                const response = await fetch(`/admin/videos/${videoId}`);
+                
+                if (!response.ok) {
+                    throw new Error('Error al cargar datos del video');
+                }
+                
+                const video = await response.json();
+                
+                // Actualizar título del video
+                document.getElementById('videoTitleDisplay').textContent = video.title;
+                
+                // Cargar el iframe
+                const iframe = document.getElementById('techniquesVideoPreview');
+                iframe.src = `https://www.youtube.com/embed/${video.video_id}`;
+                
+            } catch (error) {
+                console.error('Error:', error);
+                alert(`Error al cargar el video: ${error.message}`);
+            }
+        }
+        
+        // Función para formatear tiempo en segundos a MM:SS
+        function formatTime(seconds) {
+            const mins = Math.floor(seconds / 60);
+            const secs = seconds % 60;
+            return `${mins}:${secs.toString().padStart(2, '0')}`;
+        }
+        
+        // Función para volver a la pestaña de videos
+        function goBackToVideos() {
+            document.getElementById('video-list-tab').click();
+            document.getElementById('techniques-tab').style.display = 'none';
+        }
+        
+        // Función para finalizar la edición de técnicas
+        function finishEditingTechniques() {
+            // Ocultar la pestaña de técnicas
+            document.getElementById('techniques-tab').style.display = 'none';
+            
+            // Volver a la pestaña de videos
+            document.getElementById('video-list-tab').click();
+            
+            // Recargar los videos para reflejar los cambios
+            fetchVideos();
+        }
+        
+        // Función para confirmar eliminación
+        function confirmDelete(id) {
+            videoToDelete = id;
+            confirmDeleteModal.show();
+        }
+        
+        // Función para eliminar video
+        async function deleteVideo(id) {
+            try {
+                const response = await fetch(`/admin/videos/${id}`, {
+                    method: 'DELETE'
+                });
+                
+                if (!response.ok) {
+                    throw new Error('Error al eliminar el video');
+                }
+                
+                // Recargar lista de videos
+                fetchVideos();
+                
+                // Mostrar mensaje de éxito
+                alert('Video eliminado correctamente');
+                
+            } catch (error) {
+                console.error('Error:', error);
+                alert(`Error al eliminar el video: ${error.message}`);
+            }
+        }
+        
+        // Función para editar video
+        async function editVideo(id) {
+            try {
+                const response = await fetch(`/admin/videos/${id}`);
+                
+                if (!response.ok) {
+                    throw new Error('Error al cargar datos del video');
+                }
+                
+                const video = await response.json();
+                
+                // Cambiar a la pestaña de añadir/editar
+                document.getElementById('add-video-tab').click();
+                
+                // Llenar formulario
+                document.getElementById('video_id_edit').value = video.id;
+                document.getElementById('title').value = video.title;
+                document.getElementById('youtube_id').value = video.video_id;
+                document.getElementById('description').value = video.description || '';
+                document.getElementById('channel').value = video.channel || '';
+                document.getElementById('category').value = video.category || 'Sin categoría';
+                document.getElementById('difficulty_level').value = video.difficulty_level || 'beginner';
+                
+                // Actualizar los campos de tiempo en formato MM:SS
+                const startTimeMin = document.getElementById('technique_start_time_min');
+                const startTimeSec = document.getElementById('technique_start_time_sec');
+                const endTimeMin = document.getElementById('technique_end_time_min');
+                const endTimeSec = document.getElementById('technique_end_time_sec');
+                const startTimeHidden = document.getElementById('technique_start_time');
+                const endTimeHidden = document.getElementById('technique_end_time');
+                
+                // Convertir segundos a formato MM:SS
+                if (video.technique_start_time !== null && video.technique_start_time !== undefined) {
+                    secondsToMinSec(video.technique_start_time, startTimeMin, startTimeSec);
+                    startTimeHidden.value = video.technique_start_time;
+                }
+                
+                if (video.technique_end_time !== null && video.technique_end_time !== undefined) {
+                    secondsToMinSec(video.technique_end_time, endTimeMin, endTimeSec);
+                    endTimeHidden.value = video.technique_end_time;
+                }
+                
+                // Actualizar vista previa
+                updateVideoPreview();
+                
+                // Cambiar texto del formulario
+                document.getElementById('form-title').textContent = 'Editar Video';
+                document.getElementById('submit-btn').textContent = 'Actualizar Video';
+                
+            } catch (error) {
+                console.error('Error:', error);
+                alert(`Error al cargar datos del video: ${error.message}`);
+            }
+        }
+        
+        // Función para cargar técnicas de un video
+        async function loadTechniques(videoId) {
+            try {
+                const response = await fetch(`/api/videos/${videoId}/techniques`);
+                
+                if (!response.ok) {
+                    throw new Error('Error al cargar técnicas');
+                }
+                
+                const techniques = await response.json();
+                const techniquesList = document.getElementById('techniques-list');
+                
+                if (techniques.length === 0) {
+                    techniquesList.innerHTML = '<div class="alert alert-info">No hay técnicas asociadas a este video.</div>';
+                    return;
+                }
+                
+                // Obtener primero los datos del video para tener el ID de YouTube
+                const videoResponse = await fetch(`/admin/videos/${videoId}`);
+                if (!videoResponse.ok) {
+                    throw new Error('Error al cargar datos del video');
+                }
+                const videoData = await videoResponse.json();
+                const videoYoutubeId = videoData.video_id;
+                
+                techniquesList.innerHTML = '';
+                
+                // Ahora recorremos las técnicas para mostrarlas
+                for (const technique of techniques) {
+                    const item = document.createElement('div');
+                    item.className = 'technique-item';
+                    
+                    const startTime = formatTime(technique.start_time);
+                    const endTime = formatTime(technique.end_time);
+                    
+                    item.innerHTML = `
+                        <div class="technique-content">
+                            <strong>${technique.name}</strong> - 
+                            <span class="time-selector" onclick="playSegmentInTechniquesTab('${videoYoutubeId}', ${technique.start_time}, ${technique.end_time}); highlightTechnique(this.closest('.technique-item'))">
+                                <i class="bi bi-clock"></i> <span class="time-text">${startTime} - ${endTime}</span>
+                            </span>
+                        </div>
+                        <div class="d-flex justify-content-between mt-2">
+                            <button class="btn btn-sm btn-outline-primary me-1" onclick="playSegmentInTechniquesTab('${videoYoutubeId}', ${technique.start_time}, ${technique.end_time}); highlightTechnique(this.closest('.technique-item'))">
+                                <i class="bi bi-play-fill"></i> Ver
+                            </button>
+                            <div>
+                                <button class="btn btn-sm btn-outline-primary me-1" onclick="editTechnique(${technique.id}, '${technique.name}', ${technique.start_time}, ${technique.end_time})">
+                                    <i class="bi bi-pencil"></i> Editar
+                                </button>
+                                <button class="btn btn-sm btn-outline-danger" onclick="deleteTechnique(${technique.id})">
+                                    <i class="bi bi-trash"></i> Eliminar
+                                </button>
+                            </div>
+                        </div>
+                    `;
+                    
+                    techniquesList.appendChild(item);
+                }
+                
+            } catch (error) {
+                console.error('Error:', error);
+                document.getElementById('techniques-list').innerHTML = 
+                    `<div class="alert alert-danger">Error al cargar técnicas: ${error.message}</div>`;
+            }
+        }
+        
+        // Función para reproducir un segmento en la pestaña de técnicas
+        function playSegmentInTechniquesTab(videoId, startTime, endTime) {
+            const iframe = document.getElementById('techniquesVideoPreview');
+            iframe.src = `https://www.youtube.com/embed/${videoId}?start=${startTime}&autoplay=1`;
+            
+            // Mostrar información del tiempo
+            document.getElementById('techniqueTiming').innerHTML = `
+                <div class="alert alert-success">
+                    <i class="bi bi-play-fill me-2"></i> Reproduciendo desde ${formatTime(startTime)} hasta ${formatTime(endTime)}
+                </div>
+            `;
+        }
+        
+        // Función para editar técnica
+        function editTechnique(id, name, startTime, endTime) {
+            document.getElementById('technique_id_edit').value = id;
+            document.getElementById('technique_name').value = name;
+            
+            // Convertir segundos a formato MM:SS
+            const startMin = document.getElementById('technique_start_min');
+            const startSec = document.getElementById('technique_start_sec');
+            const endMin = document.getElementById('technique_end_min');
+            const endSec = document.getElementById('technique_end_sec');
+            const startHidden = document.getElementById('technique_start');
+            const endHidden = document.getElementById('technique_end');
+            
+            secondsToMinSec(startTime, startMin, startSec);
+            secondsToMinSec(endTime, endMin, endSec);
+            
+            startHidden.value = startTime;
+            endHidden.value = endTime;
+            
+            // Cambiar texto del botón
+            document.getElementById('technique-submit-btn').textContent = 'Actualizar Técnica';
+            
+            // Desplazarse al formulario
+            document.getElementById('techniqueForm').scrollIntoView({ behavior: 'smooth' });
+        }
+        
+        // Función para eliminar técnica
+        async function deleteTechnique(id) {
+            if (!confirm('¿Estás seguro de que deseas eliminar esta técnica?')) {
+                return;
+            }
+            
+            try {
+                const response = await fetch(`/api/techniques/${id}`, {
+                    method: 'DELETE'
+                });
+                
+                if (!response.ok) {
+                    throw new Error('Error al eliminar la técnica');
+                }
+                
+                // Recargar técnicas
+                const videoId = document.getElementById('technique_video_id').value;
+                loadTechniques(videoId);
+                
+                // Mostrar mensaje de éxito
+                alert('Técnica eliminada correctamente');
+                
+            } catch (error) {
+                console.error('Error:', error);
+                alert(`Error al eliminar la técnica: ${error.message}`);
+            }
+        }
+        
+        // Función para guardar/actualizar video
+        async function saveVideo() {
+            const videoId = document.getElementById('video_id_edit').value;
+            const isEdit = videoId !== '';
+            
+            // Extraer el ID de YouTube de la URL
+            let youtubeInputValue = document.getElementById('youtube_id').value.trim();
+            let youtubeVideoId = youtubeInputValue;
+            
+            // Si es una URL completa, extraer solo el ID
+            if (youtubeInputValue.includes('youtube.com/watch?v=')) {
+                const url = new URL(youtubeInputValue);
+                youtubeVideoId = url.searchParams.get('v');
+            } else if (youtubeInputValue.includes('youtu.be/')) {
+                youtubeVideoId = youtubeInputValue.split('youtu.be/')[1];
+            }
+            
+            // Si hay parámetros adicionales después del ID, eliminarlos
+            if (youtubeVideoId && youtubeVideoId.includes('&')) {
+                youtubeVideoId = youtubeVideoId.split('&')[0];
+            }
+            
+            const videoData = {
+                title: document.getElementById('title').value,
+                video_id: youtubeVideoId, // Usar el ID extraído en lugar de la URL completa
+                description: document.getElementById('description').value,
+                channel: document.getElementById('channel').value,
+                category: document.getElementById('category').value,
+                difficulty_level: document.getElementById('difficulty_level').value,
+                technique_start_time: parseInt(document.getElementById('technique_start_time').value) || 0
+            };
+            
+            const endTime = document.getElementById('technique_end_time').value;
+            if (endTime) {
+                videoData.technique_end_time = parseInt(endTime);
+            }
+            
+            try {
+                let url = '/admin/videos';
+                let method = 'POST';
+                
+                if (isEdit) {
+                    url = `/admin/videos/${videoId}`;
+                    method = 'PUT';
+                }
+                
+                const response = await fetch(url, {
+                    method: method,
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(videoData)
+                });
+                
+                if (!response.ok) {
+                    const data = await response.json();
+                    throw new Error(data.error || 'Error al guardar el video');
+                }
+                
+                const data = await response.json();
+                
+                // Si es un nuevo video, preguntar si quiere añadir técnicas
+                if (!isEdit && confirm('Video guardado correctamente. ¿Deseas añadir técnicas a este video ahora?')) {
+                    goToTechniques(data.id);
+                } else {
+                    // Resetear formulario
+                    resetForm();
+                    
+                    // Cambiar a la pestaña de videos
+                    document.getElementById('video-list-tab').click();
+                    
+                    // Recargar lista de videos
+                    fetchVideos();
+                    
+                    // Mostrar mensaje de éxito
+                    alert(isEdit ? 'Video actualizado correctamente' : 'Video guardado correctamente');
+                }
+                
+            } catch (error) {
+                console.error('Error:', error);
+                alert(`Error: ${error.message}`);
+            }
+        }
+        
+        // Función para guardar/actualizar técnica
+        async function saveTechnique() {
+            const techniqueId = document.getElementById('technique_id_edit').value;
+            const videoId = document.getElementById('technique_video_id').value;
+            const isEdit = techniqueId !== '';
+            
+            if (!videoId) {
+                alert('Primero debes seleccionar un video');
+                return;
+            }
+            
+            const techniqueData = {
+                name: document.getElementById('technique_name').value,
+                start_time: parseInt(document.getElementById('technique_start').value),
+                end_time: parseInt(document.getElementById('technique_end').value)
+            };
+            
+            try {
+                let url, method;
+                
+                if (isEdit) {
+                    url = `/api/techniques/${techniqueId}`;
+                    method = 'PUT';
+                } else {
+                    url = `/api/videos/${videoId}/techniques`;
+                    method = 'POST';
+                }
+                
+                const response = await fetch(url, {
+                    method: method,
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(techniqueData)
+                });
+                
+                if (!response.ok) {
+                    const data = await response.json();
+                    throw new Error(data.error || 'Error al guardar la técnica');
+                }
+                
+                // Resetear formulario de técnica
+                resetTechniqueForm();
+                
+                // Recargar técnicas
+                loadTechniques(videoId);
+                
+                // Mostrar mensaje de éxito
+                alert(isEdit ? 'Técnica actualizada correctamente' : 'Técnica añadida correctamente');
+                
+            } catch (error) {
+                console.error('Error:', error);
+                alert(`Error: ${error.message}`);
+            }
+        }
+        
+        // Función para resetear formulario de video
+        function resetForm() {
+            document.getElementById('videoForm').reset();
+            document.getElementById('video_id_edit').value = '';
+            document.getElementById('form-title').textContent = 'Añadir Nuevo Video';
+            document.getElementById('submit-btn').textContent = 'Guardar Video';
+            
+            // Resetear vista previa
+            document.getElementById('thumbnailPreview').style.backgroundImage = 'none';
+            document.getElementById('thumbnailPreview').innerHTML = `
+                <div class="d-flex justify-content-center align-items-center h-100">
+                    <span class="text-muted">La miniatura se generará automáticamente</span>
+                </div>
+            `;
+            
+            document.getElementById('videoDataPreview').innerHTML = `
+                <p class="text-muted">Ingresa la información del video para ver una vista previa.</p>
+            `;
+        }
+        
+        // Función para resetear formulario de técnica
+        function resetTechniqueForm() {
+            document.getElementById('techniqueForm').reset();
+            document.getElementById('technique_id_edit').value = '';
+            document.getElementById('technique-submit-btn').textContent = 'Añadir Técnica';
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,49 @@
+@echo off
+echo Iniciando entorno de desarrollo para Print and Paint Studio...
+
+:: Comprobar si Docker Desktop está en ejecución
+tasklist /FI "IMAGENAME eq Docker Desktop.exe" 2>NUL | find /I /N "Docker Desktop.exe">NUL
+if "%ERRORLEVEL%"=="0" (
+    echo Docker Desktop ya está en ejecución.
+) else (
+    echo Iniciando Docker Desktop...
+    start "" "C:\Program Files\Docker\Docker\Docker Desktop.exe"
+    
+    :: Esperar a que Docker Desktop inicie completamente (ajustar según sea necesario)
+    echo Esperando a que Docker Desktop se inicie completamente...
+    timeout /t 20 /nobreak
+)
+
+:: Cambiar al directorio del proyecto
+echo Cambiando al directorio del proyecto...
+cd /d C:\youtube-app
+
+:: Comprobar si los contenedores ya están en ejecución
+docker ps | find "youtube_app" > nul
+if "%ERRORLEVEL%"=="0" (
+    echo Los contenedores ya están en ejecución.
+) else (
+    echo Iniciando contenedores Docker...
+    docker-compose up -d
+    
+    :: Esperar a que los contenedores estén listos
+    echo Esperando a que los contenedores estén listos...
+    timeout /t 10 /nobreak
+)
+
+:: Abrir el navegador con la aplicación
+echo Abriendo la aplicación en el navegador...
+start http://127.0.0.1:3000
+
+:: Abrir una nueva ventana de PowerShell en el directorio del proyecto
+echo Abriendo PowerShell en el directorio del proyecto...
+start powershell.exe -NoExit -Command "cd 'C:\youtube-app'; Write-Host 'Entorno de desarrollo listo. La aplicación está disponible en http://127.0.0.1:3000' -ForegroundColor Green"
+
+echo.
+echo Entorno de desarrollo configurado correctamente.
+echo.
+echo NOTA: Si es la primera vez que inicias Docker Desktop después de reiniciar, 
+echo puede tardar más tiempo en estar disponible. Si la aplicación no carga, 
+echo espera unos minutos más y actualiza el navegador.
+echo.
+pause

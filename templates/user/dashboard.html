@@ -1,0 +1,606 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Print and Paint Studio - Panel de Usuario</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css" rel="stylesheet">
+    <style>
+        body {
+            background-color: #f8f9fa;
+            min-height: 100vh;
+        }
+        .sidebar {
+            background-color: #343a40;
+            color: white;
+            height: 100vh;
+            position: fixed;
+            padding-top: 20px;
+        }
+        .sidebar a {
+            color: #ced4da;
+            text-decoration: none;
+            display: block;
+            padding: 10px 15px;
+            transition: all 0.3s;
+        }
+        .sidebar a:hover {
+            background-color: #495057;
+            color: white;
+        }
+        .sidebar a.active {
+            background-color: #6c5ce7;
+            color: white;
+        }
+        .sidebar-heading {
+            padding: 0 15px 20px 15px;
+            font-size: 1.2rem;
+            border-bottom: 1px solid #495057;
+            margin-bottom: 20px;
+        }
+        .content {
+            padding: 20px;
+            margin-left: 250px;
+        }
+        .content-header {
+            margin-bottom: 30px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid #dee2e6;
+        }
+        .card {
+            margin-bottom: 20px;
+            border: none;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            transition: transform 0.3s;
+        }
+        .card:hover {
+            transform: translateY(-5px);
+        }
+        .card-header {
+            background-color: #6c5ce7;
+            color: white;
+        }
+        .user-info {
+            margin-top: 20px;
+            display: flex;
+            align-items: center;
+            margin-bottom: 30px;
+        }
+        .user-avatar {
+            width: 50px;
+            height: 50px;
+            background-color: #6c5ce7;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 20px;
+            margin-right: 15px;
+        }
+        .user-details h5 {
+            margin: 0;
+        }
+        .user-details small {
+            color: #6c757d;
+        }
+        .stats-card {
+            text-align: center;
+            padding: 15px 10px;
+        }
+        .stats-icon {
+            font-size: 2rem;
+            margin-bottom: 10px;
+            color: #6c5ce7;
+        }
+        .stats-number {
+            font-size: 1.8rem;
+            font-weight: bold;
+            margin-bottom: 5px;
+            color: #343a40;
+        }
+        .stats-label {
+            color: #6c757d;
+            font-size: 0.9rem;
+        }
+        .recent-video {
+            border-bottom: 1px solid #eee;
+            padding: 10px 0;
+        }
+        .recent-video:last-child {
+            border-bottom: none;
+        }
+        .recent-video-title {
+            font-weight: 600;
+            font-size: 0.95rem;
+            margin-bottom: 5px;
+        }
+        .recent-video-category {
+            font-size: 0.8rem;
+        }
+        .technique-tag {
+            display: inline-block;
+            background-color: #e9ecef;
+            padding: 3px 8px;
+            border-radius: 12px;
+            font-size: 0.8rem;
+            margin-right: 5px;
+            margin-bottom: 5px;
+            color: #495057;
+        }
+        .technique-tag:hover {
+            background-color: #6c5ce7;
+            color: white;
+            cursor: pointer;
+        }
+        .welcome-message {
+            background-color: #6c5ce7;
+            color: white;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 30px;
+        }
+        .quick-links {
+            background-color: #f1f3f9;
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 20px;
+        }
+        .quick-link-btn {
+            display: block;
+            text-align: center;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 10px;
+            background-color: white;
+            color: #343a40;
+            text-decoration: none;
+            border: 1px solid #dee2e6;
+            transition: all 0.3s;
+        }
+        .quick-link-btn:hover {
+            background-color: #6c5ce7;
+            color: white;
+            transform: translateY(-3px);
+            box-shadow: 0 5px 15px rgba(108, 92, 231, 0.2);
+        }
+        .quick-link-icon {
+            font-size: 2rem;
+            margin-bottom: 10px;
+            display: block;
+        }
+        @media (max-width: 768px) {
+            .sidebar {
+                width: 100%;
+                position: relative;
+                height: auto;
+            }
+            .content {
+                margin-left: 0;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container-fluid">
+        <div class="row">
+            <!-- Sidebar -->
+            <div class="col-md-3 col-lg-2 d-md-block sidebar collapse">
+                <div class="sidebar-heading">
+                    Print and Paint Studio
+                </div>
+                <div class="user-info">
+                    <div class="user-avatar">
+                        {{ user.username[0].upper() }}
+                    </div>
+                    <div class="user-details">
+                        <h5>{{ user.username }}</h5>
+                        <small>
+                            {% if user.experience_level == 'beginner' %}
+                                Principiante
+                            {% elif user.experience_level == 'intermediate' %}
+                                Intermedio
+                            {% else %}
+                                Experto
+                            {% endif %}
+                        </small>
+                    </div>
+                </div>
+                <ul class="nav flex-column">
+                    <li class="nav-item">
+                        <a class="nav-link active" href="{{ url_for('user_dashboard') }}">
+                            <i class="bi bi-house-door me-2"></i> Inicio
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('user_videos') }}">
+                            <i class="bi bi-collection-play me-2"></i> Videos
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('user_favorites') }}">
+                            <i class="bi bi-heart me-2"></i> Favoritos
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('user_profile') }}">
+                            <i class="bi bi-person me-2"></i> Mi Perfil
+                        </a>
+                    </li>
+                    <li class="nav-item mt-5">
+                        <a class="nav-link" href="{{ url_for('logout') }}">
+                            <i class="bi bi-box-arrow-left me-2"></i> Cerrar Sesión
+                        </a>
+                    </li>
+                </ul>
+            </div>
+            
+            <!-- Main Content -->
+            <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4 content">
+                {% with messages = get_flashed_messages(with_categories=true) %}
+                    {% if messages %}
+                        {% for category, message in messages %}
+                            <div class="alert alert-{{ category }} alert-dismissible fade show mt-3" role="alert">
+                                {{ message }}
+                                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                            </div>
+                        {% endfor %}
+                    {% endif %}
+                {% endwith %}
+
+                <!-- Mensaje de bienvenida personalizado -->
+                <div class="welcome-message mt-4">
+                    <h2>Bienvenido, {{ user.username }}</h2>
+                    <p class="mb-0">Panel de usuario de Print and Paint Studio - Técnicas de Pintura para Modelos 3D en Resina</p>
+                </div>
+                
+                <!-- Estadísticas de usuario -->
+                <div class="row">
+                    <div class="col-md-3 mb-4">
+                        <div class="card stats-card">
+                            <div class="stats-icon">
+                                <i class="bi bi-collection-play"></i>
+                            </div>
+                            <div class="stats-number" id="videosCount">-</div>
+                            <div class="stats-label">Videos para tu nivel</div>
+                        </div>
+                    </div>
+                    <div class="col-md-3 mb-4">
+                        <div class="card stats-card">
+                            <div class="stats-icon">
+                                <i class="bi bi-heart-fill"></i>
+                            </div>
+                            <div class="stats-number" id="favoritesCount">-</div>
+                            <div class="stats-label">Favoritos</div>
+                        </div>
+                    </div>
+                    <div class="col-md-3 mb-4">
+                        <div class="card stats-card">
+                            <div class="stats-icon">
+                                <i class="bi bi-award"></i>
+                            </div>
+                            <div class="stats-number">
+                                {% if user.experience_level == 'beginner' %}
+                                    <span class="badge bg-info fs-6">Principiante</span>
+                                {% elif user.experience_level == 'intermediate' %}
+                                    <span class="badge bg-warning fs-6">Intermedio</span>
+                                {% else %}
+                                    <span class="badge bg-danger fs-6">Experto</span>
+                                {% endif %}
+                            </div>
+                            <div class="stats-label">Tu nivel</div>
+                        </div>
+                    </div>
+                    <div class="col-md-3 mb-4">
+                        <div class="card stats-card">
+                            <div class="stats-icon">
+                                <i class="bi bi-calendar-check"></i>
+                            </div>
+                            <div class="stats-number" id="daysCount">-</div>
+                            <div class="stats-label">Días en la plataforma</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Accesos rápidos -->
+                <div class="row mb-4">
+                    <div class="col-12">
+                        <h4 class="mb-3">Acceso rápido</h4>
+                        <div class="quick-links">
+                            <div class="row">
+                                <div class="col-md-3 col-6">
+                                    <a href="{{ url_for('user_videos') }}" class="quick-link-btn">
+                                        <i class="bi bi-collection-play quick-link-icon"></i>
+                                        Ver Videos
+                                    </a>
+                                </div>
+                                <div class="col-md-3 col-6">
+                                    <a href="{{ url_for('user_favorites') }}" class="quick-link-btn">
+                                        <i class="bi bi-heart quick-link-icon"></i>
+                                        Mis Favoritos
+                                    </a>
+                                </div>
+                                <div class="col-md-3 col-6">
+                                    <a href="{{ url_for('user_profile') }}" class="quick-link-btn">
+                                        <i class="bi bi-person-gear quick-link-icon"></i>
+                                        Editar Perfil
+                                    </a>
+                                </div>
+                                <div class="col-md-3 col-6">
+                                    <a href="{{ url_for('user_videos') }}?filter=level" class="quick-link-btn">
+                                        <i class="bi bi-funnel quick-link-icon"></i>
+                                        Videos para mi Nivel
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row">
+                    <!-- Videos recomendados para tu nivel -->
+                    <div class="col-md-6 mb-4">
+                        <div class="card h-100">
+                            <div class="card-header">
+                                <i class="bi bi-star me-2"></i> Recomendados para ti
+                            </div>
+                            <div class="card-body">
+                                <div id="recommendedVideos">
+                                    <div class="text-center py-3">
+                                        <div class="spinner-border text-primary" role="status">
+                                            <span class="visually-hidden">Cargando...</span>
+                                        </div>
+                                        <p class="mt-2">Cargando videos recomendados...</p>
+                                    </div>
+                                </div>
+                                <a href="{{ url_for('user_videos') }}" class="btn btn-primary w-100 mt-3">Ver todos los videos</a>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Videos recientes -->
+                    <div class="col-md-6 mb-4">
+                        <div class="card h-100">
+                            <div class="card-header">
+                                <i class="bi bi-clock-history me-2"></i> Añadidos recientemente
+                            </div>
+                            <div class="card-body">
+                                <div id="recentVideos">
+                                    <div class="text-center py-3">
+                                        <div class="spinner-border text-primary" role="status">
+                                            <span class="visually-hidden">Cargando...</span>
+                                        </div>
+                                        <p class="mt-2">Cargando videos recientes...</p>
+                                    </div>
+                                </div>
+                                <a href="{{ url_for('user_videos') }}" class="btn btn-primary w-100 mt-3">Explorar biblioteca completa</a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="row">
+                    <!-- Técnicas populares -->
+                    <div class="col-md-6 mb-4">
+                        <div class="card">
+                            <div class="card-header">
+                                <i class="bi bi-brush me-2"></i> Técnicas populares
+                            </div>
+                            <div class="card-body">
+                                <div id="popularTechniques" class="mb-3">
+                                    <div class="technique-tag">Pincel seco</div>
+                                    <div class="technique-tag">Lavado</div>
+                                    <div class="technique-tag">Veladuras</div>
+                                    <div class="technique-tag">Imprimación</div>
+                                    <div class="technique-tag">Efectos de fuego</div>
+                                    <div class="technique-tag">Desgastado</div>
+                                    <div class="technique-tag">Agrietado</div>
+                                    <div class="technique-tag">Metálicos</div>
+                                    <div class="technique-tag">OSL</div>
+                                    <div class="technique-tag">NMM</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Acerca de -->
+                    <div class="col-md-6 mb-4">
+                        <div class="card">
+                            <div class="card-header">
+                                <i class="bi bi-info-circle me-2"></i> Acerca de Print and Paint Studio
+                            </div>
+                            <div class="card-body">
+                                <p>Print and Paint Studio es una plataforma dedicada a técnicas de pintura para modelos 3D en resina. Nuestra biblioteca de videos está organizada por categorías, niveles de dificultad y técnicas específicas.</p>
+                                <p>Tu cuenta está configurada para el nivel de experiencia: 
+                                    <strong>
+                                    {% if user.experience_level == 'beginner' %}
+                                        Principiante
+                                    {% elif user.experience_level == 'intermediate' %}
+                                        Intermedio
+                                    {% else %}
+                                        Experto
+                                    {% endif %}
+                                    </strong>
+                                </p>
+                                <p class="mb-0">Puedes cambiar tu nivel de experiencia en cualquier momento desde tu perfil.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </main>
+        </div>
+    </div>
+    
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // Cargar estadísticas
+            loadUserStats();
+            
+            // Cargar videos recomendados
+            loadRecommendedVideos();
+            
+            // Cargar videos recientes
+            loadRecentVideos();
+            
+            // Configurar eventos para etiquetas de técnicas
+            document.querySelectorAll('.technique-tag').forEach(tag => {
+                tag.addEventListener('click', () => {
+                    const technique = tag.textContent;
+                    window.location.href = `{{ url_for('user_videos') }}?search=${technique}`;
+                });
+            });
+        });
+        
+        async function loadUserStats() {
+            try {
+                // Contar videos para el nivel del usuario
+                const videosResponse = await fetch('/api/videos');
+                const videos = await videosResponse.json();
+                
+                const userLevel = '{{ user.experience_level }}';
+                const videosForLevel = videos.filter(v => v.difficulty_level === userLevel);
+                document.getElementById('videosCount').textContent = videosForLevel.length;
+                
+                // Contar favoritos
+                const favoritesResponse = await fetch('/user/favorites');
+                const favoritesHTML = await favoritesResponse.text();
+                
+                // Crear un elemento temporal para analizar el HTML
+                const parser = new DOMParser();
+                const doc = parser.parseFromString(favoritesHTML, 'text/html');
+                
+                // Obtener todos los IDs de videos favoritos
+                const favoriteVideos = Array.from(doc.querySelectorAll('.video-item'));
+                document.getElementById('favoritesCount').textContent = favoriteVideos.length;
+                
+                // Calcular días en la plataforma
+                const createdDate = new Date('{{ user.created_at }}');
+                const today = new Date();
+                const diffTime = Math.abs(today - createdDate);
+                const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+                document.getElementById('daysCount').textContent = diffDays;
+                
+            } catch (error) {
+                console.error('Error al cargar estadísticas:', error);
+            }
+        }
+        
+        async function loadRecommendedVideos() {
+            try {
+                const response = await fetch('/api/videos');
+                const videos = await response.json();
+                
+                const userLevel = '{{ user.experience_level }}';
+                const recommendedVideos = videos
+                    .filter(v => v.difficulty_level === userLevel)
+                    .sort(() => 0.5 - Math.random()) // Mezclar aleatoriamente
+                    .slice(0, 3); // Tomar los primeros 3
+                
+                const container = document.getElementById('recommendedVideos');
+                
+                if (recommendedVideos.length === 0) {
+                    container.innerHTML = '<div class="alert alert-info">No hay videos recomendados para tu nivel aún.</div>';
+                    return;
+                }
+                
+                container.innerHTML = '';
+                recommendedVideos.forEach(video => {
+                    const videoElement = document.createElement('div');
+                    videoElement.className = 'recent-video';
+                    
+                    let difficultyBadge = '';
+                    switch(video.difficulty_level) {
+                        case 'beginner':
+                            difficultyBadge = '<span class="badge bg-info">Principiante</span>';
+                            break;
+                        case 'intermediate':
+                            difficultyBadge = '<span class="badge bg-warning text-dark">Intermedio</span>';
+                            break;
+                        case 'expert':
+                            difficultyBadge = '<span class="badge bg-danger">Experto</span>';
+                            break;
+                    }
+                    
+                    videoElement.innerHTML = `
+                        <div class="recent-video-title">${video.title}</div>
+                        <div class="recent-video-category">
+                            <span class="badge bg-secondary">${video.category || 'Sin categoría'}</span>
+                            ${difficultyBadge}
+                        </div>
+                        <a href="{{ url_for('user_videos') }}?video=${video.id}" class="btn btn-sm btn-outline-primary mt-2">Ver video</a>
+                    `;
+                    
+                    container.appendChild(videoElement);
+                });
+                
+            } catch (error) {
+                console.error('Error al cargar videos recomendados:', error);
+                document.getElementById('recommendedVideos').innerHTML = 
+                    '<div class="alert alert-danger">Error al cargar videos recomendados</div>';
+            }
+        }
+        
+        async function loadRecentVideos() {
+            try {
+                const response = await fetch('/api/videos');
+                const videos = await response.json();
+                
+                // Ordenar por fecha de publicación (más recientes primero)
+                const recentVideos = videos
+                    .sort((a, b) => new Date(b.published_at) - new Date(a.published_at))
+                    .slice(0, 3); // Tomar los primeros 3
+                
+                const container = document.getElementById('recentVideos');
+                
+                if (recentVideos.length === 0) {
+                    container.innerHTML = '<div class="alert alert-info">No hay videos recientes.</div>';
+                    return;
+                }
+                
+                container.innerHTML = '';
+                recentVideos.forEach(video => {
+                    const videoElement = document.createElement('div');
+                    videoElement.className = 'recent-video';
+                    
+                    let difficultyBadge = '';
+                    switch(video.difficulty_level) {
+                        case 'beginner':
+                            difficultyBadge = '<span class="badge bg-info">Principiante</span>';
+                            break;
+                        case 'intermediate':
+                            difficultyBadge = '<span class="badge bg-warning text-dark">Intermedio</span>';
+                            break;
+                        case 'expert':
+                            difficultyBadge = '<span class="badge bg-danger">Experto</span>';
+                            break;
+                    }
+                    
+                    const publishedDate = new Date(video.published_at);
+                    const formattedDate = publishedDate.toLocaleDateString();
+                    
+                    videoElement.innerHTML = `
+                        <div class="recent-video-title">${video.title}</div>
+                        <div class="recent-video-category">
+                            <span class="badge bg-secondary">${video.category || 'Sin categoría'}</span>
+                            ${difficultyBadge}
+                        </div>
+                        <small class="text-muted">Publicado: ${formattedDate}</small>
+                        <div>
+                            <a href="{{ url_for('user_videos') }}?video=${video.id}" class="btn btn-sm btn-outline-primary mt-2">Ver video</a>
+                        </div>
+                    `;
+                    
+                    container.appendChild(videoElement);
+                });
+                
+            } catch (error) {
+                console.error('Error al cargar videos recientes:', error);
+                document.getElementById('recentVideos').innerHTML = 
+                    '<div class="alert alert-danger">Error al cargar videos recientes</div>';
+            }
+        }
+    </script>
+</body>
+</html>

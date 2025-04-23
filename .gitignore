@@ -1,0 +1,22 @@
+# Excluir el directorio problemático
+print-and-paint-studio/
+
+# Archivos de entorno y configuración
+.env
+*.env
+.env.*
+
+# Archivos de Python
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Archivos temporales y copias de seguridad
+*- copia*
+*copy*
+*.bak
+*.tmp
+*.log
+
+# Otras exclusiones
+.DS_Store
