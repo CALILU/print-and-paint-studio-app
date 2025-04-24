@@ -19,7 +19,18 @@ def debug_template_paths():
 
 # Configuración de la base de datos
 db_url = os.environ.get('DATABASE_URL')
-print(f"Conectando a la base de datos: {db_url}")
+print(f"URL original de la base de datos: {db_url}")
+
+# Verificar si la URL existe y si necesita ser modificada para SQLAlchemy
+if db_url and db_url.startswith('postgres://'):
+    db_url = db_url.replace('postgres://', 'postgresql://', 1)
+    print(f"URL modificada para SQLAlchemy: {db_url}")
+
+# Si no hay URL, usar una conexión por defecto
+if not db_url:
+    db_url = 'postgresql://postgres:postgres@db:5432/videos_youtube'
+    print(f"Usando URL predeterminada: {db_url}")
+
 app.config['SQLALCHEMY_DATABASE_URI'] = db_url
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['SQLALCHEMY_ECHO'] = True  # Esto imprimirá todas las consultas SQL
@@ -147,19 +158,25 @@ def user_dashboard():
 def user_videos():
     user = User.query.get(session['user_id'])
     
+    # Obtener el parámetro para mostrar todos los niveles o solo el del usuario
+    show_all_levels = request.args.get('show_all_levels', 'false').lower() == 'true'
+    
     # Filtrar videos según el nivel de experiencia del usuario
-    videos = Video.query.filter(Video.difficulty_level == user.experience_level).all()
+    if show_all_levels:
+        videos = Video.query.all()
+    else:
+        videos = Video.query.filter(Video.difficulty_level == user.experience_level).all()
     
     # Cargar técnicas para cada video
     for video in videos:
         video.techniques = Technique.query.filter_by(video_id=video.id).all()
     
     try:
-        return render_template('user/videos.html', videos=videos, user=user)
+        return render_template('user/videos.html', videos=videos, user=user, show_all_levels=show_all_levels)
     except Exception as e:
         print(f"Error al cargar la plantilla videos: {str(e)}")
         try:
-            return render_template('user/videos.html', videos=videos, user=user)
+            return render_template('user/videos.html', videos=videos, user=user, show_all_levels=show_all_levels)
         except Exception as e2:
             print(f"Error con plantilla alternativa: {str(e2)}")
             raise e
@@ -175,11 +192,11 @@ def user_all_videos():
         video.techniques = Technique.query.filter_by(video_id=video.id).all()
     
     try:
-        return render_template('user/videos.html', videos=videos, user=user)
+        return render_template('user/videos.html', videos=videos, user=user, show_all_levels=True)
     except Exception as e:
         print(f"Error al cargar la plantilla videos all: {str(e)}")
         try:
-            return render_template('user/videos.html', videos=videos, user=user)
+            return render_template('user/videos.html', videos=videos, user=user, show_all_levels=True)
         except Exception as e2:
             print(f"Error con plantilla alternativa: {str(e2)}")
             raise e
@@ -312,6 +329,46 @@ def admin_videos():
             print(f"Error con plantilla alternativa: {str(e2)}")
             raise e
 
+@app.route('/admin/clone-video/<int:video_id>', methods=['POST'])
+@admin_required
+def clone_video(video_id):
+    # Obtener el video original
+    original_video = Video.query.get_or_404(video_id)
+    
+    # Obtener el nuevo nivel de dificultad
+    new_difficulty = request.form.get('difficulty_level')
+    
+    # Verificar que no exista ya una versión con ese nivel
+    existing_version = Video.query.filter_by(
+        video_id=original_video.video_id, 
+        difficulty_level=new_difficulty
+    ).first()
+    
+    if existing_version:
+        flash(f'Ya existe una versión de este video para el nivel {new_difficulty}', 'danger')
+        return redirect(url_for('admin_videos'))
+    
+    # Crear un nuevo video con los mismos datos pero diferente nivel
+    new_video = Video(
+        title=original_video.title,
+        description=original_video.description,
+        video_id=original_video.video_id,
+        channel=original_video.channel,
+        category=original_video.category,
+        technique_start_time=original_video.technique_start_time,
+        technique_end_time=original_video.technique_end_time,
+        difficulty_level=new_difficulty,
+        version=original_video.version + 1,
+        published_at=datetime.utcnow()
+    )
+    
+    db.session.add(new_video)
+    db.session.commit()
+    
+    # Redirigir a la edición del nuevo video
+    flash('Video clonado correctamente. Ahora puedes personalizar esta versión.', 'success')
+    return redirect(url_for('edit_video', video_id=new_video.id))
+
 @app.route('/admin/videos', methods=['POST'])
 @admin_required
 def add_video():
@@ -319,6 +376,17 @@ def add_video():
         data = request.json
         
         print("Datos recibidos:", data)  # Para depuración
+        
+        # Verificar si ya existe un video con el mismo video_id y nivel de dificultad
+        existing_video = Video.query.filter_by(
+            video_id=data.get('video_id'),
+            difficulty_level=data.get('difficulty_level', 'beginner')
+        ).first()
+        
+        if existing_video:
+            return jsonify({
+                'error': 'Ya existe un video con el mismo ID de YouTube y nivel de dificultad'
+            }), 400
         
         new_video = Video(
             title=data.get('title'),
@@ -329,6 +397,7 @@ def add_video():
             technique_start_time=data.get('technique_start_time', 0),
             technique_end_time=data.get('technique_end_time'),
             difficulty_level=data.get('difficulty_level', 'beginner'),
+            version=1,  # Primera versión
             published_at=data.get('published_at')
         )
         
@@ -357,6 +426,7 @@ def add_video():
             'technique_start_time': new_video.technique_start_time,
             'technique_end_time': new_video.technique_end_time,
             'difficulty_level': new_video.difficulty_level,
+            'version': new_video.version,
             'published_at': new_video.published_at.isoformat() if new_video.published_at else None
         }), 201
     except Exception as e:
@@ -378,6 +448,7 @@ def get_video(video_id):
         'technique_start_time': video.technique_start_time,
         'technique_end_time': video.technique_end_time,
         'difficulty_level': video.difficulty_level,
+        'version': video.version,
         'published_at': video.published_at.isoformat() if video.published_at else None
     })
 
@@ -386,6 +457,22 @@ def get_video(video_id):
 def update_video(video_id):
     video = Video.query.get_or_404(video_id)
     data = request.json
+    
+    # Verificar si estamos cambiando el ID de YouTube o el nivel de dificultad
+    if (data.get('video_id') != video.video_id or 
+        data.get('difficulty_level') != video.difficulty_level):
+        
+        # Verificar si ya existe un video con ese ID y nivel
+        existing_video = Video.query.filter(
+            Video.id != video_id,  # Excluir el video actual
+            Video.video_id == data.get('video_id'),
+            Video.difficulty_level == data.get('difficulty_level')
+        ).first()
+        
+        if existing_video:
+            return jsonify({
+                'error': 'Ya existe otro video con el mismo ID de YouTube y nivel de dificultad'
+            }), 400
     
     video.title = data.get('title', video.title)
     video.description = data.get('description', video.description)
@@ -423,6 +510,7 @@ def update_video(video_id):
         'technique_start_time': video.technique_start_time,
         'technique_end_time': video.technique_end_time,
         'difficulty_level': video.difficulty_level,
+        'version': video.version,
         'published_at': video.published_at.isoformat() if video.published_at else None
     })
 
@@ -535,6 +623,7 @@ def get_videos():
             'technique_start_time': video.technique_start_time,
             'technique_end_time': video.technique_end_time,
             'difficulty_level': video.difficulty_level,
+            'version': video.version,
             'published_at': video.published_at.isoformat() if video.published_at else None,
             'techniques': techniques_data
         })
@@ -566,6 +655,7 @@ def api_get_video(video_id):
         'technique_start_time': video.technique_start_time,
         'technique_end_time': video.technique_end_time,
         'difficulty_level': video.difficulty_level,
+        'version': video.version,
         'published_at': video.published_at.isoformat() if video.published_at else None,
         'techniques': techniques_data
     })
@@ -697,6 +787,128 @@ def delete_user(user_id):
     
     return '', 204
 
+@app.route('/api/admin/statistics')
+@admin_required
+def get_admin_statistics():
+    try:
+        # Estadísticas de usuarios
+        total_users = User.query.count()
+        admin_users = User.query.filter_by(role='admin').count()
+        regular_users = total_users - admin_users
+        
+        # Usuarios por nivel de experiencia
+        beginner_users = User.query.filter_by(experience_level='beginner').count()
+        intermediate_users = User.query.filter_by(experience_level='intermediate').count()
+        expert_users = User.query.filter_by(experience_level='expert').count()
+        
+        # Estadísticas de videos
+        total_videos = Video.query.count()
+        
+        # Videos por nivel de dificultad
+        beginner_videos = Video.query.filter_by(difficulty_level='beginner').count()
+        intermediate_videos = Video.query.filter_by(difficulty_level='intermediate').count()
+        expert_videos = Video.query.filter_by(difficulty_level='expert').count()
+        
+        # Videos por categoría
+        categories = db.session.query(Video.category, db.func.count(Video.id)).group_by(Video.category).all()
+        categories_data = [{"name": cat[0] or "Sin categoría", "count": cat[1]} for cat in categories]
+        
+        # Estadísticas de favoritos
+        total_favorites = Favorite.query.count()
+        
+        # Videos más populares (con más favoritos)
+        popular_videos_query = db.session.query(
+            Video.id, Video.title, db.func.count(Favorite.id).label('favorites_count')
+        ).join(Favorite, Favorite.video_id == Video.id)\
+        .group_by(Video.id, Video.title)\
+        .order_by(db.desc('favorites_count'))\
+        .limit(5)
+        
+        popular_videos = [
+            {"id": video.id, "title": video.title, "favorites_count": video.favorites_count}
+            for video in popular_videos_query
+        ]
+        
+        # Usuarios más activos (con más favoritos)
+        active_users_query = db.session.query(
+            User.id, User.username, db.func.count(Favorite.id).label('favorites_count')
+        ).join(Favorite, Favorite.user_id == User.id)\
+        .group_by(User.id, User.username)\
+        .order_by(db.desc('favorites_count'))\
+        .limit(5)
+        
+        active_users = [
+            {"id": user.id, "username": user.username, "favorites_count": user.favorites_count}
+            for user in active_users_query
+        ]
+        
+        # Estadísticas de técnicas
+        total_techniques = Technique.query.count()
+        avg_techniques_per_video = total_techniques / total_videos if total_videos > 0 else 0
+        
+        # Calcular tiempo total de contenido (suma de duraciones de técnicas)
+        techniques_duration_query = db.session.query(
+            db.func.sum(Technique.end_time - Technique.start_time)
+        ).scalar()
+        
+        total_techniques_duration = techniques_duration_query or 0
+        
+        # Videos con más técnicas
+        videos_with_most_techniques_query = db.session.query(
+            Video.id, Video.title, db.func.count(Technique.id).label('techniques_count')
+        ).join(Technique, Technique.video_id == Video.id)\
+        .group_by(Video.id, Video.title)\
+        .order_by(db.desc('techniques_count'))\
+        .limit(5)
+        
+        videos_with_most_techniques = [
+            {"id": video.id, "title": video.title, "techniques_count": video.techniques_count}
+            for video in videos_with_most_techniques_query
+        ]
+        
+        return jsonify({
+            "users": {
+                "total": total_users,
+                "admin": admin_users,
+                "regular": regular_users,
+                "by_level": {
+                    "beginner": beginner_users,
+                    "intermediate": intermediate_users,
+                    "expert": expert_users
+                }
+            },
+            "videos": {
+                "total": total_videos,
+                "by_level": {
+                    "beginner": beginner_videos,
+                    "intermediate": intermediate_videos,
+                    "expert": expert_videos
+                },
+                "by_category": categories_data
+            },
+            "favorites": {
+                "total": total_favorites,
+                "popular_videos": popular_videos,
+                "active_users": active_users
+            },
+            "techniques": {
+                "total": total_techniques,
+                "avg_per_video": round(avg_techniques_per_video, 2),
+                "total_duration_seconds": total_techniques_duration,
+                "total_duration_formatted": format_duration(total_techniques_duration),
+                "videos_with_most_techniques": videos_with_most_techniques
+            }
+        })
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+# Función auxiliar para formatear duración en segundos a formato hh:mm:ss
+def format_duration(seconds):
+    hours = seconds // 3600
+    minutes = (seconds % 3600) // 60
+    seconds = seconds % 60
+    return f"{hours:02d}:{minutes:02d}:{seconds:02d}"
+
 @app.route('/debug/db', methods=['GET'])
 @admin_required
 def debug_db():
@@ -745,7 +957,8 @@ def debug_db():
                 'title': v.title,
                 'video_id': v.video_id,
                 'category': v.category,
-                'difficulty_level': v.difficulty_level
+                'difficulty_level': v.difficulty_level,
+                'version': v.version
             } for v in videos]
         except Exception as e:
             sample_videos = f'ERROR: {str(e)}'
