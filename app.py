@@ -493,6 +493,7 @@ def update_video(video_id):
     video.technique_start_time = data.get('technique_start_time', video.technique_start_time)
     video.technique_end_time = data.get('technique_end_time', video.technique_end_time)
     video.difficulty_level = data.get('difficulty_level', video.difficulty_level)
+    video.version = data.get('version', video.version)  # Añadir esta línea
     
     # Actualizar técnicas si se proporcionaron
     if 'techniques' in data:
