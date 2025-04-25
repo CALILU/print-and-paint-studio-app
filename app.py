@@ -28,8 +28,13 @@ if db_url and db_url.startswith('postgres://'):
 
 # Si no hay URL, usar una conexión por defecto
 if not db_url:
-    db_url = 'postgresql://postgres:postgres@db:5432/videos_youtube'
-    print(f"Usando URL predeterminada: {db_url}")
+    # Para Railway, usar la URL específica que conocemos
+    if os.environ.get('RAILWAY_ENVIRONMENT') or os.environ.get('PORT') == '8080':
+        db_url = 'postgresql://postgres:xGBtAyofMYhZvVxOuMbrYJHVkeQDDkGc@postgres.railway.internal:5432/railway'
+        print(f"Usando URL para Railway: {db_url}")
+    else:
+        db_url = 'postgresql://postgres:postgres@db:5432/videos_youtube'
+        print(f"Usando URL predeterminada para desarrollo local: {db_url}")
 
 print(f"Conectando a la base de datos: {db_url}")
 app.config['SQLALCHEMY_DATABASE_URI'] = db_url
