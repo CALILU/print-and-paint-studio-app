@@ -76,6 +76,10 @@ def index():
         else:
             return redirect(url_for('user_dashboard'))
     return render_template('login.html')
+# Añade esta ruta cerca de las otras rutas en tu app.py
+@app.route('/health')
+def health_check():
+    return 'OK', 200
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
@@ -1035,36 +1039,31 @@ def reset_db():
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
+# Al final del archivo app.py, reemplaza el bloque if __name__ == '__main__':
 if __name__ == '__main__':
-    with app.app_context():
-        print("Verificando estado de la base de datos...")
+    try:
+        # Obtener puerto desde variables de entorno (útil para Railway)
+        port = int(os.environ.get('PORT', 5000))
+        print(f"Puerto configurado: {port}")
         
-        # Verificar si las tablas existen o crear si es necesario
-        try:
-            # Intentar crear todas las tablas (este método es seguro, no hace nada si las tablas ya existen)
-            db.create_all()
-            print("Tablas creadas o verificadas correctamente")
-            
-            # Verificar si existe el usuario admin
-            admin = User.query.filter_by(username='admin').first()
-            if not admin:
-                print("Creando usuario administrador...")
-                admin = User(
-                    username='admin',
-                    email='admin@printandpaint.com',
-                    role='admin',
-                    experience_level='expert'
-                )
-                # Generar contraseña clara para depuración
-                admin.set_password('admin123')
-                print(f"Hash de contraseña generado: {admin.password_hash}")
-                db.session.add(admin)
-                db.session.commit()
-                print("Usuario administrador creado correctamente")
-            else:
-                print(f"Usuario admin ya existe: {admin.username}, {admin.email}, role: {admin.role}")
-        except Exception as e:
-            print(f"Error al inicializar la base de datos: {str(e)}")
+        # En Railway, necesitamos asegurarnos de que la aplicación escuche en el puerto correcto
+        if os.environ.get('RAILWAY_ENVIRONMENT'):
+            print("Entorno de Railway detectado")
+            port = int(os.environ.get('PORT', 8080))
+            print(f"Usando puerto de Railway: {port}")
+        
+        # En producción, no usar debug=True
+        debug_mode = os.environ.get('FLASK_ENV', '') != 'production'
+        print(f"Modo de depuración: {debug_mode}")
+        
+        print(f"Iniciando servidor en host: 0.0.0.0, puerto: {port}")
+        app.run(host='0.0.0.0', port=port, debug=debug_mode)
+    except Exception as e:
+        print(f"Error al iniciar la aplicación: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        import sys
+        sys.exit(1)
             
     # Obtener puerto desde variables de entorno (útil para Railway)
     port = int(os.environ.get('PORT', 5000))
