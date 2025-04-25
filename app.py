@@ -31,6 +31,7 @@ if not db_url:
     db_url = 'postgresql://postgres:postgres@db:5432/videos_youtube'
     print(f"Usando URL predeterminada: {db_url}")
 
+print(f"Conectando a la base de datos: {db_url}")
 app.config['SQLALCHEMY_DATABASE_URI'] = db_url
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['SQLALCHEMY_ECHO'] = True  # Esto imprimirá todas las consultas SQL
@@ -1035,43 +1036,34 @@ if __name__ == '__main__':
         
         # Verificar si las tablas existen o crear si es necesario
         try:
-            # Intentar ver si existe algún video (esto fallará si la tabla no existe)
-            db.session.execute('SELECT 1 FROM videos LIMIT 1')
-            print("Tabla 'videos' existe")
-        except Exception as e:
-            print(f"Creando tablas en la base de datos: {str(e)}")
+            # Intentar crear todas las tablas (este método es seguro, no hace nada si las tablas ya existen)
             db.create_all()
-            print("Tablas creadas correctamente")
-        
-        # Verificar si existe el usuario admin
-        admin = User.query.filter_by(username='admin').first()
-        if not admin:
-            print("Creando usuario administrador...")
-            admin = User(
-                username='admin',
-                email='admin@printandpaint.com',
-                role='admin',
-                experience_level='expert'
-            )
-            # Generar contraseña clara para depuración
-            admin.set_password('admin123')
-            print(f"Hash de contraseña generado: {admin.password_hash}")
-            db.session.add(admin)
-            db.session.commit()
-            print("Usuario administrador creado correctamente")
-        else:
-            print(f"Usuario admin ya existe: {admin.username}, {admin.email}, role: {admin.role}")
-            print(f"Hash actual: {admin.password_hash}")
-            # Actualizar contraseña para depuración
-            admin.set_password('admin123')
-            print(f"Nuevo hash: {admin.password_hash}")
-            db.session.commit()
-            print("Contraseña de administrador actualizada para pruebas")
-
-
+            print("Tablas creadas o verificadas correctamente")
+            
+            # Verificar si existe el usuario admin
+            admin = User.query.filter_by(username='admin').first()
+            if not admin:
+                print("Creando usuario administrador...")
+                admin = User(
+                    username='admin',
+                    email='admin@printandpaint.com',
+                    role='admin',
+                    experience_level='expert'
+                )
+                # Generar contraseña clara para depuración
+                admin.set_password('admin123')
+                print(f"Hash de contraseña generado: {admin.password_hash}")
+                db.session.add(admin)
+                db.session.commit()
+                print("Usuario administrador creado correctamente")
+            else:
+                print(f"Usuario admin ya existe: {admin.username}, {admin.email}, role: {admin.role}")
+        except Exception as e:
+            print(f"Error al inicializar la base de datos: {str(e)}")
+            
     # Obtener puerto desde variables de entorno (útil para Railway)
-        port = int(os.environ.get('PORT', 5000))
-        # En producción, no usar debug=True
-        debug_mode = os.environ.get('FLASK_ENV', '') != 'production'
-
-    app.run(host='0.0.0.0', port=5000, debug=True, use_reloader=False)
+    port = int(os.environ.get('PORT', 5000))
+    # En producción, no usar debug=True
+    debug_mode = os.environ.get('FLASK_ENV', '') != 'production'
+    
+    app.run(host='0.0.0.0', port=port, debug=debug_mode, use_reloader=False)
