@@ -1074,9 +1074,12 @@ if __name__ == '__main__':
         except Exception as e:
             print(f"Error al inicializar la base de datos: {str(e)}")
     
-    # Obtener puerto desde variables de entorno
-    port = int(os.environ.get('PORT', 5000))
-    debug_mode = os.environ.get('FLASK_ENV', '') != 'production'
+    # Para Railway, siempre usar el puerto 5000 ya que es el que espera
+    port = 5000
+    if not os.environ.get('RAILWAY_ENVIRONMENT'):
+        # Solo en desarrollo local, usar la variable PORT
+        port = int(os.environ.get('PORT', 5000))
     
-    # Solo una llamada a app.run()
+    debug_mode = os.environ.get('FLASK_ENV', '') != 'production'
+    print(f"Iniciando servidor en puerto: {port}")
     app.run(host='0.0.0.0', port=port, debug=debug_mode, use_reloader=False)
