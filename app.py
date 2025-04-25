@@ -1067,5 +1067,11 @@ if __name__ == '__main__':
             print(f"Nuevo hash: {admin.password_hash}")
             db.session.commit()
             print("Contraseña de administrador actualizada para pruebas")
-            
+
+
+    # Obtener puerto desde variables de entorno (útil para Railway)
+        port = int(os.environ.get('PORT', 5000))
+        # En producción, no usar debug=True
+        debug_mode = os.environ.get('FLASK_ENV', '') != 'production'
+
     app.run(host='0.0.0.0', port=5000, debug=True, use_reloader=False)
