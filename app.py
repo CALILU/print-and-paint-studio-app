@@ -369,7 +369,7 @@ def clone_video(video_id):
         technique_start_time=original_video.technique_start_time,
         technique_end_time=original_video.technique_end_time,
         difficulty_level=new_difficulty,
-        video_version=original_video.video_version + 1,
+        version=original_video.version + 1,  # CORREGIDO: se usa 'version' en lugar de 'video_version'
         published_at=datetime.utcnow()
     )
     
@@ -408,7 +408,7 @@ def add_video():
             technique_start_time=data.get('technique_start_time', 0),
             technique_end_time=data.get('technique_end_time'),
             difficulty_level=data.get('difficulty_level', 'beginner'),
-            video_version=1,  # Primera versión
+            version=1,  # CORREGIDO: se usa 'version' en lugar de 'video_version'
             published_at=data.get('published_at')
         )
         
@@ -437,7 +437,7 @@ def add_video():
             'technique_start_time': new_video.technique_start_time,
             'technique_end_time': new_video.technique_end_time,
             'difficulty_level': new_video.difficulty_level,
-            'video_version': new_video.version,
+            'version': new_video.version,  # CORREGIDO: se usa 'version' en lugar de 'video_version'
             'published_at': new_video.published_at.isoformat() if new_video.published_at else None
         }), 201
     except Exception as e:
@@ -459,7 +459,7 @@ def get_video(video_id):
         'technique_start_time': video.technique_start_time,
         'technique_end_time': video.technique_end_time,
         'difficulty_level': video.difficulty_level,
-        'video_version': video.video_version,
+        'version': video.version,  # CORREGIDO: se usa 'version' en lugar de 'video_version'
         'published_at': video.published_at.isoformat() if video.published_at else None
     })
 
@@ -493,7 +493,7 @@ def update_video(video_id):
     video.technique_start_time = data.get('technique_start_time', video.technique_start_time)
     video.technique_end_time = data.get('technique_end_time', video.technique_end_time)
     video.difficulty_level = data.get('difficulty_level', video.difficulty_level)
-    video.video_version = data.get('video_version', video.video_version)  # Cambiado de version a video_version
+    video.version = data.get('version', video.version)  # CORREGIDO: se usa 'version' en lugar de 'video_version'
     
     # Actualizar técnicas si se proporcionaron
     if 'techniques' in data:
@@ -522,7 +522,7 @@ def update_video(video_id):
         'technique_start_time': video.technique_start_time,
         'technique_end_time': video.technique_end_time,
         'difficulty_level': video.difficulty_level,
-        'video_version': video.video_version,  # Cambiado de version a video_version
+        'version': video.version,  # CORREGIDO: se usa 'version' en lugar de 'video_version'
         'published_at': video.published_at.isoformat() if video.published_at else None
     })
 
@@ -635,7 +635,7 @@ def get_videos():
             'technique_start_time': video.technique_start_time,
             'technique_end_time': video.technique_end_time,
             'difficulty_level': video.difficulty_level,
-            'version': video.video_version,
+            'version': video.version,  # CORREGIDO: se usa 'version' en lugar de 'video_version'
             'published_at': video.published_at.isoformat() if video.published_at else None,
             'techniques': techniques_data
         })
@@ -667,7 +667,7 @@ def api_get_video(video_id):
         'technique_start_time': video.technique_start_time,
         'technique_end_time': video.technique_end_time,
         'difficulty_level': video.difficulty_level,
-        'video_version': video.video_version,
+        'version': video.version,  # CORREGIDO: se usa 'version' en lugar de 'video_version'
         'published_at': video.published_at.isoformat() if video.published_at else None,
         'techniques': techniques_data
     })
@@ -970,7 +970,7 @@ def debug_db():
                 'video_id': v.video_id,
                 'category': v.category,
                 'difficulty_level': v.difficulty_level,
-                'version': v.version
+                'version': v.version  # CORREGIDO: se usa 'version' en lugar de 'version'
             } for v in videos]
         except Exception as e:
             sample_videos = f'ERROR: {str(e)}'
