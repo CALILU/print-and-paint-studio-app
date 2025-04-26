@@ -369,7 +369,7 @@ def clone_video(video_id):
         technique_start_time=original_video.technique_start_time,
         technique_end_time=original_video.technique_end_time,
         difficulty_level=new_difficulty,
-        version=original_video.version + 1,  # CORREGIDO: se usa 'version' en lugar de 'video_version'
+        video_version=original_video.video_version + 1,  # MODIFICADO: 'video_version' en lugar de 'version'
         published_at=datetime.utcnow()
     )
     
@@ -408,7 +408,7 @@ def add_video():
             technique_start_time=data.get('technique_start_time', 0),
             technique_end_time=data.get('technique_end_time'),
             difficulty_level=data.get('difficulty_level', 'beginner'),
-            version=1,  # CORREGIDO: se usa 'version' en lugar de 'video_version'
+            video_version=1,  # MODIFICADO: 'video_version' en lugar de 'version'
             published_at=data.get('published_at')
         )
         
@@ -437,7 +437,7 @@ def add_video():
             'technique_start_time': new_video.technique_start_time,
             'technique_end_time': new_video.technique_end_time,
             'difficulty_level': new_video.difficulty_level,
-            'version': new_video.version,  # CORREGIDO: se usa 'version' en lugar de 'video_version'
+            'video_version': new_video.video_version,  # MODIFICADO: 'video_version' en lugar de 'version'
             'published_at': new_video.published_at.isoformat() if new_video.published_at else None
         }), 201
     except Exception as e:
@@ -459,7 +459,7 @@ def get_video(video_id):
         'technique_start_time': video.technique_start_time,
         'technique_end_time': video.technique_end_time,
         'difficulty_level': video.difficulty_level,
-        'version': video.version,  # CORREGIDO: se usa 'version' en lugar de 'video_version'
+        'video_version': video.video_version,  # MODIFICADO: 'video_version' en lugar de 'version'
         'published_at': video.published_at.isoformat() if video.published_at else None
     })
 
@@ -493,7 +493,7 @@ def update_video(video_id):
     video.technique_start_time = data.get('technique_start_time', video.technique_start_time)
     video.technique_end_time = data.get('technique_end_time', video.technique_end_time)
     video.difficulty_level = data.get('difficulty_level', video.difficulty_level)
-    video.version = data.get('version', video.version)  # CORREGIDO: se usa 'version' en lugar de 'video_version'
+    video.video_version = data.get('video_version', video.video_version)  # MODIFICADO: 'video_version' en lugar de 'version'
     
     # Actualizar técnicas si se proporcionaron
     if 'techniques' in data:
@@ -522,7 +522,7 @@ def update_video(video_id):
         'technique_start_time': video.technique_start_time,
         'technique_end_time': video.technique_end_time,
         'difficulty_level': video.difficulty_level,
-        'version': video.version,  # CORREGIDO: se usa 'version' en lugar de 'video_version'
+        'video_version': video.video_version,  # MODIFICADO: 'video_version' en lugar de 'version'
         'published_at': video.published_at.isoformat() if video.published_at else None
     })
 
@@ -610,9 +610,48 @@ def delete_technique(technique_id):
 # API para obtener videos
 @app.route('/api/videos', methods=['GET'])
 def get_videos():
-    videos = Video.query.all()
-    result = []
-    for video in videos:
+    try:
+        videos = Video.query.all()
+        result = []
+        for video in videos:
+            # Obtener las técnicas asociadas al video
+            techniques = Technique.query.filter_by(video_id=video.id).all()
+            techniques_data = []
+            
+            for technique in techniques:
+                techniques_data.append({
+                    'id': technique.id,
+                    'name': technique.name,
+                    'start_time': technique.start_time,
+                    'end_time': technique.end_time
+                })
+            
+            result.append({
+                'id': video.id,
+                'title': video.title,
+                'description': video.description,
+                'video_id': video.video_id,
+                'channel': video.channel,
+                'category': video.category,
+                'technique_start_time': video.technique_start_time,
+                'technique_end_time': video.technique_end_time,
+                'difficulty_level': video.difficulty_level,
+                'video_version': video.video_version,  # MODIFICADO: 'video_version' en lugar de 'version'
+                'published_at': video.published_at.isoformat() if video.published_at else None,
+                'techniques': techniques_data
+            })
+        return jsonify(result)
+    except Exception as e:
+        print(f"Error en get_videos(): {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/api/videos/<int:video_id>', methods=['GET'])
+def api_get_video(video_id):
+    try:
+        video = Video.query.get_or_404(video_id)
+        
         # Obtener las técnicas asociadas al video
         techniques = Technique.query.filter_by(video_id=video.id).all()
         techniques_data = []
@@ -625,7 +664,7 @@ def get_videos():
                 'end_time': technique.end_time
             })
         
-        result.append({
+        return jsonify({
             'id': video.id,
             'title': video.title,
             'description': video.description,
@@ -635,42 +674,15 @@ def get_videos():
             'technique_start_time': video.technique_start_time,
             'technique_end_time': video.technique_end_time,
             'difficulty_level': video.difficulty_level,
-            'version': video.version,  # CORREGIDO: se usa 'version' en lugar de 'video_version'
+            'video_version': video.video_version,  # MODIFICADO: 'video_version' en lugar de 'version'
             'published_at': video.published_at.isoformat() if video.published_at else None,
             'techniques': techniques_data
         })
-    return jsonify(result)
-
-@app.route('/api/videos/<int:video_id>', methods=['GET'])
-def api_get_video(video_id):
-    video = Video.query.get_or_404(video_id)
-    
-    # Obtener las técnicas asociadas al video
-    techniques = Technique.query.filter_by(video_id=video.id).all()
-    techniques_data = []
-    
-    for technique in techniques:
-        techniques_data.append({
-            'id': technique.id,
-            'name': technique.name,
-            'start_time': technique.start_time,
-            'end_time': technique.end_time
-        })
-    
-    return jsonify({
-        'id': video.id,
-        'title': video.title,
-        'description': video.description,
-        'video_id': video.video_id,
-        'channel': video.channel,
-        'category': video.category,
-        'technique_start_time': video.technique_start_time,
-        'technique_end_time': video.technique_end_time,
-        'difficulty_level': video.difficulty_level,
-        'version': video.version,  # CORREGIDO: se usa 'version' en lugar de 'video_version'
-        'published_at': video.published_at.isoformat() if video.published_at else None,
-        'techniques': techniques_data
-    })
+    except Exception as e:
+        print(f"Error en api_get_video(): {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({"error": str(e)}), 500
 
 @app.route('/admin/users')
 @admin_required
@@ -970,7 +982,7 @@ def debug_db():
                 'video_id': v.video_id,
                 'category': v.category,
                 'difficulty_level': v.difficulty_level,
-                'version': v.version  # CORREGIDO: se usa 'version' en lugar de 'version'
+                'video_version': v.video_version  # MODIFICADO: 'video_version' en lugar de 'version'
             } for v in videos]
         except Exception as e:
             sample_videos = f'ERROR: {str(e)}'

@@ -39,7 +39,7 @@ class Video(db.Model):
     technique_start_time = db.Column(db.Integer, default=0)
     technique_end_time = db.Column(db.Integer)
     difficulty_level = db.Column(db.String(20), default='beginner')
-    version = db.Column(db.Integer, default=1)  # CORREGIDO: Unificado a 'version' en lugar de 'video_version'
+    video_version = db.Column(db.Integer, default=1)  # Nombre correcto confirmado en DB
     published_at = db.Column(db.DateTime, default=datetime.utcnow)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     
