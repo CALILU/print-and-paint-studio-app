@@ -19,7 +19,7 @@ CREATE TABLE IF NOT EXISTS videos (
     technique_start_time INTEGER DEFAULT 0,
     technique_end_time INTEGER,
     difficulty_level VARCHAR(20) DEFAULT 'beginner',
-    version INTEGER DEFAULT 1,
+    video_version INTEGER DEFAULT 1,
     published_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT video_level_uc UNIQUE (video_id, difficulty_level)

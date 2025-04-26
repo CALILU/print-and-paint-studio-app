@@ -369,7 +369,7 @@ def clone_video(video_id):
         technique_start_time=original_video.technique_start_time,
         technique_end_time=original_video.technique_end_time,
         difficulty_level=new_difficulty,
-        version=original_video.version + 1,
+        video_version=original_video.version + 1,
         published_at=datetime.utcnow()
     )
     
@@ -408,7 +408,7 @@ def add_video():
             technique_start_time=data.get('technique_start_time', 0),
             technique_end_time=data.get('technique_end_time'),
             difficulty_level=data.get('difficulty_level', 'beginner'),
-            version=1,  # Primera versión
+            video_version=1,  # Primera versión
             published_at=data.get('published_at')
         )
         
@@ -493,7 +493,7 @@ def update_video(video_id):
     video.technique_start_time = data.get('technique_start_time', video.technique_start_time)
     video.technique_end_time = data.get('technique_end_time', video.technique_end_time)
     video.difficulty_level = data.get('difficulty_level', video.difficulty_level)
-    video.version = data.get('version', video.version)  # Añadir esta línea
+    video.video_version = data.get('video_version', video.video_version)  # Cambiado de version a video_version
     
     # Actualizar técnicas si se proporcionaron
     if 'techniques' in data:
@@ -522,7 +522,7 @@ def update_video(video_id):
         'technique_start_time': video.technique_start_time,
         'technique_end_time': video.technique_end_time,
         'difficulty_level': video.difficulty_level,
-        'version': video.version,
+        'video_version': video.video_version,  # Cambiado de version a video_version
         'published_at': video.published_at.isoformat() if video.published_at else None
     })
 

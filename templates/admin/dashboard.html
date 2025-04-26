@@ -246,11 +246,289 @@
                         </div>
                     </div>
                 </div>
+                
+                <!-- Estadísticas Generales -->
+                <div class="row mt-4">
+                    <div class="col-md-12">
+                        <div class="card">
+                            <div class="card-header">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <i class="bi bi-bar-chart-fill me-2"></i> Estadísticas Generales
+                                    </div>
+                                    <button id="refreshStatsBtn" class="btn btn-sm btn-outline-light" onclick="loadStatistics()">
+                                        <i class="bi bi-arrow-clockwise"></i> Actualizar
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="card-body">
+                                <!-- Indicador de carga -->
+                                <div id="statisticsLoading" class="text-center py-5">
+                                    <div class="spinner-border text-primary" role="status">
+                                        <span class="visually-hidden">Cargando estadísticas...</span>
+                                    </div>
+                                    <p class="mt-3">Cargando estadísticas...</p>
+                                </div>
+                                
+                                <!-- Contenido de estadísticas -->
+                                <div id="statisticsContent" style="display: none;">
+                                    <!-- Pestañas de estadísticas -->
+                                    <ul class="nav nav-tabs" id="statsTab" role="tablist">
+                                        <li class="nav-item" role="presentation">
+                                            <button class="nav-link active" id="overview-tab" data-bs-toggle="tab" data-bs-target="#overview" type="button" role="tab" aria-controls="overview" aria-selected="true">
+                                                <i class="bi bi-grid-1x2-fill me-1"></i> Resumen
+                                            </button>
+                                        </li>
+                                        <li class="nav-item" role="presentation">
+                                            <button class="nav-link" id="users-tab" data-bs-toggle="tab" data-bs-target="#users-stats" type="button" role="tab" aria-controls="users-stats" aria-selected="false">
+                                                <i class="bi bi-people-fill me-1"></i> Usuarios
+                                            </button>
+                                        </li>
+                                        <li class="nav-item" role="presentation">
+                                            <button class="nav-link" id="videos-tab" data-bs-toggle="tab" data-bs-target="#videos-stats" type="button" role="tab" aria-controls="videos-stats" aria-selected="false">
+                                                <i class="bi bi-collection-play-fill me-1"></i> Videos
+                                            </button>
+                                        </li>
+                                        <li class="nav-item" role="presentation">
+                                            <button class="nav-link" id="techniques-tab" data-bs-toggle="tab" data-bs-target="#techniques-stats" type="button" role="tab" aria-controls="techniques-stats" aria-selected="false">
+                                                <i class="bi bi-list-check me-1"></i> Técnicas
+                                            </button>
+                                        </li>
+                                    </ul>
+                                    
+                                    <!-- Contenido de las pestañas -->
+                                    <div class="tab-content mt-3" id="statsTabContent">
+                                        <!-- Pestaña de Resumen -->
+                                        <div class="tab-pane fade show active" id="overview" role="tabpanel" aria-labelledby="overview-tab">
+                                            <div class="row">
+                                                <!-- Métricas principales -->
+                                                <div class="col-md-3 mb-4">
+                                                    <div class="card bg-light">
+                                                        <div class="card-body text-center">
+                                                            <h5 class="card-title"><i class="bi bi-people-fill text-primary"></i></h5>
+                                                            <h2 class="display-4 fw-bold" id="totalUsers">-</h2>
+                                                            <p class="text-muted">Usuarios registrados</p>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <div class="col-md-3 mb-4">
+                                                    <div class="card bg-light">
+                                                        <div class="card-body text-center">
+                                                            <h5 class="card-title"><i class="bi bi-collection-play text-success"></i></h5>
+                                                            <h2 class="display-4 fw-bold" id="totalVideos">-</h2>
+                                                            <p class="text-muted">Videos totales</p>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <div class="col-md-3 mb-4">
+                                                    <div class="card bg-light">
+                                                        <div class="card-body text-center">
+                                                            <h5 class="card-title"><i class="bi bi-bookmark-check-fill text-warning"></i></h5>
+                                                            <h2 class="display-4 fw-bold" id="totalTechniques">-</h2>
+                                                            <p class="text-muted">Técnicas creadas</p>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <div class="col-md-3 mb-4">
+                                                    <div class="card bg-light">
+                                                        <div class="card-body text-center">
+                                                            <h5 class="card-title"><i class="bi bi-heart-fill text-danger"></i></h5>
+                                                            <h2 class="display-4 fw-bold" id="totalFavorites">-</h2>
+                                                            <p class="text-muted">Favoritos totales</p>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            
+                                            <div class="row">
+                                                <!-- Videos populares -->
+                                                <div class="col-md-6 mb-4">
+                                                    <div class="card">
+                                                        <div class="card-header bg-light">
+                                                            <i class="bi bi-star-fill me-2"></i> Videos más populares
+                                                        </div>
+                                                        <div class="card-body">
+                                                            <div class="table-responsive">
+                                                                <table class="table table-hover">
+                                                                    <thead>
+                                                                        <tr>
+                                                                            <th>Título</th>
+                                                                            <th class="text-end">Favoritos</th>
+                                                                        </tr>
+                                                                    </thead>
+                                                                    <tbody id="popularVideosList">
+                                                                        <tr>
+                                                                            <td colspan="2" class="text-center">No hay datos disponibles</td>
+                                                                        </tr>
+                                                                    </tbody>
+                                                                </table>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                
+                                                <!-- Usuarios activos -->
+                                                <div class="col-md-6 mb-4">
+                                                    <div class="card">
+                                                        <div class="card-header bg-light">
+                                                            <i class="bi bi-person-check-fill me-2"></i> Usuarios más activos
+                                                        </div>
+                                                        <div class="card-body">
+                                                            <div class="table-responsive">
+                                                                <table class="table table-hover">
+                                                                    <thead>
+                                                                        <tr>
+                                                                            <th>Usuario</th>
+                                                                            <th class="text-end">Favoritos</th>
+                                                                        </tr>
+                                                                    </thead>
+                                                                    <tbody id="activeUsersList">
+                                                                        <tr>
+                                                                            <td colspan="2" class="text-center">No hay datos disponibles</td>
+                                                                        </tr>
+                                                                    </tbody>
+                                                                </table>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        
+                                        <!-- Pestaña de Usuarios -->
+                                        <div class="tab-pane fade" id="users-stats" role="tabpanel" aria-labelledby="users-tab">
+                                            <div class="row">
+                                                <div class="col-md-6 mb-4">
+                                                    <div class="card">
+                                                        <div class="card-header bg-light">
+                                                            <i class="bi bi-person-badge me-2"></i> Distribución de usuarios
+                                                        </div>
+                                                        <div class="card-body">
+                                                            <div class="d-flex justify-content-between mb-3">
+                                                                <div class="text-center">
+                                                                    <h5 id="regularUsers">-</h5>
+                                                                    <p class="text-muted">Usuarios</p>
+                                                                </div>
+                                                                <div class="text-center">
+                                                                    <h5 id="adminUsers">-</h5>
+                                                                    <p class="text-muted">Administradores</p>
+                                                                </div>
+                                                            </div>
+                                                            <div id="usersChart" style="height: 250px;"></div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                
+                                                <div class="col-md-6 mb-4">
+                                                    <div class="card">
+                                                        <div class="card-header bg-light">
+                                                            <i class="bi bi-bar-chart-line me-2"></i> Usuarios por nivel de experiencia
+                                                        </div>
+                                                        <div class="card-body">
+                                                            <div id="userLevelsChart" style="height: 300px;"></div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        
+                                        <!-- Pestaña de Videos -->
+                                        <div class="tab-pane fade" id="videos-stats" role="tabpanel" aria-labelledby="videos-tab">
+                                            <div class="row">
+                                                <div class="col-md-6 mb-4">
+                                                    <div class="card">
+                                                        <div class="card-header bg-light">
+                                                            <i class="bi bi-bar-chart-line me-2"></i> Videos por nivel de dificultad
+                                                        </div>
+                                                        <div class="card-body">
+                                                            <div id="videoDifficultyChart" style="height: 300px;"></div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                
+                                                <div class="col-md-6 mb-4">
+                                                    <div class="card">
+                                                        <div class="card-header bg-light">
+                                                            <i class="bi bi-pie-chart me-2"></i> Videos por categoría
+                                                        </div>
+                                                        <div class="card-body">
+                                                            <div id="videoCategoriesChart" style="height: 300px;"></div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            
+                                            <div class="row">
+                                                <div class="col-md-12 mb-4">
+                                                    <div class="card">
+                                                        <div class="card-header bg-light">
+                                                            <i class="bi bi-list-ol me-2"></i> Videos con más técnicas
+                                                        </div>
+                                                        <div class="card-body">
+                                                            <div class="table-responsive">
+                                                                <table class="table table-hover">
+                                                                    <thead>
+                                                                        <tr>
+                                                                            <th>Título</th>
+                                                                            <th class="text-end">Número de técnicas</th>
+                                                                        </tr>
+                                                                    </thead>
+                                                                    <tbody id="videosWithMostTechniquesList">
+                                                                        <tr>
+                                                                            <td colspan="2" class="text-center">No hay datos disponibles</td>
+                                                                        </tr>
+                                                                    </tbody>
+                                                                </table>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        
+                                        <!-- Pestaña de Técnicas -->
+                                        <div class="tab-pane fade" id="techniques-stats" role="tabpanel" aria-labelledby="techniques-tab">
+                                            <div class="row">
+                                                <div class="col-md-4 mb-4">
+                                                    <div class="card bg-light">
+                                                        <div class="card-body text-center">
+                                                            <h5 class="card-title">Total de técnicas</h5>
+                                                            <h2 class="display-4 fw-bold" id="techniquesCount">-</h2>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                
+                                                <div class="col-md-4 mb-4">
+                                                    <div class="card bg-light">
+                                                        <div class="card-body text-center">
+                                                            <h5 class="card-title">Promedio por video</h5>
+                                                            <h2 class="display-4 fw-bold" id="avgTechniquesPerVideo">-</h2>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                
+                                                <div class="col-md-4 mb-4">
+                                                    <div class="card bg-light">
+                                                        <div class="card-body text-center">
+                                                            <h5 class="card-title">Tiempo total de contenido</h5>
+                                                            <h2 class="display-4 fw-bold" id="totalTechniquesDuration">-</h2>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </main>
         </div>
     </div>
     
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
     <script>
         // Cargar estadísticas al iniciar
         document.addEventListener('DOMContentLoaded', () => {
@@ -333,3 +611,308 @@
                     html += '<h5 class="mt-3">Muestra de videos:</h5>';
                     if (data.sample_videos.length === 0) {
                         html += '<p>No hay videos en la base de datos.</p>';
+                    } else {
+                        html += '<div class="table-responsive"><table class="table table-striped">';
+                        html += '<thead><tr><th>ID</th><th>Título</th><th>Categoría</th><th>Dificultad</th></tr></thead>';
+                        html += '<tbody>';
+                        data.sample_videos.forEach(video => {
+                            html += `
+                                <tr>
+                                    <td>${video.id}</td>
+                                    <td>${video.title}</td>
+                                    <td>${video.category || 'Sin categoría'}</td>
+                                    <td>${video.difficulty_level}</td>
+                                </tr>
+                            `;
+                        });
+                        html += '</tbody></table></div>';
+                    }
+                }
+                
+                diagnosticResult.innerHTML = html;
+            })
+            .catch(error => {
+                diagnosticResult.innerHTML = `
+                    <div class="alert alert-danger">
+                        <i class="bi bi-exclamation-triangle me-2"></i> Error al ejecutar el diagnóstico: ${error.message}
+                    </div>
+                `;
+            });
+        }
+        
+        function confirmReset() {
+            if (confirm('¿Estás seguro de que quieres reiniciar la base de datos? Todos los datos serán eliminados.')) {
+                fetch('/debug/reset-db', {
+                    method: 'POST'
+                })
+                .then(response => response.json())
+                .then(data => {
+                    alert(data.message);
+                    location.reload();
+                })
+                .catch(error => {
+                    alert('Error al reiniciar la base de datos: ' + error.message);
+                });
+            }
+        }
+
+        // Función para cargar las estadísticas detalladas
+        async function loadStatistics() {
+            const loadingEl = document.getElementById('statisticsLoading');
+            const contentEl = document.getElementById('statisticsContent');
+            
+            // Mostrar carga
+            loadingEl.style.display = 'block';
+            contentEl.style.display = 'none';
+            
+            try {
+                const response = await fetch('/api/admin/statistics');
+                
+                if (!response.ok) {
+                    throw new Error(`Error HTTP: ${response.status}`);
+                }
+                
+                const data = await response.json();
+                console.log('Estadísticas cargadas:', data);
+                
+                // Actualizar los datos en la interfaz
+                updateDashboardStatistics(data);
+                
+                // Ocultar carga y mostrar contenido
+                loadingEl.style.display = 'none';
+                contentEl.style.display = 'block';
+                
+            } catch (error) {
+                console.error('Error al cargar estadísticas:', error);
+                loadingEl.innerHTML = `
+                    <div class="alert alert-danger">
+                        <i class="bi bi-exclamation-triangle me-2"></i> Error al cargar estadísticas: ${error.message}
+                        <button class="btn btn-outline-danger btn-sm mt-2" onclick="loadStatistics()">
+                            <i class="bi bi-arrow-clockwise me-2"></i> Intentar de nuevo
+                        </button>
+                    </div>
+                `;
+            }
+        }
+        
+        function updateDashboardStatistics(data) {
+            // Métricas principales
+            document.getElementById('totalUsers').textContent = data.users.total;
+            document.getElementById('totalVideos').textContent = data.videos.total;
+            document.getElementById('totalTechniques').textContent = data.techniques.total;
+            document.getElementById('totalFavorites').textContent = data.favorites.total;
+            
+            // Usuarios
+            document.getElementById('regularUsers').textContent = data.users.regular;
+            document.getElementById('adminUsers').textContent = data.users.admin;
+            
+            // Técnicas
+            document.getElementById('techniquesCount').textContent = data.techniques.total;
+            document.getElementById('avgTechniquesPerVideo').textContent = data.techniques.avg_per_video;
+            document.getElementById('totalTechniquesDuration').textContent = data.techniques.total_duration_formatted;
+            
+            // Videos populares
+            const popularVideosList = document.getElementById('popularVideosList');
+            if (data.favorites.popular_videos && data.favorites.popular_videos.length > 0) {
+                popularVideosList.innerHTML = '';
+                data.favorites.popular_videos.forEach(video => {
+                    popularVideosList.innerHTML += `
+                        <tr>
+                            <td><a href="javascript:void(0)" onclick="editVideo(${video.id})">${video.title}</a></td>
+                            <td class="text-end">${video.favorites_count}</td>
+                        </tr>
+                    `;
+                });
+            } else {
+                popularVideosList.innerHTML = '<tr><td colspan="2" class="text-center">No hay datos disponibles</td></tr>';
+            }
+            
+            // Usuarios activos
+            const activeUsersList = document.getElementById('activeUsersList');
+            if (data.favorites.active_users && data.favorites.active_users.length > 0) {
+                activeUsersList.innerHTML = '';
+                data.favorites.active_users.forEach(user => {
+                    activeUsersList.innerHTML += `
+                        <tr>
+                            <td>${user.username}</td>
+                            <td class="text-end">${user.favorites_count}</td>
+                        </tr>
+                    `;
+                });
+            } else {
+                activeUsersList.innerHTML = '<tr><td colspan="2" class="text-center">No hay datos disponibles</td></tr>';
+            }
+            
+            // Videos con más técnicas
+            const videosWithTechniquesList = document.getElementById('videosWithMostTechniquesList');
+            if (data.techniques.videos_with_most_techniques && data.techniques.videos_with_most_techniques.length > 0) {
+                videosWithTechniquesList.innerHTML = '';
+                data.techniques.videos_with_most_techniques.forEach(video => {
+                    videosWithTechniquesList.innerHTML += `
+                        <tr>
+                            <td><a href="javascript:void(0)" onclick="editVideo(${video.id})">${video.title}</a></td>
+                            <td class="text-end">${video.techniques_count}</td>
+                        </tr>
+                    `;
+                });
+            } else {
+                videosWithTechniquesList.innerHTML = '<tr><td colspan="2" class="text-center">No hay datos disponibles</td></tr>';
+            }
+            
+            // Generar gráficos
+            createUsersChart(data.users);
+            createUserLevelsChart(data.users.by_level);
+            createVideoDifficultyChart(data.videos.by_level);
+            createVideoCategoriesChart(data.videos.by_category);
+        }
+        
+        function createUsersChart(userData) {
+            const options = {
+                series: [userData.regular, userData.admin],
+                chart: {
+                    type: 'donut',
+                    height: 250
+                },
+                labels: ['Usuarios', 'Administradores'],
+                colors: ['#6c5ce7', '#dc3545'],
+                legend: {
+                    position: 'bottom'
+                }
+            };
+            
+            const chart = new ApexCharts(document.querySelector("#usersChart"), options);
+            if (document.querySelector("#usersChart").innerHTML === '') {
+                chart.render();
+            } else {
+                chart.updateOptions(options);
+            }
+        }
+        
+        function createUserLevelsChart(levelsData) {
+            const options = {
+                series: [{
+                    name: 'Usuarios',
+                    data: [levelsData.beginner, levelsData.intermediate, levelsData.expert]
+                }],
+                chart: {
+                    type: 'bar',
+                    height: 300,
+                    toolbar: {
+                        show: false
+                    }
+                },
+                plotOptions: {
+                    bar: {
+                        horizontal: true,
+                        dataLabels: {
+                            position: 'top',
+                        },
+                    }
+                },
+                colors: ['#6c5ce7'],
+                dataLabels: {
+                    enabled: true,
+                    formatter: function (val) {
+                        return val;
+                    },
+                    offsetX: 20,
+                    style: {
+                        fontSize: '12px',
+                        colors: ['#304758']
+                    }
+                },
+                xaxis: {
+                    categories: ['Principiante', 'Intermedio', 'Experto'],
+                }
+            };
+            
+            const chart = new ApexCharts(document.querySelector("#userLevelsChart"), options);
+            if (document.querySelector("#userLevelsChart").innerHTML === '') {
+                chart.render();
+            } else {
+                chart.updateOptions(options);
+            }
+        }
+        
+        function createVideoDifficultyChart(difficultyData) {
+            const options = {
+                series: [{
+                    name: 'Videos',
+                    data: [difficultyData.beginner, difficultyData.intermediate, difficultyData.expert]
+                }],
+                chart: {
+                    type: 'bar',
+                    height: 300,
+                    toolbar: {
+                        show: false
+                    }
+                },
+                plotOptions: {
+                    bar: {
+                        horizontal: false,
+                        columnWidth: '55%',
+                        endingShape: 'rounded'
+                    },
+                },
+                colors: ['#20c997'],
+                dataLabels: {
+                    enabled: true
+                },
+                xaxis: {
+                    categories: ['Principiante', 'Intermedio', 'Experto'],
+                }
+            };
+            
+            const chart = new ApexCharts(document.querySelector("#videoDifficultyChart"), options);
+            if (document.querySelector("#videoDifficultyChart").innerHTML === '') {
+                chart.render();
+            } else {
+                chart.updateOptions(options);
+            }
+        }
+        
+        function createVideoCategoriesChart(categoriesData) {
+            // Preparar datos para el gráfico
+            const labels = categoriesData.map(cat => cat.name);
+            const series = categoriesData.map(cat => cat.count);
+            
+            const options = {
+                series: series,
+                chart: {
+                    type: 'pie',
+                    height: 300
+                },
+                labels: labels,
+                responsive: [{
+                    breakpoint: 480,
+                    options: {
+                        chart: {
+                            height: 200
+                        },
+                        legend: {
+                            position: 'bottom'
+                        }
+                    }
+                }]
+            };
+            
+            const chart = new ApexCharts(document.querySelector("#videoCategoriesChart"), options);
+            if (document.querySelector("#videoCategoriesChart").innerHTML === '') {
+                chart.render();
+            } else {
+                chart.updateOptions(options);
+            }
+        }
+        
+        // Función para navegar a la edición de un video (si existe)
+        function editVideo(videoId) {
+            // Verificar si la función ya existe
+            if (typeof window.goToTechniques === 'function') {
+                window.goToTechniques(videoId);
+            } else {
+                window.location.href = `/admin/videos?edit=${videoId}`;
+            }
+        }
+    </script>
+</body>
+</html>

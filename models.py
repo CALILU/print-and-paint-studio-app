@@ -33,12 +33,13 @@ class Video(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     title = db.Column(db.String(255), nullable=False)
     description = db.Column(db.Text)
-    video_id = db.Column(db.String(20), unique=True, nullable=False)  # YouTube video ID
+    video_id = db.Column(db.String(20), nullable=False)
     channel = db.Column(db.String(100))
     category = db.Column(db.String(50), default='Sin categoría')
-    technique_start_time = db.Column(db.Integer, default=0)  # Tiempo en segundos donde comienza la técnica
-    technique_end_time = db.Column(db.Integer)  # Tiempo en segundos donde termina la técnica
-    difficulty_level = db.Column(db.String(20), default='beginner')  # 'beginner', 'intermediate', 'expert'
+    technique_start_time = db.Column(db.Integer, default=0)
+    technique_end_time = db.Column(db.Integer)
+    difficulty_level = db.Column(db.String(20), default='beginner')
+    video_version = db.Column(db.Integer, default=1)  # Cambiado de version a video_version
     published_at = db.Column(db.DateTime, default=datetime.utcnow)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     
@@ -47,6 +48,9 @@ class Video(db.Model):
     
     # Relación con las técnicas
     techniques = db.relationship('Technique', backref='video', lazy=True, cascade='all, delete-orphan')
+    
+    # Restricción única compuesta
+    __table_args__ = (db.UniqueConstraint('video_id', 'difficulty_level', name='video_level_uc'),)
     
     def __repr__(self):
         return f'<Video {self.title}>'
