@@ -369,7 +369,7 @@ def clone_video(video_id):
         technique_start_time=original_video.technique_start_time,
         technique_end_time=original_video.technique_end_time,
         difficulty_level=new_difficulty,
-        video_version=original_video.version + 1,
+        video_version=original_video.video_version + 1,
         published_at=datetime.utcnow()
     )
     
@@ -437,7 +437,7 @@ def add_video():
             'technique_start_time': new_video.technique_start_time,
             'technique_end_time': new_video.technique_end_time,
             'difficulty_level': new_video.difficulty_level,
-            'version': new_video.version,
+            'video_version': new_video.version,
             'published_at': new_video.published_at.isoformat() if new_video.published_at else None
         }), 201
     except Exception as e:
@@ -459,7 +459,7 @@ def get_video(video_id):
         'technique_start_time': video.technique_start_time,
         'technique_end_time': video.technique_end_time,
         'difficulty_level': video.difficulty_level,
-        'version': video.version,
+        'video_version': video.video_version,
         'published_at': video.published_at.isoformat() if video.published_at else None
     })
 
@@ -635,7 +635,7 @@ def get_videos():
             'technique_start_time': video.technique_start_time,
             'technique_end_time': video.technique_end_time,
             'difficulty_level': video.difficulty_level,
-            'version': video.version,
+            'version': video.video_version,
             'published_at': video.published_at.isoformat() if video.published_at else None,
             'techniques': techniques_data
         })
@@ -667,7 +667,7 @@ def api_get_video(video_id):
         'technique_start_time': video.technique_start_time,
         'technique_end_time': video.technique_end_time,
         'difficulty_level': video.difficulty_level,
-        'version': video.version,
+        'video_version': video.video_version,
         'published_at': video.published_at.isoformat() if video.published_at else None,
         'techniques': techniques_data
     })
