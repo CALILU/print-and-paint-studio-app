@@ -405,6 +405,7 @@ def add_video():
             video_id=data.get('video_id'),
             channel=data.get('channel'),
             category=data.get('category', 'Sin categoría'),
+            category_id=data.get('category_id'),
             technique_start_time=data.get('technique_start_time', 0),
             technique_end_time=data.get('technique_end_time'),
             difficulty_level=data.get('difficulty_level', 'beginner'),
@@ -490,6 +491,7 @@ def update_video(video_id):
     video.video_id = data.get('video_id', video.video_id)
     video.channel = data.get('channel', video.channel)
     video.category = data.get('category', video.category)
+    video.category_id = data.get('category_id', video.category_id)
     video.technique_start_time = data.get('technique_start_time', video.technique_start_time)
     video.technique_end_time = data.get('technique_end_time', video.technique_end_time)
     video.difficulty_level = data.get('difficulty_level', video.difficulty_level)
@@ -633,6 +635,7 @@ def get_videos():
                 'video_id': video.video_id,
                 'channel': video.channel,
                 'category': video.category,
+                'category_id': video.category_id,
                 'technique_start_time': video.technique_start_time,
                 'technique_end_time': video.technique_end_time,
                 'difficulty_level': video.difficulty_level,
@@ -671,6 +674,7 @@ def api_get_video(video_id):
             'video_id': video.video_id,
             'channel': video.channel,
             'category': video.category,
+            'category_id': video.category_id,
             'technique_start_time': video.technique_start_time,
             'technique_end_time': video.technique_end_time,
             'difficulty_level': video.difficulty_level,
@@ -697,6 +701,118 @@ def admin_users():
         except Exception as e2:
             print(f"Error con plantilla alternativa: {str(e2)}")
             raise e
+        
+@app.route('/admin/categories')
+@admin_required
+def admin_categories():
+    categories = Category.query.all()
+    user = User.query.get(session['user_id'])
+    try:
+        return render_template('admin/categories.html', categories=categories, user=user)
+    except Exception as e:
+        print(f"Error al cargar la plantilla admin categories: {str(e)}")
+        try:
+            return render_template('user/admin/categories.html', categories=categories, user=user)
+        except Exception as e2:
+            print(f"Error con plantilla alternativa: {str(e2)}")
+            raise e
+
+@app.route('/admin/categories', methods=['POST'])
+@admin_required
+def add_category():
+    try:
+        data = request.json
+        
+        name = data.get('name')
+        description = data.get('description', '')
+        
+        # Verificar si la categoría ya existe
+        existing_category = Category.query.filter_by(name=name).first()
+        if existing_category:
+            return jsonify({'error': 'Esta categoría ya existe'}), 400
+        
+        # Crear nueva categoría
+        new_category = Category(
+            name=name,
+            description=description
+        )
+        
+        db.session.add(new_category)
+        db.session.commit()
+        
+        return jsonify({
+            'id': new_category.id,
+            'name': new_category.name,
+            'description': new_category.description,
+            'created_at': new_category.created_at.isoformat()
+        }), 201
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/admin/categories/<int:category_id>', methods=['GET'])
+@admin_required
+def get_category(category_id):
+    category = Category.query.get_or_404(category_id)
+    return jsonify({
+        'id': category.id,
+        'name': category.name,
+        'description': category.description,
+        'created_at': category.created_at.isoformat()
+    })
+
+@app.route('/admin/categories/<int:category_id>', methods=['PUT'])
+@admin_required
+def update_category(category_id):
+    category = Category.query.get_or_404(category_id)
+    data = request.json
+    
+    # Verificar si el nuevo nombre ya existe
+    if 'name' in data and data['name'] != category.name:
+        existing_category = Category.query.filter_by(name=data['name']).first()
+        if existing_category:
+            return jsonify({'error': 'Esta categoría ya existe'}), 400
+        category.name = data['name']
+    
+    if 'description' in data:
+        category.description = data['description']
+    
+    db.session.commit()
+    
+    return jsonify({
+        'id': category.id,
+        'name': category.name,
+        'description': category.description,
+        'created_at': category.created_at.isoformat()
+    })
+
+@app.route('/admin/categories/<int:category_id>', methods=['DELETE'])
+@admin_required
+def delete_category(category_id):
+    category = Category.query.get_or_404(category_id)
+    
+    # Actualizar videos que usan esta categoría
+    videos_with_category = Video.query.filter_by(category_id=category_id).all()
+    for video in videos_with_category:
+        video.category_id = None
+        video.category = 'Sin categoría'
+    
+    db.session.delete(category)
+    db.session.commit()
+    
+    return '', 204
+
+@app.route('/api/categories', methods=['GET'])
+def get_categories():
+    categories = Category.query.all()
+    result = []
+    for category in categories:
+        result.append({
+            'id': category.id,
+            'name': category.name,
+            'description': category.description
+        })
+    return jsonify(result)
 
 @app.route('/admin/users', methods=['POST'])
 @admin_required

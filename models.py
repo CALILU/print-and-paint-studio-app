@@ -36,6 +36,7 @@ class Video(db.Model):
     video_id = db.Column(db.String(20), nullable=False)
     channel = db.Column(db.String(100))
     category = db.Column(db.String(50), default='Sin categoría')
+    category_id = db.Column(db.Integer, db.ForeignKey('categories.id'))
     technique_start_time = db.Column(db.Integer, default=0)
     technique_end_time = db.Column(db.Integer)
     difficulty_level = db.Column(db.String(20), default='beginner')
@@ -81,3 +82,17 @@ class Technique(db.Model):
     
     def __repr__(self):
         return f'<Technique {self.name} for video_id={self.video_id}>'
+    
+class Category(db.Model):
+    __tablename__ = 'categories'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(50), unique=True, nullable=False)
+    description = db.Column(db.String(255))
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    # Relación con los videos
+    videos = db.relationship('Video', backref='category_relation', lazy=True)
+    
+    def __repr__(self):
+        return f'<Category {self.name}>'    

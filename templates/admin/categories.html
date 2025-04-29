@@ -1,0 +1,509 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Print and Paint Studio - Gestión de Categorías</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css" rel="stylesheet">
+    <style>
+        body {
+            background-color: #f8f9fa;
+            min-height: 100vh;
+        }
+        .sidebar {
+            background-color: #343a40;
+            color: white;
+            height: 100vh;
+            position: fixed;
+            padding-top: 20px;
+        }
+        .sidebar a {
+            color: #ced4da;
+            text-decoration: none;
+            display: block;
+            padding: 10px 15px;
+            transition: all 0.3s;
+        }
+        .sidebar a:hover {
+            background-color: #495057;
+            color: white;
+        }
+        .sidebar a.active {
+            background-color: #dc3545;
+            color: white;
+        }
+        .sidebar-heading {
+            padding: 0 15px 20px 15px;
+            font-size: 1.2rem;
+            border-bottom: 1px solid #495057;
+            margin-bottom: 20px;
+        }
+        .content {
+            padding: 20px;
+            margin-left: 250px;
+        }
+        .content-header {
+            margin-bottom: 30px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid #dee2e6;
+        }
+        .card {
+            box-shadow: 0 0 15px rgba(0, 0, 0, 0.1);
+            margin-bottom: 20px;
+        }
+        .card-header {
+            background-color: #dc3545;
+            color: white;
+        }
+        .admin-badge {
+            background-color: #dc3545;
+            color: white;
+            padding: 5px 10px;
+            border-radius: 5px;
+            font-size: 0.8rem;
+            margin-left: 10px;
+        }
+        .btn-primary {
+            background-color: #dc3545;
+            border-color: #dc3545;
+        }
+        .btn-primary:hover {
+            background-color: #c82333;
+            border-color: #bd2130;
+        }
+        @media (max-width: 768px) {
+            .sidebar {
+                width: 100%;
+                position: relative;
+                height: auto;
+            }
+            .content {
+                margin-left: 0;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container-fluid">
+        <div class="row">
+            <!-- Sidebar -->
+            <div class="col-md-3 col-lg-2 d-md-block sidebar collapse">
+                <div class="sidebar-heading">
+                    Print and Paint Studio <span class="admin-badge">ADMIN</span>
+                </div>
+                <ul class="nav flex-column">
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('admin_dashboard') }}">
+                            <i class="bi bi-speedometer2 me-2"></i> Dashboard
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('admin_videos') }}">
+                            <i class="bi bi-collection-play me-2"></i> Gestión de Videos
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link active" href="{{ url_for('admin_categories') }}">
+                            <i class="bi bi-tags me-2"></i> Gestión de Categorías
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('admin_users') }}">
+                            <i class="bi bi-people me-2"></i> Gestión de Usuarios
+                        </a>
+                    </li>
+                    <li class="nav-item mt-5">
+                        <a class="nav-link" href="{{ url_for('logout') }}">
+                            <i class="bi bi-box-arrow-left me-2"></i> Cerrar Sesión
+                        </a>
+                    </li>
+                </ul>
+            </div>
+            
+            <!-- Main Content -->
+            <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4 content">
+                <div class="content-header">
+                    <h1>Gestión de Categorías</h1>
+                    <p>Administra las categorías para los videos</p>
+                </div>
+                
+                <div class="row mb-4">
+                    <div class="col-md-12">
+                        <div class="card">
+                            <div class="card-header">
+                                <i class="bi bi-plus-circle me-2"></i> Crear Nueva Categoría
+                            </div>
+                            <div class="card-body">
+                                <form id="categoryForm">
+                                    <div class="row">
+                                        <div class="col-md-6">
+                                            <div class="mb-3">
+                                                <label for="name" class="form-label">Nombre de la categoría</label>
+                                                <input type="text" class="form-control" id="name" required>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <div class="mb-3">
+                                                <label for="description" class="form-label">Descripción</label>
+                                                <input type="text" class="form-control" id="description">
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <button type="submit" class="btn btn-primary">Crear Categoría</button>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="row mb-4">
+                    <div class="col-md-12">
+                        <div class="card">
+                            <div class="card-header">
+                                <i class="bi bi-search me-2"></i> Buscar Categorías
+                            </div>
+                            <div class="card-body">
+                                <div class="row">
+                                    <div class="col-md-8">
+                                        <input type="text" class="form-control" id="searchInput" placeholder="Buscar por nombre...">
+                                    </div>
+                                    <div class="col-md-4">
+                                        <button class="btn btn-primary w-100" onclick="searchCategories()">Buscar</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <h3>Categorías Registradas <button id="refreshBtn" class="btn btn-sm btn-outline-primary ms-2" onclick="fetchCategories()"><i class="bi bi-arrow-clockwise"></i> Actualizar</button></h3>
+                
+                <div class="table-responsive">
+                    <table class="table table-striped table-hover">
+                        <thead class="table-dark">
+                            <tr>
+                                <th>ID</th>
+                                <th>Nombre</th>
+                                <th>Descripción</th>
+                                <th>Fecha de creación</th>
+                                <th>Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody id="categories-container">
+                            <tr>
+                                <td colspan="5" class="text-center">
+                                    <div class="spinner-border text-primary" role="status">
+                                        <span class="visually-hidden">Cargando...</span>
+                                    </div>
+                                    <p>Cargando categorías...</p>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                
+                <!-- Modal para editar categoría -->
+                <div class="modal fade" id="editCategoryModal" tabindex="-1" aria-labelledby="editCategoryModalLabel" aria-hidden="true">
+                    <div class="modal-dialog">
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <h5 class="modal-title" id="editCategoryModalLabel">Editar Categoría</h5>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                            </div>
+                            <div class="modal-body">
+                                <form id="editCategoryForm">
+                                    <input type="hidden" id="edit_category_id">
+                                    <div class="mb-3">
+                                        <label for="edit_name" class="form-label">Nombre de la categoría</label>
+                                        <input type="text" class="form-control" id="edit_name" required>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label for="edit_description" class="form-label">Descripción</label>
+                                        <input type="text" class="form-control" id="edit_description">
+                                    </div>
+                                </form>
+                            </div>
+                            <div class="modal-footer">
+                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                                <button type="button" class="btn btn-primary" onclick="updateCategory()">Guardar Cambios</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Modal de confirmación -->
+                <div class="modal fade" id="confirmDeleteModal" tabindex="-1" aria-labelledby="confirmDeleteModalLabel" aria-hidden="true">
+                    <div class="modal-dialog">
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <h5 class="modal-title" id="confirmDeleteModalLabel">Confirmar Eliminación</h5>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                            </div>
+                            <div class="modal-body">
+                                <p>¿Estás seguro de que deseas eliminar esta categoría?</p>
+                                <div class="alert alert-warning">
+                                    <i class="bi bi-exclamation-triangle me-2"></i> Los videos asociados a esta categoría se marcarán como 'Sin categoría'.
+                                </div>
+                            </div>
+                            <div class="modal-footer">
+                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                                <button type="button" class="btn btn-danger" id="deleteConfirmBtn">Eliminar</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </main>
+        </div>
+    </div>
+    
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Variables globales
+        let allCategories = [];
+        let currentSearchTerm = '';
+        let editModal;
+        let confirmDeleteModal;
+        let categoryIdToDelete = null;
+        
+        document.addEventListener('DOMContentLoaded', () => {
+            // Cargar categorías al inicio
+            fetchCategories();
+            
+            // Inicializar modales
+            editModal = new bootstrap.Modal(document.getElementById('editCategoryModal'));
+            confirmDeleteModal = new bootstrap.Modal(document.getElementById('confirmDeleteModal'));
+            
+            // Configurar botón de eliminación
+            document.getElementById('deleteConfirmBtn').addEventListener('click', () => {
+                if (categoryIdToDelete) {
+                    deleteCategory(categoryIdToDelete);
+                    categoryIdToDelete = null;
+                    confirmDeleteModal.hide();
+                }
+            });
+            
+            // Configurar el formulario de creación de categoría
+            const categoryForm = document.getElementById('categoryForm');
+            categoryForm.addEventListener('submit', (e) => {
+                e.preventDefault();
+                createCategory();
+            });
+            
+            // Configurar búsqueda en tiempo real
+            const searchInput = document.getElementById('searchInput');
+            searchInput.addEventListener('input', () => {
+                currentSearchTerm = searchInput.value.toLowerCase();
+                filterCategories();
+            });
+        });
+        
+        async function fetchCategories() {
+            const container = document.getElementById('categories-container');
+            container.innerHTML = `
+                <tr>
+                    <td colspan="5" class="text-center">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">Cargando...</span>
+                        </div>
+                        <p>Cargando categorías...</p>
+                    </td>
+                </tr>
+            `;
+            
+            try {
+                const response = await fetch('/api/categories');
+                
+                if (!response.ok) {
+                    throw new Error('Error al cargar categorías');
+                }
+                
+                const categories = await response.json();
+                
+                // Guardar en variable global
+                allCategories = categories;
+                
+                displayCategories(categories);
+            } catch (error) {
+                console.error('Error:', error);
+                container.innerHTML = `
+                    <tr>
+                        <td colspan="5" class="text-center text-danger">
+                            Error al cargar categorías: ${error.message}
+                        </td>
+                    </tr>
+                `;
+            }
+        }
+        
+        function displayCategories(categories) {
+            const container = document.getElementById('categories-container');
+            container.innerHTML = '';
+            
+            if (categories.length === 0) {
+                container.innerHTML = `
+                    <tr>
+                        <td colspan="5" class="text-center">
+                            No se encontraron categorías
+                        </td>
+                    </tr>
+                `;
+                return;
+            }
+            
+            categories.forEach(category => {
+                const row = document.createElement('tr');
+                
+                row.innerHTML = `
+                    <td>${category.id}</td>
+                    <td>${category.name}</td>
+                    <td>${category.description || '-'}</td>
+                    <td>${new Date(category.created_at).toLocaleString()}</td>
+                    <td>
+                        <button class="btn btn-sm btn-primary me-2" onclick="openEditModal(${category.id})">
+                            <i class="bi bi-pencil"></i> Editar
+                        </button>
+                        <button class="btn btn-sm btn-danger" onclick="confirmDelete(${category.id})">
+                            <i class="bi bi-trash"></i> Eliminar
+                        </button>
+                    </td>
+                `;
+                
+                container.appendChild(row);
+            });
+        }
+        
+        function filterCategories() {
+            let filteredCategories = [...allCategories];
+            
+            if (currentSearchTerm) {
+                filteredCategories = filteredCategories.filter(category => {
+                    return category.name.toLowerCase().includes(currentSearchTerm) || 
+                           (category.description && category.description.toLowerCase().includes(currentSearchTerm));
+                });
+            }
+            
+            displayCategories(filteredCategories);
+        }
+        
+        function searchCategories() {
+            currentSearchTerm = document.getElementById('searchInput').value.toLowerCase();
+            filterCategories();
+        }
+        
+        async function createCategory() {
+            const name = document.getElementById('name').value;
+            const description = document.getElementById('description').value;
+            
+            const categoryData = {
+                name,
+                description
+            };
+            
+            try {
+                const response = await fetch('/admin/categories', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(categoryData)
+                });
+                
+                const data = await response.json();
+                
+                if (!response.ok) {
+                    throw new Error(data.error || 'Error al crear la categoría');
+                }
+                
+                // Limpiar formulario
+                document.getElementById('categoryForm').reset();
+                
+                // Recargar categorías
+                fetchCategories();
+                
+                alert('Categoría creada correctamente');
+                
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Hubo un error al crear la categoría: ' + error.message);
+            }
+        }
+        
+        function openEditModal(categoryId) {
+            const category = allCategories.find(c => c.id === categoryId);
+            if (!category) return;
+            
+            document.getElementById('edit_category_id').value = category.id;
+            document.getElementById('edit_name').value = category.name;
+            document.getElementById('edit_description').value = category.description || '';
+            
+            editModal.show();
+        }
+        
+        async function updateCategory() {
+            const categoryId = document.getElementById('edit_category_id').value;
+            const name = document.getElementById('edit_name').value;
+            const description = document.getElementById('edit_description').value;
+            
+            const categoryData = {
+                name,
+                description
+            };
+            
+            try {
+                const response = await fetch(`/admin/categories/${categoryId}`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(categoryData)
+                });
+                
+                const data = await response.json();
+                
+                if (!response.ok) {
+                    throw new Error(data.error || 'Error al actualizar la categoría');
+                }
+                
+                // Cerrar modal
+                editModal.hide();
+                
+                // Recargar categorías
+                fetchCategories();
+                
+                alert('Categoría actualizada correctamente');
+                
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Hubo un error al actualizar la categoría: ' + error.message);
+            }
+        }
+        
+        function confirmDelete(categoryId) {
+            categoryIdToDelete = categoryId;
+            confirmDeleteModal.show();
+        }
+        
+        async function deleteCategory(categoryId) {
+            try {
+                const response = await fetch(`/admin/categories/${categoryId}`, {
+                    method: 'DELETE'
+                });
+                
+                if (!response.ok) {
+                    throw new Error('Error al eliminar la categoría');
+                }
+                
+                // Recargar categorías
+                fetchCategories();
+                
+                alert('Categoría eliminada correctamente');
+                
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Hubo un error al eliminar la categoría: ' + error.message);
+            }
+        }
+    </script>
+</body>
+</html>
