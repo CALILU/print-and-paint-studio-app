@@ -52,19 +52,19 @@ WHERE NOT EXISTS (
 );
 
 -- Insertar algunos videos de ejemplo si no existen
-INSERT INTO videos (title, description, video_id, channel, category, difficulty_level, technique_start_time, technique_end_time, version)
+INSERT INTO videos (title, description, video_id, channel, category, difficulty_level, technique_start_time, technique_end_time, video_version)
 SELECT 'Pintura de base para miniaturas', 'Aprende la técnica básica para pintar la base de tus miniaturas.', 'dQw4w9WgXcQ', 'Print and Paint', 'Pintura Base', 'beginner', 60, 180, 1
 WHERE NOT EXISTS (
     SELECT 1 FROM videos WHERE video_id = 'dQw4w9WgXcQ' AND difficulty_level = 'beginner'
 );
 
-INSERT INTO videos (title, description, video_id, channel, category, difficulty_level, technique_start_time, technique_end_time, version)
+INSERT INTO videos (title, description, video_id, channel, category, difficulty_level, technique_start_time, technique_end_time, video_version)
 SELECT 'Técnica de sombreado avanzada', 'Aprende técnicas avanzadas de sombreado para darle profundidad a tus modelos.', 'ZZ5LpwO-An4', 'Print and Paint', 'Sombreado', 'intermediate', 120, 300, 1
 WHERE NOT EXISTS (
     SELECT 1 FROM videos WHERE video_id = 'ZZ5LpwO-An4' AND difficulty_level = 'intermediate'
 );
 
-INSERT INTO videos (title, description, video_id, channel, category, difficulty_level, technique_start_time, technique_end_time, version)
+INSERT INTO videos (title, description, video_id, channel, category, difficulty_level, technique_start_time, technique_end_time, video_version)
 SELECT 'Efectos especiales para modelos 3D', 'Cómo crear efectos de fuego, agua y electricidad en tus modelos.', '9bZkp7q19f0', 'Print and Paint', 'Efectos Especiales', 'expert', 180, 360, 1
 WHERE NOT EXISTS (
     SELECT 1 FROM videos WHERE video_id = '9bZkp7q19f0' AND difficulty_level = 'expert'

@@ -1169,7 +1169,7 @@
             confirmDeleteModal = new bootstrap.Modal(document.getElementById('confirmDeleteModal'));
             
             // Cargar categorías
-    load    loadCategories();
+            loadCategories();
             
             // Configurar formulario de videos
             const videoForm = document.getElementById('videoForm');
@@ -1304,7 +1304,10 @@
         function updateVideoPreview() {
             const youtubeId = document.getElementById('youtube_id').value.trim();
             const title = document.getElementById('title').value.trim();
-            const category = document.getElementById('category').value;
+            const categoryId = document.getElementById('category_id').value;
+            const categoryName = categoryId ? 
+                document.getElementById('category_id').options[document.getElementById('category_id').selectedIndex].text : 
+                'Sin categoría';
             const difficultyLevel = document.getElementById('difficulty_level').value;
             
             // Actualizar miniatura
@@ -1343,7 +1346,7 @@
                     <h5>${title || 'Sin título'}</h5>
                     <p class="text-muted">${youtubeId ? `YouTube ID: ${youtubeId}` : 'Sin ID de YouTube'}</p>
                     <div>
-                        <span class="badge bg-secondary">${category}</span>
+                        <span class="badge bg-secondary">${categoryName}</span>
                         ${difficultyBadge}
                     </div>
                 `;
@@ -1985,7 +1988,14 @@
                 document.getElementById('youtube_id').value = video.video_id;
                 document.getElementById('description').value = video.description || '';
                 document.getElementById('channel').value = video.channel || '';
-                document.getElementById('category').value = video.category || 'Sin categoría';
+                
+                // Seleccionar categoría si existe
+                if (video.category_id) {
+                    document.getElementById('category_id').value = video.category_id;
+                } else {
+                    document.getElementById('category_id').value = '';
+                }
+                
                 document.getElementById('difficulty_level').value = video.difficulty_level || 'beginner';
                 
                 // Actualizar los campos de tiempo en formato MM:SS
@@ -2249,12 +2259,18 @@
                 youtubeVideoId = youtubeVideoId.split('&')[0];
             }
             
+            const categoryId = document.getElementById('category_id').value;
+            const categoryName = categoryId ? 
+                document.getElementById('category_id').options[document.getElementById('category_id').selectedIndex].text : 
+                'Sin categoría';
+            
             const videoData = {
                 title: document.getElementById('title').value,
-                video_id: youtubeVideoId, // Usar el ID extraído en lugar de la URL completa
+                video_id: youtubeVideoId,
                 description: document.getElementById('description').value,
                 channel: document.getElementById('channel').value,
-                category: document.getElementById('category').value,
+                category: categoryName,
+                category_id: categoryId || null,
                 difficulty_level: document.getElementById('difficulty_level').value,
                 technique_start_time: parseInt(document.getElementById('technique_start_time').value) || 0
             };
