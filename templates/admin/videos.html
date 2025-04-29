@@ -1827,6 +1827,7 @@
                     techniquesList.innerHTML = '<div class="alert alert-info">No hay técnicas registradas para este video.</div>';
                 } else {
                     techniquesList.innerHTML = '';
+                    techniques.sort((a, b) => a.start_time - b.start_time);
                     techniques.forEach(technique => {
                         const startTime = formatTime(technique.start_time);
                         const endTime = formatTime(technique.end_time);

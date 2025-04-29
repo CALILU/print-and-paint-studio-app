@@ -540,7 +540,7 @@ def delete_video(video_id):
 # Rutas para gestionar técnicas
 @app.route('/api/videos/<int:video_id>/techniques', methods=['GET'])
 def get_video_techniques(video_id):
-    techniques = Technique.query.filter_by(video_id=video_id).all()
+    techniques = Technique.query.filter_by(video_id=video_id).order_by(Technique.start_time).all()
     result = []
     for technique in techniques:
         result.append({
@@ -615,7 +615,7 @@ def get_videos():
         result = []
         for video in videos:
             # Obtener las técnicas asociadas al video
-            techniques = Technique.query.filter_by(video_id=video.id).all()
+            techniques = Technique.query.filter_by(video_id=video.id).order_by(Technique.start_time).all()
             techniques_data = []
             
             for technique in techniques:
@@ -653,7 +653,7 @@ def api_get_video(video_id):
         video = Video.query.get_or_404(video_id)
         
         # Obtener las técnicas asociadas al video
-        techniques = Technique.query.filter_by(video_id=video.id).all()
+        techniques = Technique.query.filter_by(video_id=video.id).order_by(Technique.start_time).all()
         techniques_data = []
         
         for technique in techniques:
