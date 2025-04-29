@@ -1219,7 +1219,7 @@
             // Monitorear cambios en formulario para vista previa
             document.getElementById('youtube_id').addEventListener('input', updateVideoPreview);
             document.getElementById('title').addEventListener('input', updateVideoPreview);
-            document.getElementById('category').addEventListener('change', updateVideoPreview);
+            document.getElementById('category_id').addEventListener('change', updateVideoPreview);
             document.getElementById('difficulty_level').addEventListener('change', updateVideoPreview);
             
             // Escuchar la tecla Enter en el campo de búsqueda
@@ -1422,15 +1422,34 @@
             `;
             
             try {
+                // Añadido console.log para depuración
                 console.log("Iniciando solicitud a /api/videos");
+                
                 const response = await fetch('/api/videos');
+                
                 console.log("Respuesta recibida:", response.status);
                 
+                // Verificar si la respuesta es correcta
                 if (!response.ok) {
-                    throw new Error(`Error HTTP: ${response.status}`);
+                    throw new Error(`Error HTTP: ${response.status} ${response.statusText}`);
                 }
                 
-                const data = await response.json();
+                // Intentar convertir la respuesta a JSON
+                let data;
+                try {
+                    data = await response.json();
+                    console.log("Datos recibidos:", data);
+                } catch (jsonError) {
+                    console.error("Error al parsear JSON:", jsonError);
+                    throw new Error("Error al procesar los datos del servidor. Respuesta no válida.");
+                }
+                
+                // Verificar que los datos son un array
+                if (!Array.isArray(data)) {
+                    console.error("Los datos recibidos no son un array:", data);
+                    throw new Error("Formato de datos incorrecto. Se esperaba un array de videos.");
+                }
+                
                 console.log(`Videos cargados: ${data.length}`);
                 
                 // Actualizar la variable global
