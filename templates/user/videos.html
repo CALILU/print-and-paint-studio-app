@@ -56,6 +56,7 @@
             transition: transform 0.2s;
             box-shadow: 0 2px 5px rgba(0,0,0,0.1);
             background-color: white;
+            height: 100%;
         }
         .video-container:hover {
             transform: translateY(-5px);
@@ -123,15 +124,22 @@
             border-radius: 4px;
             padding: 8px 12px;
             font-size: 0.85rem;
+            margin-top: 10px;
         }
         .techniques-title {
             font-weight: bold;
             margin-bottom: 5px;
             color: #495057;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
         }
         .techniques-list {
             margin: 0;
             padding-left: 20px;
+            max-height: 200px;
+            overflow-y: auto;
         }
         .techniques-list li {
             margin-bottom: 3px;
@@ -173,6 +181,49 @@
         .technique-highlight {
             color: #6c5ce7;
             font-weight: bold;
+        }
+        .view-toggle-btn {
+            display: inline-block;
+            width: 40px;
+            height: 40px;
+            text-align: center;
+            line-height: 40px;
+            margin-left: 5px;
+            border-radius: 4px;
+            color: #6c757d;
+            background-color: #f8f9fa;
+            border: 1px solid #dee2e6;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .view-toggle-btn:hover {
+            background-color: #e9ecef;
+        }
+        .view-toggle-btn.active {
+            background-color: #6c5ce7;
+            color: white;
+            border-color: #6c5ce7;
+        }
+        /* Estilos para vista lista */
+        .video-list-item {
+            margin-bottom: 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            background-color: white;
+            transition: transform 0.2s;
+        }
+        .video-list-item:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+        .video-list-thumbnail {
+            width: 160px;
+            height: 90px;
+            object-fit: cover;
+            border-radius: 4px;
+        }
+        .hidden-techniques {
+            display: none;
         }
         @media (max-width: 768px) {
             .sidebar {
@@ -323,6 +374,20 @@
                     </div>
                 </div>
                 
+                <!-- Selector de vista: rejilla/lista -->
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h3>Videos encontrados: <span id="videoCount">{{ videos|length }}</span></h3>
+                    <div class="d-flex">
+                        <div id="gridViewBtn" class="view-toggle-btn active" onclick="setViewMode('grid')" title="Vista en rejilla">
+                            <i class="bi bi-grid"></i>
+                        </div>
+                        <div id="listViewBtn" class="view-toggle-btn" onclick="setViewMode('list')" title="Vista en lista">
+                            <i class="bi bi-list"></i>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Contenedor de videos - inicialmente en vista de rejilla -->
                 <div id="videos-container" class="row">
                     {% if videos %}
                         {% for video in videos %}
@@ -377,8 +442,11 @@
                                     
                                     {% if video.techniques %}
                                         <div class="techniques-container mt-2">
-                                            <div class="techniques-title"><i class="bi bi-list-check"></i> Técnicas en este video:</div>
-                                            <ul class="techniques-list">
+                                            <div class="techniques-title" onclick="toggleTechniques('{{ video.id }}')">
+                                                <span><i class="bi bi-list-check"></i> Técnicas en este video ({{ video.techniques|length }})</span>
+                                                <i class="bi bi-chevron-down" id="techniques-chevron-{{ video.id }}"></i>
+                                            </div>
+                                            <ul class="techniques-list hidden-techniques" id="techniques-list-{{ video.id }}">
                                                 {% for technique in video.techniques %}
                                                 <li>
                                                     <a href="javascript:void(0)" onclick="playTechniqueSegment('{{ video.id }}', '{{ video.video_id }}', {{ technique.start_time }}, {{ technique.end_time }})">
@@ -411,6 +479,7 @@
         let currentDifficulty = 'all';
         let onlyMyLevel = false;
         let activeVideoTimer = null;
+        let viewMode = 'grid'; // Modo de visualización predeterminado: grid o list
         
         document.addEventListener('DOMContentLoaded', () => {
             // Configurar búsqueda en tiempo real
@@ -465,7 +534,268 @@
             
             // Verificar estado de favoritos al cargar la página
             checkFavoriteStatus();
+            
+            // Restaurar modo de visualización desde localStorage si existe
+            const savedViewMode = localStorage.getItem('userVideosViewMode');
+            if (savedViewMode) {
+                setViewMode(savedViewMode, false);
+            }
         });
+        
+        // Función para cambiar entre modos de visualización (rejilla/lista)
+        function setViewMode(mode, save = true) {
+            viewMode = mode;
+            const container = document.getElementById('videos-container');
+            
+            // Actualizar botones de selección
+            document.getElementById('gridViewBtn').classList.remove('active');
+            document.getElementById('listViewBtn').classList.remove('active');
+            
+            if (mode === 'grid') {
+                // Configurar vista de rejilla
+                document.getElementById('gridViewBtn').classList.add('active');
+                container.className = 'row';
+                
+                // Si ya tenemos los elementos en vista de lista, convertirlos a rejilla
+                if (container.querySelector('.video-list-item')) {
+                    convertToGridView();
+                }
+            } else {
+                // Configurar vista de lista
+                document.getElementById('listViewBtn').classList.add('active');
+                container.className = '';
+                
+                // Si ya tenemos los elementos en vista de rejilla, convertirlos a lista
+                if (container.querySelector('.video-item')) {
+                    convertToListView();
+                }
+            }
+            
+            // Guardar preferencia en localStorage
+            if (save) {
+                localStorage.setItem('userVideosViewMode', mode);
+            }
+        }
+        
+        // Función para convertir de vista de rejilla a vista de lista
+        function convertToGridView() {
+            const container = document.getElementById('videos-container');
+            const listItems = container.querySelectorAll('.video-list-item');
+            
+            // Limpiar el contenedor
+            container.innerHTML = '';
+            
+            // Recrear los elementos originales
+            listItems.forEach(item => {
+                const videoId = item.getAttribute('data-id');
+                const videoData = {
+                    id: videoId,
+                    title: item.querySelector('.video-title').textContent,
+                    description: item.querySelector('.video-description').textContent,
+                    videoId: item.getAttribute('data-youtube-id'),
+                    category: item.getAttribute('data-category'),
+                    difficulty: item.getAttribute('data-difficulty'),
+                    channel: item.querySelector('.video-list-channel').textContent.replace('Canal: ', '')
+                };
+                
+                // Crear elemento de rejilla
+                const gridItem = document.createElement('div');
+                gridItem.className = 'col-md-6 col-lg-4 video-item';
+                gridItem.setAttribute('data-category', videoData.category);
+                gridItem.setAttribute('data-difficulty', videoData.difficulty);
+                
+                // Determinar si existe el alert de nivel diferente
+                let levelAlertHtml = '';
+                const levelAlert = item.querySelector('.alert-warning');
+                if (levelAlert) {
+                    levelAlertHtml = levelAlert.outerHTML;
+                }
+                
+                // Determinar si tiene técnica principal
+                let techniquePrincipalHtml = '';
+                const techniqueTime = item.querySelector('.technique-time');
+                if (techniqueTime) {
+                    techniquePrincipalHtml = techniqueTime.outerHTML;
+                }
+                
+                // Determinar si tiene técnicas adicionales
+                let techniquesHtml = '';
+                const techniquesContainer = item.querySelector('.techniques-container');
+                if (techniquesContainer) {
+                    techniquesHtml = techniquesContainer.outerHTML;
+                }
+                
+                // Determinar estado del botón de favoritos
+                const isFavorite = item.querySelector('.favorite-btn i').classList.contains('bi-heart-fill');
+                const favoriteIcon = isFavorite ? 'bi-heart-fill' : 'bi-heart';
+                
+                gridItem.innerHTML = `
+                    <div class="video-container">
+                        <div class="d-flex justify-content-between align-items-start">
+                            <div class="video-title">${videoData.title}</div>
+                            <button class="favorite-btn" onclick="toggleFavorite(${videoData.id}, this)">
+                                <i class="bi ${favoriteIcon}"></i>
+                            </button>
+                        </div>
+                        <div class="video-description">${videoData.description}</div>
+                        <div class="youtube-container">
+                            <iframe id="video-frame-${videoData.id}" src="https://www.youtube.com/embed/${videoData.videoId}" frameborder="0" allowfullscreen></iframe>
+                        </div>
+                        <div class="video-channel mt-2">Canal: ${videoData.channel}</div>
+                        <div class="video-category mt-1">
+                            <span class="badge bg-info">${videoData.category || 'Sin categoría'}</span>
+                            <span class="badge bg-warning text-dark">
+                                ${videoData.difficulty === 'beginner' ? 'Principiante' : 
+                                videoData.difficulty === 'intermediate' ? 'Intermedio' : 'Experto'}
+                            </span>
+                        </div>
+                        ${levelAlertHtml}
+                        ${techniquePrincipalHtml}
+                        ${techniquesHtml}
+                    </div>
+                `;
+                
+                container.appendChild(gridItem);
+            });
+        }
+        
+        // Función para convertir de vista de rejilla a vista de lista
+        function convertToListView() {
+            const container = document.getElementById('videos-container');
+            const gridItems = container.querySelectorAll('.video-item');
+            
+            // Limpiar el contenedor
+            container.innerHTML = '';
+            
+            // Recrear los elementos en formato de lista
+            gridItems.forEach(item => {
+                const videoContainer = item.querySelector('.video-container');
+                const videoId = videoContainer.querySelector('.favorite-btn').getAttribute('onclick').match(/\d+/)[0];
+                const youtubeId = videoContainer.querySelector('iframe').src.split('/').pop().split('?')[0];
+                const title = videoContainer.querySelector('.video-title').textContent;
+                const description = videoContainer.querySelector('.video-description').textContent;
+                const category = item.getAttribute('data-category');
+                const difficulty = item.getAttribute('data-difficulty');
+                const channel = videoContainer.querySelector('.video-channel').textContent.replace('Canal: ', '');
+                
+                // Determinar nivel en texto
+                let difficultyText = 'Principiante';
+                if (difficulty === 'intermediate') {
+                    difficultyText = 'Intermedio';
+                } else if (difficulty === 'expert') {
+                    difficultyText = 'Experto';
+                }
+                
+                // Verificar si es un favorito
+                const isFavorite = videoContainer.querySelector('.favorite-btn i').classList.contains('bi-heart-fill');
+                const favoriteIcon = isFavorite ? 'bi-heart-fill' : 'bi-heart';
+                
+                // Determinar si tiene alerta de nivel diferente
+                let levelAlertHtml = '';
+                const levelAlert = videoContainer.querySelector('.alert-warning');
+                if (levelAlert) {
+                    levelAlertHtml = `
+                        <div class="alert alert-warning py-1 px-2 mt-2 mb-0">
+                            <i class="bi bi-exclamation-triangle-fill me-1"></i> 
+                            Este video está orientado a nivel <strong>${difficultyText}</strong>
+                        </div>
+                    `;
+                }
+                
+                // Determinar si tiene técnica principal
+                let techniquePrincipalHtml = '';
+                const techniqueTime = videoContainer.querySelector('.technique-time');
+                if (techniqueTime) {
+                    techniquePrincipalHtml = `
+                        <div class="mt-2 mb-1">
+                            ${techniqueTime.outerHTML}
+                        </div>
+                    `;
+                }
+                
+                // Determinar si tiene técnicas adicionales y obtenerlas
+                let techniquesHtml = '';
+                const techniquesContainer = videoContainer.querySelector('.techniques-container');
+                if (techniquesContainer) {
+                    // Crear una nueva versión del contenedor para la vista de lista
+                    const techniquesTitle = techniquesContainer.querySelector('.techniques-title').textContent;
+                    const techniquesList = techniquesContainer.querySelector('.techniques-list');
+                    const techniquesCount = techniquesTitle.match(/\((\d+)\)/)[1];
+                    
+                    techniquesHtml = `
+                        <div class="techniques-container mt-2">
+                            <div class="techniques-title" onclick="toggleTechniques('${videoId}')">
+                                <span><i class="bi bi-list-check"></i> Técnicas en este video (${techniquesCount})</span>
+                                <i class="bi bi-chevron-down" id="techniques-chevron-${videoId}"></i>
+                            </div>
+                            <ul class="techniques-list hidden-techniques" id="techniques-list-${videoId}">
+                                ${techniquesList.innerHTML}
+                            </ul>
+                        </div>
+                    `;
+                }
+                
+                // Crear elemento de lista
+                const listItem = document.createElement('div');
+                listItem.className = 'video-list-item';
+                listItem.setAttribute('data-id', videoId);
+                listItem.setAttribute('data-youtube-id', youtubeId);
+                listItem.setAttribute('data-category', category);
+                listItem.setAttribute('data-difficulty', difficulty);
+                
+                listItem.innerHTML = `
+                    <div class="row align-items-center p-3">
+                        <div class="col-md-3 mb-3 mb-md-0">
+                            <div class="position-relative">
+                                <img src="https://img.youtube.com/vi/${youtubeId}/mqdefault.jpg" alt="${title}" class="img-fluid video-list-thumbnail">
+                                <button class="btn btn-sm btn-primary position-absolute" style="top: 50%; left: 50%; transform: translate(-50%, -50%);" 
+                                    onclick="playVideoInList('${videoId}', '${youtubeId}')">
+                                    <i class="bi bi-play-fill"></i>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="col-md-9">
+                            <div class="d-flex justify-content-between align-items-start">
+                                <h5 class="video-title">${title}</h5>
+                                <button class="favorite-btn" onclick="toggleFavorite(${videoId}, this)">
+                                    <i class="bi ${favoriteIcon}"></i>
+                                </button>
+                            </div>
+                            <p class="video-description text-muted small">${description}</p>
+                            <div class="video-list-channel text-muted small">Canal: ${channel}</div>
+                            <div class="mb-2">
+                                <span class="badge bg-info">${category || 'Sin categoría'}</span>
+                                <span class="badge bg-warning text-dark">${difficultyText}</span>
+                            </div>
+                            ${levelAlertHtml}
+                            ${techniquePrincipalHtml}
+                            ${techniquesHtml}
+                        </div>
+                    </div>
+                `;
+                
+                container.appendChild(listItem);
+            });
+        }
+        
+        // Función para reproducir un video en la vista de lista
+        function playVideoInList(videoId, youtubeId) {
+            const item = document.querySelector(`.video-list-item[data-id="${videoId}"]`);
+            if (!item) return;
+            
+            const thumbnailContainer = item.querySelector('.position-relative');
+            
+            // Reemplazar la miniatura con un iframe
+            const iframe = document.createElement('div');
+            iframe.style.height = '180px';
+            iframe.innerHTML = `
+                <iframe id="video-frame-${videoId}" src="https://www.youtube.com/embed/${youtubeId}?autoplay=1" 
+                    frameborder="0" allowfullscreen style="width: 100%; height: 100%;">
+                </iframe>
+            `;
+            
+            thumbnailContainer.replaceWith(iframe);
+        }
 
         // Función para reproducir un segmento de técnica específico
         function playTechniqueSegment(videoElementId, youtubeVideoId, startTime, endTime) {
@@ -475,8 +805,22 @@
                 activeVideoTimer = null;
             }
             
-            // Obtener el iframe del video
-            const iframe = document.getElementById(`video-frame-${videoElementId}`);
+            // Obtener el iframe del video según el modo de visualización
+            let iframe;
+            if (viewMode === 'grid') {
+                iframe = document.getElementById(`video-frame-${videoElementId}`);
+            } else {
+                // En vista de lista, primero hay que encontrar el contenedor
+                const listItem = document.querySelector(`.video-list-item[data-id="${videoElementId}"]`);
+                if (listItem) {
+                    // Si todavía no se ha creado el iframe, crearlo
+                    if (!listItem.querySelector('iframe')) {
+                        playVideoInList(videoElementId, youtubeVideoId);
+                    }
+                    iframe = document.getElementById(`video-frame-${videoElementId}`);
+                }
+            }
+            
             if (iframe) {
                 // Resaltar la técnica actual (opcional)
                 highlightTechnique(event.target.closest('li'));
@@ -500,6 +844,20 @@
                     // Quitar resaltado
                     resetTechniqueHighlights();
                 }, duration * 1000); // Convertir segundos a milisegundos
+            }
+        }
+        
+        // Función para mostrar/ocultar la lista de técnicas
+        function toggleTechniques(videoId) {
+            const techniquesList = document.getElementById(`techniques-list-${videoId}`);
+            const chevron = document.getElementById(`techniques-chevron-${videoId}`);
+            
+            if (techniquesList.classList.contains('hidden-techniques')) {
+                techniquesList.classList.remove('hidden-techniques');
+                chevron.classList.replace('bi-chevron-down', 'bi-chevron-up');
+            } else {
+                techniquesList.classList.add('hidden-techniques');
+                chevron.classList.replace('bi-chevron-up', 'bi-chevron-down');
             }
         }
         
@@ -527,15 +885,33 @@
         }
         
         function filterVideos() {
-            const videoItems = document.querySelectorAll('.video-item');
+            let videoItems;
+            if (viewMode === 'grid') {
+                videoItems = document.querySelectorAll('.video-item');
+            } else {
+                videoItems = document.querySelectorAll('.video-list-item');
+            }
+            
             let visibleCount = 0;
             
             videoItems.forEach(item => {
-                const videoTitle = item.querySelector('.video-title').textContent.toLowerCase();
-                const videoDescription = item.querySelector('.video-description').textContent.toLowerCase();
-                const videoChannel = item.querySelector('.video-channel').textContent.toLowerCase();
-                const videoCategory = item.getAttribute('data-category');
-                const videoDifficulty = item.getAttribute('data-difficulty');
+                // Obtener los datos del video según el modo de visualización
+                let videoTitle, videoDescription, videoChannel, videoCategory, videoDifficulty;
+                
+                if (viewMode === 'grid') {
+                    const videoContainer = item.querySelector('.video-container');
+                    videoTitle = videoContainer.querySelector('.video-title').textContent.toLowerCase();
+                    videoDescription = videoContainer.querySelector('.video-description').textContent.toLowerCase();
+                    videoChannel = videoContainer.querySelector('.video-channel').textContent.toLowerCase();
+                    videoCategory = item.getAttribute('data-category');
+                    videoDifficulty = item.getAttribute('data-difficulty');
+                } else {
+                    videoTitle = item.querySelector('.video-title').textContent.toLowerCase();
+                    videoDescription = item.querySelector('.video-description').textContent.toLowerCase();
+                    videoChannel = item.querySelector('.video-list-channel').textContent.toLowerCase();
+                    videoCategory = item.getAttribute('data-category');
+                    videoDifficulty = item.getAttribute('data-difficulty');
+                }
                 
                 // Filtrar por término de búsqueda
                 const matchesSearch = !currentSearchTerm || 
@@ -554,12 +930,15 @@
                 
                 // Mostrar u ocultar el video según los filtros
                 if (matchesSearch && matchesCategory && matchesDifficulty && matchesUserLevel) {
-                    item.style.display = 'block';
+                    item.style.display = viewMode === 'grid' ? 'block' : '';
                     visibleCount++;
                 } else {
                     item.style.display = 'none';
                 }
             });
+            
+            // Actualizar contador de videos
+            document.getElementById('videoCount').textContent = visibleCount;
             
             // Mostrar mensaje si no hay videos que coincidan
             const videosContainer = document.getElementById('videos-container');
@@ -568,7 +947,7 @@
                 if (!document.getElementById('no-videos-message')) {
                     const noVideosMessage = document.createElement('div');
                     noVideosMessage.id = 'no-videos-message';
-                    noVideosMessage.className = 'col-12 text-center';
+                    noVideosMessage.className = viewMode === 'grid' ? 'col-12 text-center' : 'text-center py-4';
                     noVideosMessage.innerHTML = '<p>No se encontraron videos que coincidan con tu búsqueda</p>';
                     videosContainer.appendChild(noVideosMessage);
                 }
@@ -635,16 +1014,13 @@
                     .filter(id => id !== null);
                 
                 // Actualizar los íconos de favoritos en la página actual
-                document.querySelectorAll('.video-item').forEach(item => {
-                    const favoriteBtn = item.querySelector('.favorite-btn');
-                    if (favoriteBtn) {
-                        const onclick = favoriteBtn.getAttribute('onclick');
-                        const match = /toggleFavorite\((\d+)/.exec(onclick);
-                        if (match) {
-                            const videoId = parseInt(match[1]);
-                            if (favoriteVideos.includes(videoId)) {
-                                favoriteBtn.querySelector('i').classList.replace('bi-heart', 'bi-heart-fill');
-                            }
+                document.querySelectorAll('.favorite-btn').forEach(btn => {
+                    const onclick = btn.getAttribute('onclick');
+                    const match = /toggleFavorite\((\d+)/.exec(onclick);
+                    if (match) {
+                        const videoId = parseInt(match[1]);
+                        if (favoriteVideos.includes(videoId)) {
+                            btn.querySelector('i').classList.replace('bi-heart', 'bi-heart-fill');
                         }
                     }
                 });
@@ -653,6 +1029,7 @@
                 console.error('Error al verificar favoritos:', error);
             });
         }
+        
         function toggleAllLevels() {
             const showAll = document.getElementById('showAllLevels').checked;
             window.location.href = "/user/videos?show_all_levels=" + showAll;
