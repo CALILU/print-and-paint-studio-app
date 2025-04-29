@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Print and Paint Studio - Gestión de Videos1</title>
+    <title>Print and Paint Studio - Gestión de Videos</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css" rel="stylesheet">
     <style>
@@ -98,7 +98,7 @@
             border-radius: 4px;
             margin-bottom: 10px;
         }
-        .youtube-container iframe {
+        .youtube-container iframe, .youtube-container div {
             position: absolute;
             top: 0;
             left: 0;
@@ -319,10 +319,10 @@
 <body>
     <div class="container-fluid">
         <div class="row">
-            <!-- Sidebar mio mi1-->
+            <!-- Sidebar -->
             <div class="col-md-3 col-lg-2 d-md-block sidebar collapse">
                 <div class="sidebar-heading">
-                    Print and Paint Studio - ISIDRO <span class="admin-badge">ADMIN</span>
+                    Print and Paint Studio <span class="admin-badge">ADMIN</span>
                 </div>
                 <ul class="nav flex-column">
                     <li class="nav-item">
@@ -639,11 +639,14 @@
                                 </div>
                             </div>
                             <div class="card-body">
+                                <!-- Campo oculto para el ID de YouTube actual -->
+                                <input type="hidden" id="currentYoutubeId" value="">
+                                
                                 <!-- Video preview for techniques -->
                                 <div class="row mb-4">
                                     <div class="col-md-6">
                                         <div class="youtube-container">
-                                            <iframe id="techniquesVideoPreview" src="" frameborder="0" allowfullscreen></iframe>
+                                            <div id="techniquesVideoPreview"></div>
                                         </div>
                                     </div>
                                     <div class="col-md-6">
@@ -1084,6 +1087,8 @@
     </div>
     
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- API de YouTube (agregada) -->
+    <script src="https://www.youtube.com/iframe_api"></script>
     <script>
         // Variables globales
         let allVideos = [];
@@ -1097,6 +1102,7 @@
         let viewMode = 'grid';
         let selectedVideos = new Set();
         let tooltips = [];
+        let youtubePlayer; // Variable para el reproductor de YouTube
 
         // Función para cargar estadísticas
         async function loadStatistics() {
@@ -1242,6 +1248,33 @@
                 resetTechniqueHighlights();
             });
         });
+
+        // Función para inicializar el reproductor de YouTube
+        function initYouTubePlayer(videoId) {
+            // Si ya existe un reproductor, destruirlo primero
+            if (youtubePlayer) {
+                youtubePlayer.destroy();
+            }
+            
+            // Crear un nuevo reproductor
+            youtubePlayer = new YT.Player('techniquesVideoPreview', {
+                videoId: videoId,
+                events: {
+                    'onReady': onPlayerReady,
+                    'onStateChange': onPlayerStateChange
+                }
+            });
+        }
+
+        // Función que se ejecuta cuando el reproductor está listo
+        function onPlayerReady(event) {
+            console.log('Reproductor de YouTube listo');
+        }
+
+        // Función que se ejecuta cuando cambia el estado del reproductor
+        function onPlayerStateChange(event) {
+            // Puedes realizar acciones según el estado del reproductor aquí
+        }
         
         // Función para inicializar tooltips
         function initTooltips() {
@@ -1265,6 +1298,7 @@
             tooltips = [];
         }
         
+        // Función para actualizar vista previa del video
         // Función para actualizar vista previa del video
         function updateVideoPreview() {
             const youtubeId = document.getElementById('youtube_id').value.trim();
@@ -1319,326 +1353,56 @@
             }
         }
         
-        // Función para inicializar los campos de tiempo
-        function initTimeInputs() {
-            // Para el formulario de video principal
-            const startTimeMin = document.getElementById('technique_start_time_min');
-            const startTimeSec = document.getElementById('technique_start_time_sec');
-            const endTimeMin = document.getElementById('technique_end_time_min');
-            const endTimeSec = document.getElementById('technique_end_time_sec');
-            const startTimeHidden = document.getElementById('technique_start_time');
-            const endTimeHidden = document.getElementById('technique_end_time');
-            
-            // Eventos para convertir minutos:segundos a segundos totales
-            [startTimeMin, startTimeSec].forEach(input => {
-                input.addEventListener('input', () => {
-                    validateAndUpdateTime(startTimeMin, startTimeSec, startTimeHidden);
-                    validateTimeRange(startTimeMin, startTimeSec, endTimeMin, endTimeSec);
-                });
-            });
-            
-            [endTimeMin, endTimeSec].forEach(input => {
-                input.addEventListener('input', () => {
-                    validateAndUpdateTime(endTimeMin, endTimeSec, endTimeHidden);
-                    validateTimeRange(startTimeMin, startTimeSec, endTimeMin, endTimeSec);
-                });
-            });
-            
-            // Para el formulario de técnicas
-            const techniqueStartMin = document.getElementById('technique_start_min');
-            const techniqueStartSec = document.getElementById('technique_start_sec');
-            const techniqueEndMin = document.getElementById('technique_end_min');
-            const techniqueEndSec = document.getElementById('technique_end_sec');
-            const techniqueStartHidden = document.getElementById('technique_start');
-            const techniqueEndHidden = document.getElementById('technique_end');
-            
-            // Eventos para convertir minutos:segundos a segundos totales
-            [techniqueStartMin, techniqueStartSec].forEach(input => {
-                input.addEventListener('input', () => {
-                    validateAndUpdateTime(techniqueStartMin, techniqueStartSec, techniqueStartHidden);
-                    validateTimeRange(techniqueStartMin, techniqueStartSec, techniqueEndMin, techniqueEndSec);
-                });
-            });
-            
-            [techniqueEndMin, techniqueEndSec].forEach(input => {
-                input.addEventListener('input', () => {
-                    validateAndUpdateTime(techniqueEndMin, techniqueEndSec, techniqueEndHidden);
-                    validateTimeRange(techniqueStartMin, techniqueStartSec, techniqueEndMin, techniqueEndSec);
-                });
-            });
-        }
-
-        // Función para validar y actualizar el tiempo en el campo oculto
-        function validateAndUpdateTime(minInput, secInput, hiddenInput) {
-            let minutes = parseInt(minInput.value) || 0;
-            let seconds = parseInt(secInput.value) || 0;
-            
-            // Asegurarse de que los segundos estén en el rango 0-59
-            if (seconds > 59) {
-                seconds = 59;
-                secInput.value = 59;
-            }
-            
-            // Calcular tiempo total en segundos
-            const totalSeconds = minutes * 60 + seconds;
-            hiddenInput.value = totalSeconds;
-        }
-
-        // Función para validar que el tiempo final sea mayor que el inicial
-        function validateTimeRange(startMinInput, startSecInput, endMinInput, endSecInput) {
-            const startMin = parseInt(startMinInput.value) || 0;
-            const startSec = parseInt(startSecInput.value) || 0;
-            const endMin = parseInt(endMinInput.value) || 0;
-            const endSec = parseInt(endSecInput.value) || 0;
-            
-            const startTotal = startMin * 60 + startSec;
-            const endTotal = endMin * 60 + endSec;
-            
-            // Validar que el tiempo final sea mayor que el inicial
-            if (endTotal <= startTotal && (endMinInput.value !== '' || endSecInput.value !== '')) {
-                // Calcular un tiempo final válido (inicial + 10 segundos)
-                let newEndTotal = startTotal + 10;
-                const newEndMin = Math.floor(newEndTotal / 60);
-                const newEndSec = newEndTotal % 60;
-                
-                endMinInput.value = newEndMin;
-                endSecInput.value = newEndSec;
-            }
-        }
-
-        // Función para convertir segundos a formato minutos:segundos y actualizar los campos
-        function secondsToMinSec(seconds, minInput, secInput) {
-            if (seconds === null || seconds === undefined || seconds === '') return;
-            
-            const totalSeconds = parseInt(seconds);
-            const minutes = Math.floor(totalSeconds / 60);
-            const remainingSeconds = totalSeconds % 60;
-            
-            minInput.value = minutes;
-            secInput.value = remainingSeconds;
-        }
-        
         // Función para capturar el tiempo actual del video
         function captureCurrentTime() {
-            // Obtener el iframe
-            const iframe = document.getElementById('techniquesVideoPreview');
-            
-            // Esta funcionalidad requiere la API de YouTube
-            // Aquí se tendría que implementar la comunicación con la API de YouTube
-            // Para demostración, simplemente mostraremos un mensaje
-            
-            alert('Esta funcionalidad requiere la implementación de la API de YouTube Player. En una implementación real, capturaría el tiempo actual del video.');
-        }
-        
-        // Función para reproducir un segmento de técnica específico
-        function playTechniqueSegment(videoId, startTime, endTime) {
-            // Detener cualquier temporizador activo
-            if (activeVideoTimer !== null) {
-                clearTimeout(activeVideoTimer);
-                activeVideoTimer = null;
-            }
-            
-            // Obtener el iframe del video
-            const iframe = document.getElementById('previewIframe');
-            if (iframe) {
-                // Resaltar la técnica actual si se pasó un elemento
-                if (event && event.target) {
-                    const techniqueElement = event.target.closest('.technique-item');
-                    if (techniqueElement) {
-                        highlightTechnique(techniqueElement);
+            if (youtubePlayer && youtubePlayer.getCurrentTime) {
+                // Obtener el tiempo actual en segundos
+                const currentTime = Math.floor(youtubePlayer.getCurrentTime());
+                
+                // Determinar si estamos capturando el tiempo de inicio o final
+                const activeInput = document.activeElement;
+                
+                if (activeInput) {
+                    // Convertir a minutos y segundos
+                    const minutes = Math.floor(currentTime / 60);
+                    const seconds = currentTime % 60;
+                    
+                    // Establecer los valores en el formulario según el campo activo o último campo enfocado
+                    if (activeInput.id === 'technique_start_min' || activeInput.id === 'technique_start_sec') {
+                        document.getElementById('technique_start_min').value = minutes;
+                        document.getElementById('technique_start_sec').value = seconds;
+                        document.getElementById('technique_start').value = currentTime;
+                    } else if (activeInput.id === 'technique_end_min' || activeInput.id === 'technique_end_sec') {
+                        document.getElementById('technique_end_min').value = minutes;
+                        document.getElementById('technique_end_sec').value = seconds;
+                        document.getElementById('technique_end').value = currentTime;
+                    } else {
+                        // Si ningún campo está enfocado, preguntar al usuario
+                        const targetField = confirm('¿Deseas capturar este tiempo como inicio de la técnica? (OK para inicio, Cancelar para fin)');
+                        
+                        if (targetField) {
+                            // Tiempo inicio
+                            document.getElementById('technique_start_min').value = minutes;
+                            document.getElementById('technique_start_sec').value = seconds;
+                            document.getElementById('technique_start').value = currentTime;
+                        } else {
+                            // Tiempo fin
+                            document.getElementById('technique_end_min').value = minutes;
+                            document.getElementById('technique_end_sec').value = seconds;
+                            document.getElementById('technique_end').value = currentTime;
+                        }
                     }
+                    
+                    // Mostrar mensaje de confirmación
+                    document.getElementById('techniqueTiming').innerHTML = `
+                        <div class="alert alert-success">
+                            <i class="bi bi-check-circle me-2"></i> Tiempo capturado: ${minutes}:${seconds.toString().padStart(2, '0')}
+                        </div>
+                    `;
                 }
-                
-                // Actualizar la URL con los parámetros de tiempo y autoplay
-                let newSrc = `https://www.youtube.com/embed/${videoId}?start=${startTime}&autoplay=1`;
-                iframe.src = newSrc;
-                
-                // Mostrar el modal si no está visible
-                if (!document.getElementById('previewModal').classList.contains('show')) {
-                    previewModal.show();
-                }
-                
-                // Calcular la duración de la técnica
-                const duration = endTime - startTime;
-                
-                // Configurar un temporizador para cerrar el video después de que termine la técnica
-                activeVideoTimer = setTimeout(() => {
-                    // Resetear el video
-                    iframe.src = '';
-                    
-                    // Cerrar el modal
-                    previewModal.hide();
-                    
-                    // Quitar resaltado
-                    resetTechniqueHighlights();
-                    
-                    // Limpiar el temporizador
-                    activeVideoTimer = null;
-                }, duration * 1000); // Convertir segundos a milisegundos
-            }
-        }
-        
-        // Función para resaltar la técnica que se está reproduciendo
-        function highlightTechnique(techniqueElement) {
-            // Quitar el resaltado de todas las técnicas
-            resetTechniqueHighlights();
-            
-            // Añadir clase de resaltado a la técnica actual
-            if (techniqueElement) {
-                techniqueElement.classList.add('technique-highlight');
-            }
-        }
-        
-        // Función para quitar todos los resaltados de técnicas
-        function resetTechniqueHighlights() {
-            document.querySelectorAll('.technique-item').forEach(el => {
-                el.classList.remove('technique-highlight');
-            });
-        }
-        
-        // Función para establecer el modo de visualización
-        function setViewMode(mode) {
-            viewMode = mode;
-            const container = document.getElementById('videos-container');
-            
-            document.getElementById('gridViewBtn').classList.remove('active');
-            document.getElementById('listViewBtn').classList.remove('active');
-            
-            if (mode === 'grid') {
-                container.className = 'video-grid';
-                document.getElementById('gridViewBtn').classList.add('active');
             } else {
-                container.className = '';
-                document.getElementById('listViewBtn').classList.add('active');
+                alert('No se pudo capturar el tiempo actual. Asegúrate de que el video esté cargado correctamente.');
             }
-            
-            // Redibujar los videos
-            displayVideos(allVideos);
-        }
-        
-        // Función para limpiar todos los filtros
-        function clearFilters() {
-            currentSearchTerm = '';
-            document.getElementById('searchInput').value = '';
-            
-            // Resetear categorías
-            document.querySelectorAll('.category-pill[data-category]').forEach(pill => {
-                pill.classList.remove('active');
-            });
-            document.querySelector('.category-pill[data-category="all"]').classList.add('active');
-            currentCategory = 'all';
-            
-            // Resetear dificultad
-            document.querySelectorAll('.category-pill[data-difficulty]').forEach(pill => {
-                pill.classList.remove('active');
-            });
-            document.querySelector('.category-pill[data-difficulty="all"]').classList.add('active');
-            currentDifficulty = 'all';
-            
-            // Resetear checkboxes
-            document.getElementById('filterHasTechniques').checked = false;
-            document.getElementById('filterNoTechniques').checked = false;
-            
-            // Limpiar filtros activos
-            document.getElementById('activeFilters').innerHTML = '';
-            
-            // Resetear la vista
-            displayVideos(allVideos);
-        }
-        
-        // Función para aplicar los filtros actuales
-        function applyFilters() {
-            // Actualizar filtros activos
-            updateActiveFilters();
-            
-            // Filtrar videos
-            filterVideos();
-            
-            // Cerrar el collapsible de filtros avanzados
-            const bsCollapse = bootstrap.Collapse.getInstance(document.getElementById('advancedFilters'));
-            if (bsCollapse) {
-                bsCollapse.hide();
-            }
-        }
-        
-        // Función para actualizar la visualización de filtros activos
-        function updateActiveFilters() {
-            const activeFiltersContainer = document.getElementById('activeFilters');
-            activeFiltersContainer.innerHTML = '';
-            
-            // Categoría
-            if (currentCategory !== 'all') {
-                addFilterChip(activeFiltersContainer, 'Categoría: ' + currentCategory, () => {
-                    document.querySelectorAll('.category-pill[data-category]').forEach(pill => {
-                        pill.classList.remove('active');
-                    });
-                    document.querySelector('.category-pill[data-category="all"]').classList.add('active');
-                    currentCategory = 'all';
-                    filterVideos();
-                });
-            }
-            
-            // Dificultad
-            if (currentDifficulty !== 'all') {
-                let difficultyText;
-                switch(currentDifficulty) {
-                    case 'beginner': difficultyText = 'Principiante'; break;
-                    case 'intermediate': difficultyText = 'Intermedio'; break;
-                    case 'expert': difficultyText = 'Experto'; break;
-                    default: difficultyText = currentDifficulty;
-                }
-                
-                addFilterChip(activeFiltersContainer, 'Dificultad: ' + difficultyText, () => {
-                    document.querySelectorAll('.category-pill[data-difficulty]').forEach(pill => {
-                        pill.classList.remove('active');
-                    });
-                    document.querySelector('.category-pill[data-difficulty="all"]').classList.add('active');
-                    currentDifficulty = 'all';
-                    filterVideos();
-                });
-            }
-            
-            // Videos con técnicas
-            if (document.getElementById('filterHasTechniques').checked) {
-                addFilterChip(activeFiltersContainer, 'Solo videos con técnicas', () => {
-                    document.getElementById('filterHasTechniques').checked = false;
-                    filterVideos();
-                });
-            }
-            
-            // Videos sin técnicas
-            if (document.getElementById('filterNoTechniques').checked) {
-                addFilterChip(activeFiltersContainer, 'Solo videos sin técnicas', () => {
-                    document.getElementById('filterNoTechniques').checked = false;
-                    filterVideos();
-                });
-            }
-            
-            // Término de búsqueda
-            if (currentSearchTerm) {
-                addFilterChip(activeFiltersContainer, 'Búsqueda: ' + currentSearchTerm, () => {
-                    document.getElementById('searchInput').value = '';
-                    currentSearchTerm = '';
-                    filterVideos();
-                });
-            }
-        }
-        
-        // Función para añadir un chip de filtro
-        function addFilterChip(container, text, removeCallback) {
-            const chip = document.createElement('div');
-            chip.className = 'filter-chip';
-            chip.innerHTML = `
-                ${text}
-                <span class="close" onclick="event.stopPropagation();">&times;</span>
-            `;
-            
-            chip.querySelector('.close').addEventListener('click', () => {
-                removeCallback();
-                chip.remove();
-            });
-            
-            container.appendChild(chip);
         }
         
         // Función para obtener todos los videos
@@ -2094,7 +1858,6 @@
                 previewModal.show();
             }
         }
-        
         // Función para navegar a la pestaña de técnicas
         function goToTechniques(videoId) {
             // Guardar el ID del video
@@ -2125,9 +1888,18 @@
                 // Actualizar título del video
                 document.getElementById('videoTitleDisplay').textContent = video.title;
                 
-                // Cargar el iframe
-                const iframe = document.getElementById('techniquesVideoPreview');
-                iframe.src = `https://www.youtube.com/embed/${video.video_id}`;
+                // Guardar el YouTube ID para usarlo con el API
+                document.getElementById('currentYoutubeId').value = video.video_id;
+                
+                // Inicializar el reproductor de YouTube después de que la API esté lista
+                if (window.YT && window.YT.Player) {
+                    initYouTubePlayer(video.video_id);
+                } else {
+                    // Si la API de YouTube aún no está lista, esperar a que se cargue
+                    window.onYouTubeIframeAPIReady = function() {
+                        initYouTubePlayer(video.video_id);
+                    };
+                }
                 
             } catch (error) {
                 console.error('Error:', error);
@@ -2315,15 +2087,88 @@
         
         // Función para reproducir un segmento en la pestaña de técnicas
         function playSegmentInTechniquesTab(videoId, startTime, endTime) {
-            const iframe = document.getElementById('techniquesVideoPreview');
-            iframe.src = `https://www.youtube.com/embed/${videoId}?start=${startTime}&autoplay=1`;
+            if (youtubePlayer && youtubePlayer.loadVideoById) {
+                // Cargar el video en el tiempo específico
+                youtubePlayer.loadVideoById({
+                    videoId: videoId,
+                    startSeconds: startTime
+                });
+                
+                // Mostrar información del tiempo
+                document.getElementById('techniqueTiming').innerHTML = `
+                    <div class="alert alert-success">
+                        <i class="bi bi-play-fill me-2"></i> Reproduciendo desde ${formatTime(startTime)} hasta ${formatTime(endTime)}
+                    </div>
+                `;
+                
+                // Si hay un temporizador activo, limpiarlo
+                if (window.activeSegmentTimer) {
+                    clearTimeout(window.activeSegmentTimer);
+                }
+                
+                // Establecer un temporizador para detener el video cuando llegue al final del segmento
+                window.activeSegmentTimer = setTimeout(() => {
+                    youtubePlayer.pauseVideo();
+                }, (endTime - startTime) * 1000);
+            } else {
+                // Si el reproductor no está disponible, usar el iframe tradicional
+                const iframe = document.getElementById('techniquesVideoPreview');
+                if (iframe) {
+                    const containerDiv = iframe.parentElement;
+                    containerDiv.innerHTML = `<iframe id="techniquesVideoPreview" src="https://www.youtube.com/embed/${videoId}?start=${startTime}&autoplay=1" frameborder="0" allowfullscreen></iframe>`;
+                    
+                    // Mostrar información del tiempo
+                    document.getElementById('techniqueTiming').innerHTML = `
+                        <div class="alert alert-success">
+                            <i class="bi bi-play-fill me-2"></i> Reproduciendo desde ${formatTime(startTime)} hasta ${formatTime(endTime)}
+                        </div>
+                    `;
+                }
+            }
+        }
+        
+        // Función para resaltar la técnica que se está reproduciendo
+        function highlightTechnique(techniqueElement) {
+            // Quitar el resaltado de todas las técnicas
+            resetTechniqueHighlights();
             
-            // Mostrar información del tiempo
-            document.getElementById('techniqueTiming').innerHTML = `
-                <div class="alert alert-success">
-                    <i class="bi bi-play-fill me-2"></i> Reproduciendo desde ${formatTime(startTime)} hasta ${formatTime(endTime)}
-                </div>
-            `;
+            // Añadir clase de resaltado a la técnica actual
+            if (techniqueElement) {
+                techniqueElement.classList.add('technique-highlight');
+            }
+        }
+        
+        // Función para quitar todos los resaltados de técnicas
+        function resetTechniqueHighlights() {
+            document.querySelectorAll('.technique-item').forEach(el => {
+                el.classList.remove('technique-highlight');
+            });
+        }
+        
+        // Función para reproducir un segmento específico en la vista previa
+        function playTechniqueSegment(videoId, startTime, endTime) {
+            // Detener cualquier temporizador activo
+            if (activeVideoTimer !== null) {
+                clearTimeout(activeVideoTimer);
+                activeVideoTimer = null;
+            }
+            
+            // Obtener el iframe del video
+            const iframe = document.getElementById('previewIframe');
+            if (iframe) {
+                // Actualizar la URL con los parámetros de tiempo y autoplay
+                iframe.src = `https://www.youtube.com/embed/${videoId}?start=${startTime}&autoplay=1`;
+                
+                // Calcular la duración de la técnica
+                const duration = endTime - startTime;
+                
+                // Configurar un temporizador para detener el video después de que termine la técnica
+                activeVideoTimer = setTimeout(() => {
+                    // Resetear el video
+                    iframe.src = `https://www.youtube.com/embed/${videoId}`;
+                    activeVideoTimer = null;
+                }, duration * 1000);
+            }
         }
         
         // Función para editar técnica
@@ -2547,7 +2392,106 @@
             document.getElementById('technique_id_edit').value = '';
             document.getElementById('technique-submit-btn').textContent = 'Añadir Técnica';
         }
+        
+        // Función para inicializar los campos de tiempo
+        function initTimeInputs() {
+            // Para el formulario de video principal
+            const startTimeMin = document.getElementById('technique_start_time_min');
+            const startTimeSec = document.getElementById('technique_start_time_sec');
+            const endTimeMin = document.getElementById('technique_end_time_min');
+            const endTimeSec = document.getElementById('technique_end_time_sec');
+            const startTimeHidden = document.getElementById('technique_start_time');
+            const endTimeHidden = document.getElementById('technique_end_time');
+            
+            // Eventos para convertir minutos:segundos a segundos totales
+            [startTimeMin, startTimeSec].forEach(input => {
+                input.addEventListener('input', () => {
+                    validateAndUpdateTime(startTimeMin, startTimeSec, startTimeHidden);
+                    validateTimeRange(startTimeMin, startTimeSec, endTimeMin, endTimeSec);
+                });
+            });
+            
+            [endTimeMin, endTimeSec].forEach(input => {
+                input.addEventListener('input', () => {
+                    validateAndUpdateTime(endTimeMin, endTimeSec, endTimeHidden);
+                    validateTimeRange(startTimeMin, startTimeSec, endTimeMin, endTimeSec);
+                });
+            });
+            
+            // Para el formulario de técnicas
+            const techniqueStartMin = document.getElementById('technique_start_min');
+            const techniqueStartSec = document.getElementById('technique_start_sec');
+            const techniqueEndMin = document.getElementById('technique_end_min');
+            const techniqueEndSec = document.getElementById('technique_end_sec');
+            const techniqueStartHidden = document.getElementById('technique_start');
+            const techniqueEndHidden = document.getElementById('technique_end');
+            
+            // Eventos para convertir minutos:segundos a segundos totales
+            [techniqueStartMin, techniqueStartSec].forEach(input => {
+                input.addEventListener('input', () => {
+                    validateAndUpdateTime(techniqueStartMin, techniqueStartSec, techniqueStartHidden);
+                    validateTimeRange(techniqueStartMin, techniqueStartSec, techniqueEndMin, techniqueEndSec);
+                });
+            });
+            
+            [techniqueEndMin, techniqueEndSec].forEach(input => {
+                input.addEventListener('input', () => {
+                    validateAndUpdateTime(techniqueEndMin, techniqueEndSec, techniqueEndHidden);
+                    validateTimeRange(techniqueStartMin, techniqueStartSec, techniqueEndMin, techniqueEndSec);
+                });
+            });
+        }
 
+        // Función para validar y actualizar el tiempo en el campo oculto
+        function validateAndUpdateTime(minInput, secInput, hiddenInput) {
+            let minutes = parseInt(minInput.value) || 0;
+            let seconds = parseInt(secInput.value) || 0;
+            
+            // Asegurarse de que los segundos estén en el rango 0-59
+            if (seconds > 59) {
+                seconds = 59;
+                secInput.value = 59;
+            }
+            
+            // Calcular tiempo total en segundos
+            const totalSeconds = minutes * 60 + seconds;
+            hiddenInput.value = totalSeconds;
+        }
+
+        // Función para validar que el tiempo final sea mayor que el inicial
+        function validateTimeRange(startMinInput, startSecInput, endMinInput, endSecInput) {
+            const startMin = parseInt(startMinInput.value) || 0;
+            const startSec = parseInt(startSecInput.value) || 0;
+            const endMin = parseInt(endMinInput.value) || 0;
+            const endSec = parseInt(endSecInput.value) || 0;
+            
+            const startTotal = startMin * 60 + startSec;
+            const endTotal = endMin * 60 + endSec;
+            
+            // Validar que el tiempo final sea mayor que el inicial
+            if (endTotal <= startTotal && (endMinInput.value !== '' || endSecInput.value !== '')) {
+                // Calcular un tiempo final válido (inicial + 10 segundos)
+                let newEndTotal = startTotal + 10;
+                const newEndMin = Math.floor(newEndTotal / 60);
+                const newEndSec = newEndTotal % 60;
+                
+                endMinInput.value = newEndMin;
+                endSecInput.value = newEndSec;
+            }
+        }
+
+        // Función para convertir segundos a formato minutos:segundos y actualizar los campos
+        function secondsToMinSec(seconds, minInput, secInput) {
+            if (seconds === null || seconds === undefined || seconds === '') return;
+            
+            const totalSeconds = parseInt(seconds);
+            const minutes = Math.floor(totalSeconds / 60);
+            const remainingSeconds = totalSeconds % 60;
+            
+            minInput.value = minutes;
+            secInput.value = remainingSeconds;
+        }
+        
         // Función para abrir el modal de clonación
         function openCloneModal(videoId, videoTitle, currentDifficulty) {
             // Configurar el formulario
@@ -2579,10 +2523,153 @@
                 default: return level;
             }
         }
-    </script>
-
-    <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
-    <script>
+        
+        // Función para establecer el modo de visualización
+        function setViewMode(mode) {
+            viewMode = mode;
+            const container = document.getElementById('videos-container');
+            
+            document.getElementById('gridViewBtn').classList.remove('active');
+            document.getElementById('listViewBtn').classList.remove('active');
+            
+            if (mode === 'grid') {
+                container.className = 'video-grid';
+                document.getElementById('gridViewBtn').classList.add('active');
+            } else {
+                container.className = '';
+                document.getElementById('listViewBtn').classList.add('active');
+            }
+            
+            // Redibujar los videos
+            displayVideos(allVideos);
+        }
+        
+        // Función para limpiar todos los filtros
+        function clearFilters() {
+            currentSearchTerm = '';
+            document.getElementById('searchInput').value = '';
+            
+            // Resetear categorías
+            document.querySelectorAll('.category-pill[data-category]').forEach(pill => {
+                pill.classList.remove('active');
+            });
+            document.querySelector('.category-pill[data-category="all"]').classList.add('active');
+            currentCategory = 'all';
+            
+            // Resetear dificultad
+            document.querySelectorAll('.category-pill[data-difficulty]').forEach(pill => {
+                pill.classList.remove('active');
+            });
+            document.querySelector('.category-pill[data-difficulty="all"]').classList.add('active');
+            currentDifficulty = 'all';
+            
+            // Resetear checkboxes
+            document.getElementById('filterHasTechniques').checked = false;
+            document.getElementById('filterNoTechniques').checked = false;
+            
+            // Limpiar filtros activos
+            document.getElementById('activeFilters').innerHTML = '';
+            
+            // Resetear la vista
+            displayVideos(allVideos);
+        }
+        
+        // Función para aplicar los filtros actuales
+        function applyFilters() {
+            // Actualizar filtros activos
+            updateActiveFilters();
+            
+            // Filtrar videos
+            filterVideos();
+            
+            // Cerrar el collapsible de filtros avanzados
+            const bsCollapse = bootstrap.Collapse.getInstance(document.getElementById('advancedFilters'));
+            if (bsCollapse) {
+                bsCollapse.hide();
+            }
+        }
+        
+        // Función para actualizar la visualización de filtros activos
+        function updateActiveFilters() {
+            const activeFiltersContainer = document.getElementById('activeFilters');
+            activeFiltersContainer.innerHTML = '';
+            
+            // Categoría
+            if (currentCategory !== 'all') {
+                addFilterChip(activeFiltersContainer, 'Categoría: ' + currentCategory, () => {
+                    document.querySelectorAll('.category-pill[data-category]').forEach(pill => {
+                        pill.classList.remove('active');
+                    });
+                    document.querySelector('.category-pill[data-category="all"]').classList.add('active');
+                    currentCategory = 'all';
+                    filterVideos();
+                });
+            }
+            
+            // Dificultad
+            if (currentDifficulty !== 'all') {
+                let difficultyText;
+                switch(currentDifficulty) {
+                    case 'beginner': difficultyText = 'Principiante'; break;
+                    case 'intermediate': difficultyText = 'Intermedio'; break;
+                    case 'expert': difficultyText = 'Experto'; break;
+                    default: difficultyText = currentDifficulty;
+                }
+                
+                addFilterChip(activeFiltersContainer, 'Dificultad: ' + difficultyText, () => {
+                    document.querySelectorAll('.category-pill[data-difficulty]').forEach(pill => {
+                        pill.classList.remove('active');
+                    });
+                    document.querySelector('.category-pill[data-difficulty="all"]').classList.add('active');
+                    currentDifficulty = 'all';
+                    filterVideos();
+                });
+            }
+            
+            // Videos con técnicas
+            if (document.getElementById('filterHasTechniques').checked) {
+                addFilterChip(activeFiltersContainer, 'Solo videos con técnicas', () => {
+                    document.getElementById('filterHasTechniques').checked = false;
+                    filterVideos();
+                });
+            }
+            
+            // Videos sin técnicas
+            if (document.getElementById('filterNoTechniques').checked) {
+                addFilterChip(activeFiltersContainer, 'Solo videos sin técnicas', () => {
+                    document.getElementById('filterNoTechniques').checked = false;
+                    filterVideos();
+                });
+            }
+            
+            // Término de búsqueda
+            if (currentSearchTerm) {
+                addFilterChip(activeFiltersContainer, 'Búsqueda: ' + currentSearchTerm, () => {
+                    document.getElementById('searchInput').value = '';
+                    currentSearchTerm = '';
+                    filterVideos();
+                });
+            }
+        }
+        
+        // Función para añadir un chip de filtro
+        function addFilterChip(container, text, removeCallback) {
+            const chip = document.createElement('div');
+            chip.className = 'filter-chip';
+            chip.innerHTML = `
+                ${text}
+                <span class="close" onclick="event.stopPropagation();">&times;</span>
+            `;
+            
+            chip.querySelector('.close').addEventListener('click', () => {
+                removeCallback();
+                chip.remove();
+            });
+            
+            container.appendChild(chip);
+        }
+        
+        // Funciones para las estadísticas
         async function loadStatistics() {
             const loadingEl = document.getElementById('statisticsLoading');
             const contentEl = document.getElementById('statisticsContent');
@@ -2669,7 +2756,7 @@
                 activeUsersList.innerHTML = '<tr><td colspan="2" class="text-center">No hay datos disponibles</td></tr>';
             }
             
-            // Videos con más técnicas
+             // Videos con más técnicas
             const videosWithTechniquesList = document.getElementById('videosWithMostTechniquesList');
             if (data.techniques.videos_with_most_techniques && data.techniques.videos_with_most_techniques.length > 0) {
                 videosWithTechniquesList.innerHTML = '';
