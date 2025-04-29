@@ -705,17 +705,23 @@ def admin_users():
 @app.route('/admin/categories')
 @admin_required
 def admin_categories():
-    categories = Category.query.all()
-    user = User.query.get(session['user_id'])
     try:
+        categories = Category.query.all()
+        user = User.query.get(session['user_id'])
+        print(f"Categorías obtenidas: {len(categories)}")
+        print(f"Usuario obtenido: {user.username}")
+        
+        # Verificar que el archivo de plantilla existe
+        import os
+        template_path = os.path.join(app.template_folder, 'admin', 'categories.html')
+        print(f"¿Existe la plantilla? {os.path.exists(template_path)}")
+        
         return render_template('admin/categories.html', categories=categories, user=user)
     except Exception as e:
-        print(f"Error al cargar la plantilla admin categories: {str(e)}")
-        try:
-            return render_template('user/admin/categories.html', categories=categories, user=user)
-        except Exception as e2:
-            print(f"Error con plantilla alternativa: {str(e2)}")
-            raise e
+        import traceback
+        print(f"Error en admin_categories: {str(e)}")
+        print(traceback.format_exc())
+        return f"Error: {str(e)}", 500
 
 @app.route('/admin/categories', methods=['POST'])
 @admin_required
