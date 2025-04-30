@@ -1,5 +1,5 @@
 from flask import Flask, render_template, request, jsonify, redirect, url_for, session, flash
-from models import db, User, Video, Favorite, Technique, Category
+from models import db, User, Video, Favorite, Technique, Category, Paint
 from functools import wraps
 import os
 from datetime import datetime
@@ -821,6 +821,137 @@ def get_categories():
             'description': category.description
         })
     return jsonify(result)
+# Rutas para la gestión de pinturas (ADMIN)
+@app.route('/admin/paints')
+@admin_required
+def admin_paints():
+    user = User.query.get(session['user_id'])
+    try:
+        return render_template('admin/paints.html', user=user)
+    except Exception as e:
+        print(f"Error al cargar la plantilla admin paints: {str(e)}")
+        return f"Error: {str(e)}", 500
+
+@app.route('/api/paints', methods=['GET'])
+def get_paints():
+    try:
+        paints = Paint.query.all()
+        result = []
+        for paint in paints:
+            result.append({
+                'id': paint.id,
+                'name': paint.name,
+                'brand': paint.brand,
+                'color_code': paint.color_code,
+                'color_type': paint.color_type,
+                'color_family': paint.color_family,
+                'image_url': paint.image_url,
+                'stock': paint.stock,
+                'price': paint.price,
+                'description': paint.description,
+                'color_preview': paint.color_preview,
+                'created_at': paint.created_at.isoformat() if paint.created_at else None
+            })
+        return jsonify(result)
+    except Exception as e:
+        print(f"Error en get_paints(): {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/admin/paints', methods=['POST'])
+@admin_required
+def add_paint():
+    try:
+        data = request.json
+        
+        new_paint = Paint(
+            name=data.get('name'),
+            brand=data.get('brand'),
+            color_code=data.get('color_code'),
+            color_type=data.get('color_type'),
+            color_family=data.get('color_family'),
+            image_url=data.get('image_url'),
+            stock=data.get('stock', 0),
+            price=data.get('price'),
+            description=data.get('description'),
+            color_preview=data.get('color_preview')
+        )
+        
+        db.session.add(new_paint)
+        db.session.commit()
+        
+        return jsonify({
+            'id': new_paint.id,
+            'name': new_paint.name,
+            'brand': new_paint.brand,
+            'created_at': new_paint.created_at.isoformat()
+        }), 201
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/admin/paints/<int:paint_id>', methods=['GET'])
+@admin_required
+def get_paint(paint_id):
+    paint = Paint.query.get_or_404(paint_id)
+    return jsonify({
+        'id': paint.id,
+        'name': paint.name,
+        'brand': paint.brand,
+        'color_code': paint.color_code,
+        'color_type': paint.color_type,
+        'color_family': paint.color_family,
+        'image_url': paint.image_url,
+        'stock': paint.stock,
+        'price': paint.price,
+        'description': paint.description,
+        'color_preview': paint.color_preview,
+        'created_at': paint.created_at.isoformat() if paint.created_at else None
+    })
+
+@app.route('/admin/paints/<int:paint_id>', methods=['PUT'])
+@admin_required
+def update_paint(paint_id):
+    paint = Paint.query.get_or_404(paint_id)
+    data = request.json
+    
+    paint.name = data.get('name', paint.name)
+    paint.brand = data.get('brand', paint.brand)
+    paint.color_code = data.get('color_code', paint.color_code)
+    paint.color_type = data.get('color_type', paint.color_type) 
+    paint.color_family = data.get('color_family', paint.color_family)
+    paint.image_url = data.get('image_url', paint.image_url)
+    paint.stock = data.get('stock', paint.stock)
+    paint.price = data.get('price', paint.price)
+    paint.description = data.get('description', paint.description)
+    paint.color_preview = data.get('color_preview', paint.color_preview)
+    
+    db.session.commit()
+    
+    return jsonify({
+        'id': paint.id,
+        'name': paint.name,
+        'brand': paint.brand,
+        'color_code': paint.color_code,
+        'color_type': paint.color_type,
+        'color_family': paint.color_family,
+        'image_url': paint.image_url,
+        'stock': paint.stock,
+        'price': paint.price,
+        'description': paint.description,
+        'color_preview': paint.color_preview,
+        'created_at': paint.created_at.isoformat() if paint.created_at else None
+    })
+
+@app.route('/admin/paints/<int:paint_id>', methods=['DELETE'])
+@admin_required
+def delete_paint(paint_id):
+    paint = Paint.query.get_or_404(paint_id)
+    db.session.delete(paint)
+    db.session.commit()
+    
+    return '', 204
 
 @app.route('/admin/users', methods=['POST'])
 @admin_required

@@ -100,3 +100,31 @@ INSERT INTO techniques (video_id, name, start_time, end_time)
 SELECT (SELECT id FROM videos WHERE video_id = '9bZkp7q19f0' AND difficulty_level = 'expert'), 'Efectos de agua con resina transparente', 280, 360
 WHERE EXISTS (SELECT 1 FROM videos WHERE video_id = '9bZkp7q19f0' AND difficulty_level = 'expert')
 AND NOT EXISTS (SELECT 1 FROM techniques WHERE video_id = (SELECT id FROM videos WHERE video_id = '9bZkp7q19f0' AND difficulty_level = 'expert') AND name = 'Efectos de agua con resina transparente');
+
+-- Crear tabla de pinturas si no existe
+CREATE TABLE IF NOT EXISTS paints (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(100) NOT NULL,
+    brand VARCHAR(50) NOT NULL,
+    color_code VARCHAR(20),
+    color_type VARCHAR(50),
+    color_family VARCHAR(50),
+    image_url VARCHAR(255),
+    stock INTEGER DEFAULT 0,
+    price NUMERIC(8, 2),
+    description TEXT,
+    color_preview VARCHAR(20),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Insertar algunas pinturas de ejemplo
+INSERT INTO paints (name, brand, color_code, color_type, color_family, stock, price, description, color_preview)
+VALUES 
+('Model Color Khaki', 'Vallejo', '70.762', 'Base', 'Brown', 15, 3.25, 'Pintura acrílica de color marrón caqui ideal para uniformes militares', '#5B5A37'),
+('Death Guard Green', 'Citadel', 'Base', 'Base', 'Green', 8, 4.50, 'Color base verde para la legión Death Guard', '#7E866B'),
+('Brush-On Primer', 'Army Painter', 'WP1472', 'Primer', 'Grey', 20, 6.95, 'Imprimación gris para aplicar con pincel', '#696969'),
+('Dark Grey', 'AK Interactive', '11022', 'Acrylic', 'Grey', 5, 2.80, 'Pintura acrílica gris oscuro para detalles', '#333333'),
+('Ratskin Flesh', 'Citadel', 'Base', 'Base', 'Flesh', 12, 4.50, 'Color base para piel humana', '#AC7860'),
+('Model Color Silver', 'Vallejo', '70.997', 'Metallic', 'Metallic', 10, 3.25, 'Pintura metálica color plata', '#C0C0C0'),
+('Nuln Oil', 'Citadel', 'Shade', 'Wash', 'Black', 7, 7.80, 'Lavado negro para dar profundidad', '#000000'),
+('Contrast Blood Angels Red', 'Citadel', 'Contrast', 'Contrast', 'Red', 9, 7.80, 'Pintura de contraste roja', '#A02020');
