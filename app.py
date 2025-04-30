@@ -72,7 +72,7 @@ def index():
     if 'user_id' in session:
         user = User.query.get(session['user_id'])
         if user.role == 'admin':
-            return redirect(url_for('admin_videos'))
+            return redirect(url_for('admin_dashboard'))  # Cambiado de admin_videos a admin_dashboard
         else:
             return redirect(url_for('user_dashboard'))
     return render_template('login.html')
@@ -312,15 +312,17 @@ def user_profile():
             raise e
 
 # Rutas de administrador
-@app.route('/admin/videos')
+# A esta función
+@app.route('/admin/dashboard')
 @admin_required
 def admin_dashboard():
+    user = User.query.get(session['user_id'])
     try:
-        return render_template('admin/videos.html')
+        return render_template('admin/dashboard.html', user=user)
     except Exception as e:
         print(f"Error al cargar la plantilla admin dashboard: {str(e)}")
         try:
-            return render_template('user/admin/videos.html')
+            return render_template('user/admin/dashboard.html', user=user)
         except Exception as e2:
             print(f"Error con plantilla alternativa: {str(e2)}")
             raise e
