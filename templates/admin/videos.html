@@ -1104,45 +1104,59 @@
 
         // Función para cargar estadísticas
         async function loadStatistics() {
-            const loadingEl = document.getElementById('statisticsLoading');
-            const contentEl = document.getElementById('statisticsContent');
-            
-            // Mostrar carga
-            loadingEl.style.display = 'block';
-            contentEl.style.display = 'none';
-            
             try {
-                const response = await fetch('/api/admin/statistics');
+                // Cargar videos para contar
+                const videosResponse = await fetch('/api/videos');
+                if (!videosResponse.ok) {
+                    throw new Error('Error al cargar videos');
+                }
+                const videos = await videosResponse.json();
+                document.querySelector('.videos-count').textContent = videos.length;
                 
-                if (!response.ok) {
-                    throw new Error(`Error HTTP: ${response.status}`);
+                // Obtener categorías únicas
+                const categories = new Set();
+                videos.forEach(video => {
+                    if (video.category) {
+                        categories.add(video.category);
+                    } else {
+                        categories.add('Sin categoría');
+                    }
+                });
+                document.querySelector('.categories-count').textContent = categories.size;
+                
+                // Solicitud para obtener diagnóstico que incluye conteos
+                const diagnosticResponse = await fetch('/debug/db');
+                if (!diagnosticResponse.ok) {
+                    throw new Error('Error al cargar diagnóstico');
                 }
                 
-                const data = await response.json();
-                console.log('Estadísticas cargadas:', data);
+                const data = await diagnosticResponse.json();
                 
-                // Verificar que los datos tienen la estructura esperada
-                if (!data || !data.users || !data.videos || !data.techniques || !data.favorites) {
-                    throw new Error('Los datos recibidos no tienen el formato esperado');
+                // Extraer cantidad de usuarios
+                if (data.tables && data.tables.users) {
+                    const usersMatch = data.tables.users.match(/\((\d+) registros\)/);
+                    if (usersMatch && usersMatch[1]) {
+                        document.querySelector('.users-count').textContent = usersMatch[1];
+                    } else {
+                        document.querySelector('.users-count').textContent = '0';
+                    }
                 }
                 
-                // Actualizar los datos en la interfaz
-                updateDashboardStatistics(data);
-                
-                // Ocultar carga y mostrar contenido
-                loadingEl.style.display = 'none';
-                contentEl.style.display = 'block';
-                
+                // Extraer cantidad de favoritos
+                if (data.tables && data.tables.favorites) {
+                    const favoritesMatch = data.tables.favorites.match(/\((\d+) registros\)/);
+                    if (favoritesMatch && favoritesMatch[1]) {
+                        document.querySelector('.favorites-count').textContent = favoritesMatch[1];
+                    } else {
+                        document.querySelector('.favorites-count').textContent = '0';
+                    }
+                }
             } catch (error) {
                 console.error('Error al cargar estadísticas:', error);
-                loadingEl.innerHTML = `
-                    <div class="alert alert-danger">
-                        <i class="bi bi-exclamation-triangle me-2"></i> Error al cargar estadísticas: ${error.message}
-                        <button class="btn btn-outline-danger btn-sm mt-2" onclick="loadStatistics()">
-                            <i class="bi bi-arrow-clockwise me-2"></i> Intentar de nuevo
-                        </button>
-                    </div>
-                `;
+                document.querySelector('.videos-count').textContent = '-';
+                document.querySelector('.users-count').textContent = '-';
+                document.querySelector('.favorites-count').textContent = '-';
+                document.querySelector('.categories-count').textContent = '-';
             }
         }
         
@@ -2732,78 +2746,36 @@
         }
         
         function updateDashboardStatistics(data) {
-            try {
-                // Métricas principales - verificar que existen los datos antes de asignarlos
-                document.getElementById('totalUsers').textContent = data.users && data.users.total || '0';
-                document.getElementById('totalVideos').textContent = data.videos && data.videos.total || '0';
-                document.getElementById('totalTechniques').textContent = data.techniques && data.techniques.total || '0';
-                document.getElementById('totalFavorites').textContent = data.favorites && data.favorites.total || '0';
-                
-                // Usuarios
-                if (data.users) {
-                    document.getElementById('regularUsers').textContent = data.users.regular || '0';
-                    document.getElementById('adminUsers').textContent = data.users.admin || '0';
-                }
-                
-                // Técnicas
-                if (data.techniques) {
-                    document.getElementById('techniquesCount').textContent = data.techniques.total || '0';
-                    document.getElementById('avgTechniquesPerVideo').textContent = data.techniques.avg_per_video || '0';
-                    document.getElementById('totalTechniquesDuration').textContent = data.techniques.total_duration_formatted || '00:00:00';
-                }
-                
-                // Videos populares
-                updateTableData('popularVideosList', data.favorites && data.favorites.popular_videos);
-                
-                // Usuarios activos
-                updateTableData('activeUsersList', data.favorites && data.favorites.active_users);
-                
-                // Videos con más técnicas
-                updateTableData('videosWithMostTechniquesList', data.techniques && data.techniques.videos_with_most_techniques);
-                
-                // Generar gráficos si están disponibles los datos
-                if (data.users) createUsersChart(data.users);
-                if (data.users && data.users.by_level) createUserLevelsChart(data.users.by_level);
-                if (data.videos && data.videos.by_level) createVideoDifficultyChart(data.videos.by_level);
-                if (data.videos && data.videos.by_category) createVideoCategoriesChart(data.videos.by_category);
-            } catch (error) {
-                console.error('Error al actualizar estadísticas en el dashboard:', error);
-            }
-        }
-
-        // Función auxiliar para actualizar tablas de datos
-        function updateTableData(tableId, dataArray) {
-            const tableElement = document.getElementById(tableId);
-            if (!tableElement) return;
+            // Métricas principales
+            document.getElementById('totalUsers').textContent = data.users.total;
+            document.getElementById('totalVideos').textContent = data.videos.total;
+            document.getElementById('totalTechniques').textContent = data.techniques.total;
+            document.getElementById('totalFavorites').textContent = data.favorites.total;
             
-            if (!dataArray || !Array.isArray(dataArray) || dataArray.length === 0) {
-                tableElement.innerHTML = '<tr><td colspan="2" class="text-center">No hay datos disponibles</td></tr>';
-                return;
-            }
+            // Usuarios
+            document.getElementById('regularUsers').textContent = data.users.regular;
+            document.getElementById('adminUsers').textContent = data.users.admin;
             
-            tableElement.innerHTML = '';
+            // Técnicas
+            document.getElementById('techniquesCount').textContent = data.techniques.total;
+            document.getElementById('avgTechniquesPerVideo').textContent = data.techniques.avg_per_video;
+            document.getElementById('totalTechniquesDuration').textContent = data.techniques.total_duration_formatted;
             
-            if (tableId === 'popularVideosList' || tableId === 'videosWithMostTechniquesList') {
-                dataArray.forEach(item => {
-                    tableElement.innerHTML += `
+            // Videos populares
+            const popularVideosList = document.getElementById('popularVideosList');
+            if (data.favorites.popular_videos && data.favorites.popular_videos.length > 0) {
+                popularVideosList.innerHTML = '';
+                data.favorites.popular_videos.forEach(video => {
+                    popularVideosList.innerHTML += `
                         <tr>
-                            <td><a href="javascript:void(0)" onclick="editVideo(${item.id})">${item.title}</a></td>
-                            <td class="text-end">${tableId === 'popularVideosList' ? item.favorites_count : item.techniques_count}</td>
+                            <td><a href="javascript:void(0)" onclick="editVideo(${video.id})">${video.title}</a></td>
+                            <td class="text-end">${video.favorites_count}</td>
                         </tr>
                     `;
                 });
-            } else if (tableId === 'activeUsersList') {
-                dataArray.forEach(user => {
-                    tableElement.innerHTML += `
-                        <tr>
-                            <td>${user.username}</td>
-                            <td class="text-end">${user.favorites_count}</td>
-                        </tr>
-                    `;
-                });
+            } else {
+                popularVideosList.innerHTML = '<tr><td colspan="2" class="text-center">No hay datos disponibles</td></tr>';
             }
-        }
-
             
             // Usuarios activos
             const activeUsersList = document.getElementById('activeUsersList');
