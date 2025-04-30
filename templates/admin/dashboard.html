@@ -537,14 +537,18 @@
     <script>
         // Cargar estadísticas al iniciar
         document.addEventListener('DOMContentLoaded', () => {
+            console.log("Página cargada, ejecutando loadStatistics");
             loadStatistics();
         });
         
         function loadStatistics() {
-            // Hacer una solicitud para obtener datos estadísticos
+            console.log("Cargando estadísticas...");
+            
+            // Videos totales
             fetch('/api/videos')
             .then(response => response.json())
             .then(videos => {
+                console.log(`Videos cargados: ${videos.length}`);
                 document.querySelector('.videos-count').textContent = videos.length;
                 
                 // Obtener categorías únicas
@@ -558,28 +562,45 @@
             })
             .catch(error => {
                 console.error('Error al cargar videos:', error);
+                document.querySelector('.videos-count').textContent = 'Error';
             });
             
-            // Solicitud para obtener diagnóstico que incluye conteos
-            fetch('/debug/db')
+            // Datos de usuarios y favoritos
+            fetch('/api/admin/statistics')
             .then(response => response.json())
             .then(data => {
-                if (data.tables) {
-                    // Extraer cantidad de usuarios
-                    const usersMatch = data.tables.users.match(/\((\d+) registros\)/);
-                    if (usersMatch && usersMatch[1]) {
-                        document.querySelector('.users-count').textContent = usersMatch[1];
-                    }
-                    
-                    // Extraer cantidad de favoritos
-                    const favoritesMatch = data.tables.favorites.match(/\((\d+) registros\)/);
-                    if (favoritesMatch && favoritesMatch[1]) {
-                        document.querySelector('.favorites-count').textContent = favoritesMatch[1];
-                    }
-                }
+                console.log('Estadísticas cargadas:', data);
+                
+                // Actualizar contadores con los datos obtenidos
+                document.querySelector('.users-count').textContent = data.users.total;
+                document.querySelector('.favorites-count').textContent = data.favorites.total;
             })
             .catch(error => {
-                console.error('Error al cargar estadísticas:', error);
+                console.error('Error al cargar estadísticas completas:', error);
+                
+                // Si falla, intentar obtener las estadísticas básicas
+                fetch('/debug/db')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.tables) {
+                        // Extraer cantidad de usuarios
+                        const usersMatch = data.tables.users.match(/\((\d+) registros\)/);
+                        if (usersMatch && usersMatch[1]) {
+                            document.querySelector('.users-count').textContent = usersMatch[1];
+                        }
+                        
+                        // Extraer cantidad de favoritos
+                        const favoritesMatch = data.tables.favorites.match(/\((\d+) registros\)/);
+                        if (favoritesMatch && favoritesMatch[1]) {
+                            document.querySelector('.favorites-count').textContent = favoritesMatch[1];
+                        }
+                    }
+                })
+                .catch(err => {
+                    console.error('Error en fallback:', err);
+                    document.querySelector('.users-count').textContent = 'Error';
+                    document.querySelector('.favorites-count').textContent = 'Error';
+                });
             });
         }
         

@@ -977,43 +977,6 @@ def get_admin_statistics():
             for video in popular_videos_query
         ]
         
-        # Usuarios más activos (con más favoritos)
-        active_users_query = db.session.query(
-            User.id, User.username, db.func.count(Favorite.id).label('favorites_count')
-        ).join(Favorite, Favorite.user_id == User.id)\
-        .group_by(User.id, User.username)\
-        .order_by(db.desc('favorites_count'))\
-        .limit(5)
-        
-        active_users = [
-            {"id": user.id, "username": user.username, "favorites_count": user.favorites_count}
-            for user in active_users_query
-        ]
-        
-        # Estadísticas de técnicas
-        total_techniques = Technique.query.count()
-        avg_techniques_per_video = total_techniques / total_videos if total_videos > 0 else 0
-        
-        # Calcular tiempo total de contenido (suma de duraciones de técnicas)
-        techniques_duration_query = db.session.query(
-            db.func.sum(Technique.end_time - Technique.start_time)
-        ).scalar()
-        
-        total_techniques_duration = techniques_duration_query or 0
-        
-        # Videos con más técnicas
-        videos_with_most_techniques_query = db.session.query(
-            Video.id, Video.title, db.func.count(Technique.id).label('techniques_count')
-        ).join(Technique, Technique.video_id == Video.id)\
-        .group_by(Video.id, Video.title)\
-        .order_by(db.desc('techniques_count'))\
-        .limit(5)
-        
-        videos_with_most_techniques = [
-            {"id": video.id, "title": video.title, "techniques_count": video.techniques_count}
-            for video in videos_with_most_techniques_query
-        ]
-        
         return jsonify({
             "users": {
                 "total": total_users,
@@ -1036,18 +999,11 @@ def get_admin_statistics():
             },
             "favorites": {
                 "total": total_favorites,
-                "popular_videos": popular_videos,
-                "active_users": active_users
-            },
-            "techniques": {
-                "total": total_techniques,
-                "avg_per_video": round(avg_techniques_per_video, 2),
-                "total_duration_seconds": total_techniques_duration,
-                "total_duration_formatted": format_duration(total_techniques_duration),
-                "videos_with_most_techniques": videos_with_most_techniques
+                "popular_videos": popular_videos
             }
         })
     except Exception as e:
+        print(f"Error al obtener estadísticas: {str(e)}")
         return jsonify({"error": str(e)}), 500
 
 # Función auxiliar para formatear duración en segundos a formato hh:mm:ss
