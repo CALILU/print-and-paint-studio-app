@@ -114,7 +114,7 @@ CREATE TABLE IF NOT EXISTS paints (
     price NUMERIC(8, 2),
     description TEXT,
     color_preview VARCHAR(20),
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP 
 );
 
 -- Insertar algunas pinturas de ejemplo

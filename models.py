@@ -95,7 +95,7 @@ class Category(db.Model):
     videos = db.relationship('Video', backref='category_relation', lazy=True)
     
     def __repr__(self):
-        return f'<Category {self.name}>'    
+        return f'<Category {self.name}>'     
     
 class Paint(db.Model):
     __tablename__ = 'paints'
@@ -114,4 +114,4 @@ class Paint(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     
     def __repr__(self):
-        return f'<Paint {self.brand} - {self.name}>'    
+        return f'<Paint {self.brand} - {self.name}>'     
