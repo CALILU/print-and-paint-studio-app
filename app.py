@@ -76,12 +76,12 @@ def api_search_images():
             # Proporcionar imágenes de ejemplo si no se encontraron resultados
             placeholder_images = [
                 {
-                    'url': f"https://via.placeholder.com/300x200/cccccc/666666/?text=No+Image+{i}",
+                    'url': f"https://via.placeholder.com/300x200/cccccc/666666?text=No+Image+{i}",
                     'title': f"Imagen de muestra {i}",
                     'source': ""
                 } for i in range(1, 5)
             ]
-            return jsonify({"images": placeholder_images, "message": "No se encontraron imágenes. Mostrando ejemplos."})
+                        return jsonify({"images": placeholder_images, "message": "No se encontraron imágenes. Mostrando ejemplos."})
         
         return jsonify({"images": images})
     
@@ -93,7 +93,7 @@ def api_search_images():
         # Proporcionar imágenes de placeholder en caso de error
         placeholder_images = [
             {
-                'url': f"https://via.placeholder.com/300x200/ffdddd/cc0000/?text=Error+{i}",
+                'url': f"https://via.placeholder.com/300x200/ffdddd/cc0000?text=Error+{i}",
                 'title': f"Error en la búsqueda - Imagen {i}",
                 'source': ""
             } for i in range(1, 3)
