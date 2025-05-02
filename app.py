@@ -41,6 +41,7 @@ def debug_template_paths():
         print(f"Ruta: {rule}")
 
 # Añadir esta ruta cerca de las otras rutas de API
+# Añadir esta ruta cerca de las otras rutas de API
 @app.route('/api/search-images', methods=['GET'])
 @admin_required
 def api_search_images():
@@ -104,8 +105,8 @@ def api_search_images():
             "images": placeholder_images, 
             "error": str(e),
             "message": "Error al buscar imágenes. Mostrando imágenes de muestra."
-        }), 200  # Devolver 200 en vez de 500 para manejar el error en el cliente 
-    
+        }), 200  # Devolver 200 en vez de 500 para manejar el error en el cliente
+       
 # Configuración de la base de datos
 db_url = os.environ.get('DATABASE_URL')
 print(f"URL original de la base de datos: {db_url}")
