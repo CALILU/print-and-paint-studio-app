@@ -81,7 +81,8 @@ def api_search_images():
                     'source': ""
                 } for i in range(1, 5)
             ]
-                        return jsonify({"images": placeholder_images, "message": "No se encontraron imágenes. Mostrando ejemplos."})
+            
+            return jsonify({"images": placeholder_images, "message": "No se encontraron imágenes. Mostrando ejemplos."})
         
         return jsonify({"images": images})
     
