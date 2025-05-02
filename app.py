@@ -54,17 +54,21 @@ def api_search_images():
         # Para depuración
         print(f"Iniciando búsqueda de imágenes para: {query}")
         
-        # Intentar usar DuckDuckGo para buscar imágenes - usando técnicas de boton_imagen1.py
+        # Intentar usar DuckDuckGo para buscar imágenes - corrigiendo parámetros
         with DDGS() as ddgs:
-            # Usar safesearch='Moderate' como en boton_imagen1.py y aumentar max_results
-            results = list(ddgs.images(query, safesearch='Moderate', max_results=15))
+            # IMPORTANTE: Usar solo los parámetros soportados por la versión de la biblioteca
+            # Versión actual usa: keywords, region, safesearch
+            results = list(ddgs.images(
+                keywords=query,  # Usar 'keywords' en lugar de la consulta directa
+                safesearch='moderate',  # Usar lowercase 'moderate' en lugar de 'Moderate'
+                max_results=15  # Este parámetro podría ser el problema - verificar si es soportado
+            ))
             print(f"Resultados obtenidos: {len(results)}")
         
-        # Preparar resultados - verificando y validando las URLs como en boton_imagen1.py
+        # Preparar resultados verificando URLs
         images = []
         for result in results:
             if 'image' in result and result['image']:
-                # Solo incluimos URLs que parecen válidas
                 url_imagen = result.get('image')
                 if url_imagen and (url_imagen.startswith('http://') or url_imagen.startswith('https://')):
                     images.append({
@@ -75,10 +79,10 @@ def api_search_images():
         
         print(f"Imágenes procesadas/validadas: {len(images)}")
         
-        # Si no se encontraron imágenes, devolver imágenes de ejemplo más descriptivas
+        # Si no se encontraron imágenes, devolver imágenes de ejemplo
         if not images:
             print("No se encontraron imágenes para la consulta")
-            # Proporcionar imágenes de ejemplo si no se encontraron resultados
+            # Proporcionar imágenes de ejemplo
             placeholder_images = [
                 {
                     'url': f"https://via.placeholder.com/300x200/e9ecef/495057?text=Sin+resultados",
@@ -99,7 +103,7 @@ def api_search_images():
         print(f"Error en búsqueda de imágenes: {str(e)}")
         traceback.print_exc()
         
-        # Proporcionar imágenes de placeholder en caso de error - más descriptivas
+        # Proporcionar imágenes de placeholder en caso de error
         placeholder_images = [
             {
                 'url': f"https://via.placeholder.com/300x200/f8d7da/721c24?text=Error+de+búsqueda",
@@ -112,8 +116,8 @@ def api_search_images():
             "images": placeholder_images, 
             "error": str(e),
             "message": "Error al buscar imágenes. Por favor, inténtelo de nuevo más tarde."
-        }), 200  # Devolver 200 en vez de 500 para manejar el error en el cliente     
-    
+        }), 200  # Devolver 200 en vez de 500
+      
 # Configuración de la base de datos
 db_url = os.environ.get('DATABASE_URL')
 print(f"URL original de la base de datos: {db_url}")

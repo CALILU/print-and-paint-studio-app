@@ -1684,7 +1684,7 @@
             console.log(`Mostrando ${images.length} imágenes encontradas`);
             
             // Verificar si hay imágenes para mostrar
-            if (images.length === 0) {
+            if (!images || images.length === 0) {
                 resultsContainer.innerHTML = `
                     <div class="col-12 text-center">
                         <div class="alert alert-info">
@@ -1696,35 +1696,41 @@
                 return;
             }
             
-            // Contador de imágenes cargadas correctamente
-            let loadedImages = 0;
+            // Mostrar un mensaje mientras se cargan las imágenes
+            resultsContainer.innerHTML = `
+                <div class="col-12 text-center mb-3">
+                    <p class="text-muted">Cargando ${images.length} imágenes...</p>
+                </div>
+            `;
             
+            // Añadir cada imagen al contenedor
             images.forEach((image, index) => {
-                // Asegurarnos de que la URL es válida
-                if (!image.url || (!image.url.startsWith('http://') && !image.url.startsWith('https://'))) {
-                    console.warn(`Imagen ${index+1} con URL inválida:`, image.url);
-                    return; // Saltar esta imagen
-                }
+                // Si la URL no es válida, usar una imagen de reemplazo
+                const imageUrl = image.url || 'https://via.placeholder.com/200/f8f9fa/666666?text=Sin+imagen';
                 
                 const imageCard = document.createElement('div');
                 imageCard.className = 'col-md-4 col-lg-3 mb-4';
                 
-                // Crear estructura de tarjeta con manejo de errores mejorado
+                // Crear estructura de tarjeta con mejor manejo de errores
                 imageCard.innerHTML = `
                     <div class="card h-100">
                         <div style="height: 200px; background-color: #f8f9fa; display: flex; align-items: center; justify-content: center; position: relative;">
-                            <div class="spinner-border text-primary position-absolute" role="status" id="spinner-${index}">
+                            <div class="spinner-border text-primary" role="status" id="spinner-${index}">
                                 <span class="visually-hidden">Cargando...</span>
                             </div>
-                            <img src="${image.url}" alt="${image.title || 'Resultado de búsqueda'}" 
-                                class="card-img-top" style="max-height: 180px; max-width: 90%; object-fit: contain;"
-                                onload="this.style.display='block'; document.getElementById('spinner-${index}').style.display='none'; window.loadedImageCounter++;"
-                                onerror="this.onerror=null; this.src='https://via.placeholder.com/200x150/f8f9fa/666666?text=Imagen+no+disponible'; document.getElementById('spinner-${index}').style.display='none';">
+                            <img 
+                                src="${imageUrl}" 
+                                alt="${image.title || 'Imagen'}" 
+                                class="card-img-top" 
+                                style="max-height: 180px; max-width: 90%; object-fit: contain; display: none;"
+                                onload="this.style.display='block'; document.getElementById('spinner-${index}').style.display='none';"
+                                onerror="this.onerror=null; this.src='https://via.placeholder.com/200/f8f9fa/666666?text=Imagen+no+disponible'; document.getElementById('spinner-${index}').style.display='none';"
+                            >
                         </div>
                         <div class="card-body">
                             <p class="card-text small text-muted mb-2" style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${image.title || 'Sin título'}</p>
                             <button class="btn btn-sm btn-primary w-100 select-image-btn" 
-                                    data-url="${image.url}">
+                                    data-url="${imageUrl}">
                                 <i class="bi bi-check-circle me-1"></i> Seleccionar
                             </button>
                         </div>
@@ -1733,23 +1739,6 @@
                 
                 resultsContainer.appendChild(imageCard);
             });
-            
-            // Inicializar contador de imágenes cargadas
-            window.loadedImageCounter = 0;
-            
-            // Comprobar si todas las imágenes han fallado después de un tiempo
-            setTimeout(() => {
-                if (window.loadedImageCounter === 0 && images.length > 0) {
-                    resultsContainer.innerHTML += `
-                        <div class="col-12">
-                            <div class="alert alert-warning mt-3">
-                                <i class="bi bi-exclamation-triangle me-2"></i>
-                                <strong>Advertencia:</strong> Hubo problemas al cargar las imágenes. Esto puede deberse a problemas de conectividad o a que las imágenes ya no están disponibles.
-                            </div>
-                        </div>
-                    `;
-                }
-            }, 5000); // Comprobar después de 5 segundos
             
             // Añadir eventos a los botones de selección
             document.querySelectorAll('.select-image-btn').forEach(btn => {
