@@ -1613,12 +1613,16 @@
             }
         }
 
-        // Función para mostrar los resultados de la búsqueda
         function displayImageResults(images) {
             const resultsContainer = document.getElementById('imageSearchResults');
             resultsContainer.innerHTML = '';
             
+            console.log(`Mostrando ${images.length} imágenes encontradas`);
+            
             images.forEach((image, index) => {
+                // Registrar información de cada imagen para depuración
+                console.log(`Imagen ${index+1}:`, image.url);
+                
                 const imageCard = document.createElement('div');
                 imageCard.className = 'col-md-4 col-lg-3 mb-4';
                 
@@ -1626,7 +1630,8 @@
                     <div class="card h-100">
                         <div style="height: 200px; background-color: #f8f9fa; display: flex; align-items: center; justify-content: center;">
                             <img src="${image.url}" alt="Resultado de búsqueda ${index + 1}" 
-                                class="card-img-top" style="max-height: 180px; max-width: 90%; object-fit: contain;">
+                                class="card-img-top" style="max-height: 180px; max-width: 90%; object-fit: contain;"
+                                onerror="this.onerror=null; this.src='https://via.placeholder.com/200x150/f8f9fa/666666/?text=Error+de+imagen'; console.error('Error al cargar imagen:', this.src);">
                         </div>
                         <div class="card-body">
                             <p class="card-text small text-truncate">${image.url}</p>
