@@ -236,6 +236,22 @@
             height: 30px;
             margin-right: 10px;
         }
+        .filter-chip {
+            display: inline-block;
+            background-color: #f8f9fa;
+            color: #495057;
+            padding: 4px 10px;
+            border-radius: 20px;
+            margin-right: 5px;
+            margin-bottom: 5px;
+            font-size: 0.9rem;
+            border: 1px solid #dee2e6;
+        }
+        .filter-chip .close {
+            margin-left: 5px;
+            cursor: pointer;
+            font-weight: bold;
+        }
         @media (max-width: 768px) {
             .sidebar {
                 width: 100%;
@@ -723,11 +739,13 @@
         let paintToDelete = null;
         let confirmDeleteModal;
         let viewPaintModal;
+        let imageSearchModal;
         
         document.addEventListener('DOMContentLoaded', () => {
             // Inicializar modales
             confirmDeleteModal = new bootstrap.Modal(document.getElementById('confirmDeleteModal'));
             viewPaintModal = new bootstrap.Modal(document.getElementById('viewPaintModal'));
+            imageSearchModal = new bootstrap.Modal(document.getElementById('imageSearchModal'));
             
             // Configurar formulario de pinturas
             const paintForm = document.getElementById('paintForm');
@@ -736,9 +754,48 @@
                 savePaint();
             });
             
-            imageSearchModal = new bootstrap.Modal(document.getElementById('imageSearchModal'));
+            // Configurar botón de eliminación de pintura
+            document.getElementById('confirmDeleteBtn').addEventListener('click', () => {
+                if (paintToDelete) {
+                    deletePaint(paintToDelete);
+                    confirmDeleteModal.hide();
+                }
+            });
             
-            // ... (otros event listeners)
+            // Configurar botón de edición en el modal de detalles
+            document.getElementById('editPaintBtn').addEventListener('click', () => {
+                const paintId = document.getElementById('editPaintBtn').getAttribute('data-id');
+                viewPaintModal.hide();
+                if (paintId) {
+                    editPaint(paintId);
+                }
+            });
+            
+            // Configurar vista previa en tiempo real
+            setupLivePreview();
+            
+            // Añadir evento al botón de búsqueda de imágenes
+            document.getElementById('searchImagesBtn').addEventListener('click', () => {
+                const paintName = document.getElementById('name').value.trim();
+                const paintBrand = document.getElementById('brand').value.trim();
+                const colorCode = document.getElementById('color_code').value.trim();
+                
+                if (!paintName && !paintBrand) {
+                    alert('Por favor, introduce al menos un nombre o marca para la pintura antes de buscar imágenes.');
+                    return;
+                }
+                
+                // Mostrar el modal
+                document.getElementById('searchTermDisplay').textContent = `${paintBrand} ${paintName} ${colorCode}`.trim();
+                document.getElementById('imageSearchLoading').style.display = 'block';
+                document.getElementById('imageSearchResults').style.display = 'none';
+                document.getElementById('imageSearchError').style.display = 'none';
+                
+                imageSearchModal.show();
+                
+                // Iniciar búsqueda de imágenes
+                searchImages(paintBrand, paintName, colorCode);
+            });
             
             // Inicializar filtros
             initializeFilters();
@@ -751,11 +808,10 @@
                 console.error("Error al cargar pinturas iniciales:", error);
             });
         });
-        // Función para inicializar los filtros
-        // Función para inicializar los filtros
+        
         // Función para inicializar los filtros
         function initializeFilters() {
-            // Obtener todos los checkboxes de stock (estos se mantienen igual)
+            // Obtener todos los checkboxes de stock
             const stockCheckboxes = document.querySelectorAll('#stockFilters input[type="checkbox"]');
             filteredStockStatus = Array.from(stockCheckboxes)
                 .filter(cb => cb.checked)
@@ -777,6 +833,7 @@
                 });
             });
         }
+        
         // Función para configurar la vista previa en tiempo real
         function setupLivePreview() {
             const updatePreview = () => {
@@ -896,7 +953,6 @@
             filterAndDisplayPaints();
         }
         
-        // Función para filtrar y mostrar las pinturas
         // Función para filtrar y mostrar las pinturas
         function filterAndDisplayPaints() {
             let filteredPaints = [...allPaints];
@@ -1109,29 +1165,23 @@
             currentSearchTerm = '';
             document.getElementById('searchInput').value = '';
             
-            // Activar todos los checkboxes de marca
-            document.querySelectorAll('#brandFilters input[type="checkbox"]').forEach(cb => {
-                cb.checked = true;
-            });
-            filteredBrands = Array.from(document.querySelectorAll('#brandFilters input[type="checkbox"]')).map(cb => cb.value);
+            // Reestablecer filtros de marca
+            filteredBrands = [];
+            document.getElementById('activeBrandFilters').innerHTML = '';
             
-            // Activar todos los checkboxes de tipo
-            document.querySelectorAll('#typeFilters input[type="checkbox"]').forEach(cb => {
-                cb.checked = true;
-            });
-            filteredTypes = Array.from(document.querySelectorAll('#typeFilters input[type="checkbox"]')).map(cb => cb.value);
+            // Reestablecer filtros de tipo
+            filteredTypes = [];
+            document.getElementById('activeTypeFilters').innerHTML = '';
+            
+            // Reestablecer filtros de familia de color
+            filteredColorFamilies = [];
+            document.getElementById('activeColorFamilyFilters').innerHTML = '';
             
             // Activar todos los checkboxes de stock
             document.querySelectorAll('#stockFilters input[type="checkbox"]').forEach(cb => {
                 cb.checked = true;
             });
-            filteredStockStatus = Array.from(document.querySelectorAll('#stockFilters input[type="checkbox"]')).map(cb => cb.value);
-            
-            // Activar todos los checkboxes de familia de color
-            document.querySelectorAll('#colorFamilyFilters input[type="checkbox"]').forEach(cb => {
-                cb.checked = true;
-            });
-            filteredColorFamilies = Array.from(document.querySelectorAll('#colorFamilyFilters input[type="checkbox"]')).map(cb => cb.value);
+            filteredStockStatus = ['in', 'low', 'out'];
             
             // Actualizar la visualización
             filterAndDisplayPaints();
@@ -1139,7 +1189,7 @@
         
         // Función para aplicar los filtros
         function applyFilters() {
-            // Los filtros ya se actualizan con los eventos de cambio de los checkboxes
+            // Los filtros ya se actualizan con los eventos de cambio
             // Solo necesitamos actualizar la visualización
             filterAndDisplayPaints();
             
@@ -1345,7 +1395,8 @@
             // Llenar los selectores
             fillSelectOptions('brandFilterSelect', brands);
             fillSelectOptions('typeFilterSelect', types);
-            fillSelectOptions('colorFamilyFilterSelect', colorFamilies);            
+            fillSelectOptions('colorFamilyFilterSelect', colorFamilies);
+            
             // Configurar eventos para los selectores
             setupFilterSelect('brandFilterSelect', 'activeBrandFilters', 'brand');
             setupFilterSelect('typeFilterSelect', 'activeTypeFilters', 'color_type');
@@ -1432,7 +1483,6 @@
         }
 
         // Función para actualizar filtros activos
-        // Función para actualizar filtros activos
         function updateFilters() {
             // Recopilar todos los filtros activos
             filteredBrands = getActiveFilterValues('activeBrandFilters');
@@ -1441,6 +1491,9 @@
             
             // Actualizar filtros activos
             updateActiveFilters();
+            
+            // Aplicar filtros
+            filterAndDisplayPaints();
         }
 
         // Función para actualizar la visualización de filtros activos
@@ -1464,7 +1517,37 @@
                 activeFiltersContainer.appendChild(filterGroup);
             }
             
-            // Código adicional para otros filtros...
+            // Mostrar filtros de tipo
+            if (filteredTypes && filteredTypes.length > 0) {
+                const filterGroup = document.createElement('div');
+                filterGroup.className = 'mb-2';
+                filterGroup.innerHTML = '<strong>Tipos:</strong> ';
+                
+                filteredTypes.forEach(type => {
+                    const chip = document.createElement('span');
+                    chip.className = 'badge bg-secondary me-1';
+                    chip.textContent = type;
+                    filterGroup.appendChild(chip);
+                });
+                
+                activeFiltersContainer.appendChild(filterGroup);
+            }
+            
+            // Mostrar filtros de familia de color
+            if (filteredColorFamilies && filteredColorFamilies.length > 0) {
+                const filterGroup = document.createElement('div');
+                filterGroup.className = 'mb-2';
+                filterGroup.innerHTML = '<strong>Familias de color:</strong> ';
+                
+                filteredColorFamilies.forEach(family => {
+                    const chip = document.createElement('span');
+                    chip.className = 'badge bg-secondary me-1';
+                    chip.textContent = family;
+                    filterGroup.appendChild(chip);
+                });
+                
+                activeFiltersContainer.appendChild(filterGroup);
+            }
         }
 
         // Función para obtener valores de filtros activos
@@ -1493,7 +1576,6 @@
             });
         }
 
-        // Función para verificar y eliminar una opción
         // Función para verificar y eliminar una opción
         async function verifyAndDeleteOption(value, propertyName, select) {
             // Contar pinturas que usan este valor
@@ -1539,56 +1621,9 @@
                 console.error('Error al eliminar la opción:', error);
                 alert(`Error al eliminar "${value}": ${error.message}`);
             }
-        }      
-
-        // Variables para la búsqueda de imágenes
-        let imageSearchModal;
-
-        // Inicializar el modal de búsqueda de imágenes
-        document.addEventListener('DOMContentLoaded', () => {
-            // Código existente...
-            
-            // Inicializar el modal de búsqueda de imágenes
-            imageSearchModal = new bootstrap.Modal(document.getElementById('imageSearchModal'));
-            
-            // Añadir evento al botón de búsqueda de imágenes
-            // Añadir evento al botón de búsqueda de imágenes
-            // Añadir evento al botón de búsqueda de imágenes
-            // Añadir evento al botón de búsqueda de imágenes
-            document.getElementById('searchImagesBtn').addEventListener('click', () => {
-                const paintName = document.getElementById('name').value.trim();
-                const paintBrand = document.getElementById('brand').value.trim();
-                const colorCode = document.getElementById('color_code').value.trim();
-                
-                if (!paintName && !paintBrand) {
-                    alert('Por favor, introduce al menos un nombre o marca para la pintura antes de buscar imágenes.');
-                    return;
-                }
-                
-                // Mostrar el modal
-                document.getElementById('searchTermDisplay').textContent = `${paintBrand} ${paintName} ${colorCode}`.trim();
-                document.getElementById('imageSearchLoading').style.display = 'block';
-                document.getElementById('imageSearchResults').style.display = 'none';
-                document.getElementById('imageSearchError').style.display = 'none';
-                
-                imageSearchModal.show();
-                
-                // Iniciar búsqueda de imágenes
-                searchImages(paintBrand, paintName, colorCode);
-            });
-        });
+        }
 
         // Función para buscar imágenes
-        // Ubicación: templates/admin/paints.html (función searchImages)
-        // Función para buscar imágenes
-        // Ubicación: templates/admin/paints.html (función searchImages)
-        // Función para buscar imágenes
-        // Ubicación: templates/admin/paints.html (función searchImages)
-        // Función para buscar imágenes - versión mejorada
-        // Función para buscar imágenes - versión mejorada
-        // Función para buscar imágenes - versión mejorada
-        // Función para buscar imágenes - versión mejorada
-        // Función para buscar imágenes - versión mejorada
         async function searchImages(brand, name, colorCode) {
             try {
                 // Componer una consulta más efectiva
@@ -1698,7 +1733,7 @@
             }
         }
 
-        // Añadir esta función para mostrar los resultados de la búsqueda
+        // Función para mostrar los resultados de la búsqueda
         function displayImageResults(images) {
             const resultsContainer = document.getElementById('imageSearchResults');
             resultsContainer.innerHTML = '';
@@ -1746,23 +1781,11 @@
                 resultsContainer.appendChild(moreImagesMessage);
             }
         }
+        
         // Función para seleccionar una imagen
         function selectImage(url) {
             // Actualizar el campo de URL de la imagen
             document.getElementById('image_url').value = url;
-            
-            // Actualizar la vista previa
-            const imagePreview = document.getElementById('imagePreview');
-            if (imagePreview) {
-                const previewContainer = imagePreview.querySelector('.paint-container');
-                if (previewContainer) {
-                    // Actualizar la URL de la vista previa si existe
-                    const imgElement = previewContainer.querySelector('img');
-                    if (imgElement) {
-                        imgElement.src = url;
-                    }
-                }
-            }
             
             // Cerrar el modal
             imageSearchModal.hide();
@@ -1770,6 +1793,3 @@
             // Mostrar mensaje de confirmación
             alert('¡Imagen seleccionada con éxito!');
         }
-    </script>
-</body>
-</html>
