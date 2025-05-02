@@ -10,6 +10,27 @@ app = Flask(__name__)
 app.config['DEBUG'] = True
 app.config['TEMPLATES_AUTO_RELOAD'] = True
 
+# Decoradores para proteger rutas
+def login_required(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if 'user_id' not in session:
+            return redirect(url_for('login'))
+        return f(*args, **kwargs)
+    return decorated_function
+
+def admin_required(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if 'user_id' not in session:
+            return redirect(url_for('login'))
+        user = User.query.get(session['user_id'])
+        if not user or user.role != 'admin':
+            flash('Acceso denegado. Se requieren privilegios de administrador.', 'danger')
+            return redirect(url_for('user_dashboard'))
+        return f(*args, **kwargs)
+    return decorated_function
+
 # Añadir código de depuración después de crear la app Flask
 @app.before_request
 def debug_template_paths():
@@ -77,27 +98,6 @@ app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'print_and_paint_studio_
 
 # Inicializar la base de datos
 db.init_app(app)
-
-# Decoradores para proteger rutas
-def login_required(f):
-    @wraps(f)
-    def decorated_function(*args, **kwargs):
-        if 'user_id' not in session:
-            return redirect(url_for('login'))
-        return f(*args, **kwargs)
-    return decorated_function
-
-def admin_required(f):
-    @wraps(f)
-    def decorated_function(*args, **kwargs):
-        if 'user_id' not in session:
-            return redirect(url_for('login'))
-        user = User.query.get(session['user_id'])
-        if not user or user.role != 'admin':
-            flash('Acceso denegado. Se requieren privilegios de administrador.', 'danger')
-            return redirect(url_for('user_dashboard'))
-        return f(*args, **kwargs)
-    return decorated_function
 
 # Rutas públicas
 @app.route('/')
