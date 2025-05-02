@@ -70,7 +70,7 @@ def api_search_images():
         
         print(f"Imágenes procesadas: {len(images)}")
         
-        # Si no se encontraron imágenes, devolver una respuesta más descriptiva
+        # Si no se encontraron imágenes, devolver imágenes de ejemplo
         if not images:
             print("No se encontraron imágenes para la consulta")
             # Proporcionar imágenes de ejemplo si no se encontraron resultados
@@ -104,7 +104,7 @@ def api_search_images():
             "images": placeholder_images, 
             "error": str(e),
             "message": "Error al buscar imágenes. Mostrando imágenes de muestra."
-        }), 200  # Devolver 200 en vez de 500 para manejar el error en el cliente
+        }), 200  # Devolver 200 en vez de 500 para manejar el error en el cliente 
     
 # Configuración de la base de datos
 db_url = os.environ.get('DATABASE_URL')
