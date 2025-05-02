@@ -3,6 +3,8 @@ from models import db, User, Video, Favorite, Technique, Category, Paint
 from functools import wraps
 import os
 from datetime import datetime
+from duckduckgo_search import DDGS
+import random
 
 app = Flask(__name__)
 app.config['DEBUG'] = True
@@ -16,6 +18,37 @@ def debug_template_paths():
         print(f"Rutas de búsqueda de plantillas: {app.jinja_loader.searchpath}")
     for rule in app.url_map.iter_rules():
         print(f"Ruta: {rule}")
+
+# Añadir esta ruta cerca de las otras rutas de API
+@app.route('/api/search-images', methods=['GET'])
+@admin_required
+def api_search_images():
+    query = request.args.get('query', '')
+    if not query:
+        return jsonify({"error": "Consulta de búsqueda vacía"}), 400
+    
+    try:
+        # Usar DuckDuckGo para buscar imágenes
+        with DDGS() as ddgs:
+            results = list(ddgs.images(query, safesearch='Moderate', max_results=12))
+        
+        # Preparar resultados
+        images = []
+        for result in results:
+            if 'image' in result and result['image']:
+                images.append({
+                    'url': result['image'],
+                    'title': result.get('title', ''),
+                    'source': result.get('url', '')
+                })
+        
+        return jsonify({"images": images})
+    
+    except Exception as e:
+        import traceback
+        print(f"Error en búsqueda de imágenes: {str(e)}")
+        traceback.print_exc()
+        return jsonify({"error": str(e)}), 500        
 
 # Configuración de la base de datos
 db_url = os.environ.get('DATABASE_URL')
