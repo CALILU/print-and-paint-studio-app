@@ -43,6 +43,7 @@ def debug_template_paths():
 # Añadir esta ruta cerca de las otras rutas de API
 # Añadir esta ruta cerca de las otras rutas de API
 # Modificar esta ruta en app.py
+# Modificar esta ruta en app.py
 @app.route('/api/search-images', methods=['GET'])
 @admin_required
 def api_search_images():
@@ -64,7 +65,7 @@ def api_search_images():
         images = []
         for r in resultados:
             url_imagen = r.get('image')
-            if url_imagen and url_imagen not in images:  # Evitar duplicados
+            if url_imagen and url_imagen not in [img.get('url') for img in images]:  # Evitar duplicados
                 images.append({
                     'url': url_imagen,
                     'title': r.get('title', ''),
@@ -89,10 +90,9 @@ def api_search_images():
         traceback.print_exc()
         
         return jsonify({
-            "images": [], 
             "error": str(e),
             "message": "Error al buscar imágenes: " + str(e)
-        }), 200
+        }), 500
       
 # Configuración de la base de datos
 db_url = os.environ.get('DATABASE_URL')

@@ -1556,13 +1556,13 @@
                 const paintName = document.getElementById('name').value.trim();
                 const paintBrand = document.getElementById('brand').value.trim();
                 
-                if (!paintName) {
-                    alert('Por favor, introduce un nombre para la pintura antes de buscar imágenes.');
+                if (!paintName && !paintBrand) {
+                    alert('Por favor, introduce al menos un nombre o marca para la pintura antes de buscar imágenes.');
                     return;
                 }
                 
                 // Mostrar el modal
-                document.getElementById('searchTermDisplay').textContent = `${paintBrand} ${paintName}`;
+                document.getElementById('searchTermDisplay').textContent = `${paintBrand} ${paintName}`.trim();
                 document.getElementById('imageSearchLoading').style.display = 'block';
                 document.getElementById('imageSearchResults').style.display = 'none';
                 document.getElementById('imageSearchError').style.display = 'none';
@@ -1581,10 +1581,30 @@
         // Función para buscar imágenes
         // Ubicación: templates/admin/paints.html (función searchImages)
         // Función para buscar imágenes - versión mejorada
+        // Función para buscar imágenes - versión mejorada
         async function searchImages(brand, name) {
             try {
                 // Componer una consulta más efectiva - similar a boton_imagen1.py
-                const consulta = `${brand} ${name} paint color miniature`.trim();
+                let consulta = "";
+                
+                // Si tenemos marca y nombre, usamos ambos
+                if (brand && name) {
+                    consulta = `${brand} ${name} paint miniature color`;
+                } 
+                // Si solo tenemos nombre
+                else if (name) {
+                    consulta = `${name} miniature paint color`;
+                }
+                // Si solo tenemos marca
+                else if (brand) {
+                    consulta = `${brand} paints colors miniature`;
+                }
+                
+                consulta = consulta.trim();
+                
+                if (!consulta) {
+                    throw new Error("Por favor, proporciona al menos un término de búsqueda");
+                }
                 
                 // Mostrar indicador de carga con información
                 document.getElementById('imageSearchLoading').innerHTML = `
@@ -1634,7 +1654,7 @@
                                 <i class="bi bi-exclamation-triangle me-2"></i>
                                 No se encontraron imágenes para "${brand} ${name}".
                                 <br>
-                                <small>Intenta con términos de búsqueda diferentes.</small>
+                                <small>Intenta con términos de búsqueda diferentes o prueba solo con el nombre o solo con la marca.</small>
                             </div>
                         </div>
                     `;
@@ -1659,7 +1679,7 @@
                         <i class="bi bi-exclamation-triangle me-2"></i>
                         <strong>Error al buscar imágenes:</strong> ${error.message}
                         <br>
-                        <small>Puede que el servidor esté sobrecargado. Por favor, inténtelo de nuevo en unos momentos.</small>
+                        <small>Puede que el servidor esté sobrecargado o que los términos de búsqueda no sean suficientemente específicos.</small>
                         <hr>
                         <div class="d-flex justify-content-end">
                             <button class="btn btn-sm btn-outline-danger" onclick="document.getElementById('imageSearchError').style.display='none';">
@@ -1674,8 +1694,6 @@
             }
         }
 
-        // Ubicación: templates/admin/paints.html (función displayImageResults)
-        // Ubicación: templates/admin/paints.html (función displayImageResults)
         // Mejorar la función displayImageResults en paints.html
         function displayImageResults(images) {
             const resultsContainer = document.getElementById('imageSearchResults');
