@@ -41,7 +41,7 @@ def debug_template_paths():
         print(f"Ruta: {rule}")
 
 # Añadir esta ruta cerca de las otras rutas de API
-@@app.route('/api/search-images', methods=['GET'])
+@app.route('/api/search-images', methods=['GET'])
 @admin_required
 def api_search_images():
     query = request.args.get('query', '')
