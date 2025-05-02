@@ -324,7 +324,6 @@
                         </button>
                     </li>
                 </ul>
-                
                 <!-- Tab Content -->
                 <div class="tab-content" id="adminPaintsTabsContent">
                     <!-- Paints List Tab -->
@@ -349,59 +348,54 @@
                                             <i class="bi bi-funnel"></i> Filtros avanzados
                                         </button>
                                     </div>
-                                </div>
-                                
+                                </div>                 
                                 <div class="collapse" id="advancedFilters">
                                     <div class="row">
                                         <div class="col-md-4 mb-3">
                                             <label class="form-label fw-bold">Filtrar por marca:</label>
-                                            <div id="brandFilters" class="d-flex flex-wrap">
-                                                <div class="form-check form-check-inline">
-                                                    <input class="form-check-input" type="checkbox" id="brandVallejo" value="Vallejo" checked>
-                                                    <label class="form-check-label" for="brandVallejo">Vallejo</label>
-                                                </div>
-                                                <div class="form-check form-check-inline">
-                                                    <input class="form-check-input" type="checkbox" id="brandCitadel" value="Citadel" checked>
-                                                    <label class="form-check-label" for="brandCitadel">Citadel</label>
-                                                </div>
-                                                <div class="form-check form-check-inline">
-                                                    <input class="form-check-input" type="checkbox" id="brandArmyPainter" value="Army Painter" checked>
-                                                    <label class="form-check-label" for="brandArmyPainter">Army Painter</label>
-                                                </div>
-                                                <div class="form-check form-check-inline">
-                                                    <input class="form-check-input" type="checkbox" id="brandAK" value="AK Interactive" checked>
-                                                    <label class="form-check-label" for="brandAK">AK Interactive</label>
-                                                </div>
+                                            <div class="input-group mb-2">
+                                                <select class="form-select" id="brandFilterSelect">
+                                                    <option value="">Seleccionar marca...</option>
+                                                    <!-- Las opciones se cargarán dinámicamente -->
+                                                </select>
+                                                <button class="btn btn-outline-danger" type="button" id="deleteBrandBtn" disabled>
+                                                    <i class="bi bi-trash"></i>
+                                                </button>
                                             </div>
+                                            <div id="activeBrandFilters" class="d-flex flex-wrap"></div>
                                         </div>
                                         
                                         <div class="col-md-4 mb-3">
                                             <label class="form-label fw-bold">Filtrar por tipo:</label>
-                                            <div id="typeFilters" class="d-flex flex-wrap">
-                                                <div class="form-check form-check-inline">
-                                                    <input class="form-check-input" type="checkbox" id="typeBase" value="Base" checked>
-                                                    <label class="form-check-label" for="typeBase">Base</label>
-                                                </div>
-                                                <div class="form-check form-check-inline">
-                                                    <input class="form-check-input" type="checkbox" id="typeLayer" value="Layer" checked>
-                                                    <label class="form-check-label" for="typeLayer">Layer</label>
-                                                </div>
-                                                <div class="form-check form-check-inline">
-                                                    <input class="form-check-input" type="checkbox" id="typeShade" value="Shade" checked>
-                                                    <label class="form-check-label" for="typeShade">Shade</label>
-                                                </div>
-                                                <div class="form-check form-check-inline">
-                                                    <input class="form-check-input" type="checkbox" id="typePrimer" value="Primer" checked>
-                                                    <label class="form-check-label" for="typePrimer">Primer</label>
-                                                </div>
-                                                <div class="form-check form-check-inline">
-                                                    <input class="form-check-input" type="checkbox" id="typeEffects" value="Effects" checked>
-                                                    <label class="form-check-label" for="typeEffects">Effects</label>
-                                                </div>
+                                            <div class="input-group mb-2">
+                                                <select class="form-select" id="typeFilterSelect">
+                                                    <option value="">Seleccionar tipo...</option>
+                                                    <!-- Las opciones se cargarán dinámicamente -->
+                                                </select>
+                                                <button class="btn btn-outline-danger" type="button" id="deleteTypeBtn" disabled>
+                                                    <i class="bi bi-trash"></i>
+                                                </button>
                                             </div>
+                                            <div id="activeTypeFilters" class="d-flex flex-wrap"></div>
                                         </div>
                                         
                                         <div class="col-md-4 mb-3">
+                                            <label class="form-label fw-bold">Filtrar por familia de color:</label>
+                                            <div class="input-group mb-2">
+                                                <select class="form-select" id="colorFamilyFilterSelect">
+                                                    <option value="">Seleccionar familia...</option>
+                                                    <!-- Las opciones se cargarán dinámicamente -->
+                                                </select>
+                                                <button class="btn btn-outline-danger" type="button" id="deleteColorFamilyBtn" disabled>
+                                                    <i class="bi bi-trash"></i>
+                                                </button>
+                                            </div>
+                                            <div id="activeColorFamilyFilters" class="d-flex flex-wrap"></div>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="row">
+                                        <div class="col-md-12 mb-3">
                                             <label class="form-label fw-bold">Filtrar por stock:</label>
                                             <div id="stockFilters" class="d-flex flex-wrap">
                                                 <div class="form-check form-check-inline">
@@ -415,54 +409,6 @@
                                                 <div class="form-check form-check-inline">
                                                     <input class="form-check-input" type="checkbox" id="stockOut" value="out" checked>
                                                     <label class="form-check-label" for="stockOut">Sin stock</label>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    
-                                    <div class="row">
-                                        <div class="col-md-12 mb-3">
-                                            <label class="form-label fw-bold">Familia de color:</label>
-                                            <div id="colorFamilyFilters" class="d-flex flex-wrap">
-                                                <div class="form-check form-check-inline">
-                                                    <input class="form-check-input" type="checkbox" id="colorRed" value="Red" checked>
-                                                    <label class="form-check-label" for="colorRed">Rojo</label>
-                                                </div>
-                                                <div class="form-check form-check-inline">
-                                                    <input class="form-check-input" type="checkbox" id="colorBlue" value="Blue" checked>
-                                                    <label class="form-check-label" for="colorBlue">Azul</label>
-                                                </div>
-                                                <div class="form-check form-check-inline">
-                                                    <input class="form-check-input" type="checkbox" id="colorGreen" value="Green" checked>
-                                                    <label class="form-check-label" for="colorGreen">Verde</label>
-                                                </div>
-                                                <div class="form-check form-check-inline">
-                                                    <input class="form-check-input" type="checkbox" id="colorYellow" value="Yellow" checked>
-                                                    <label class="form-check-label" for="colorYellow">Amarillo</label>
-                                                </div>
-                                                <div class="form-check form-check-inline">
-                                                    <input class="form-check-input" type="checkbox" id="colorBrown" value="Brown" checked>
-                                                    <label class="form-check-label" for="colorBrown">Marrón</label>
-                                                </div>
-                                                <div class="form-check form-check-inline">
-                                                    <input class="form-check-input" type="checkbox" id="colorPurple" value="Purple" checked>
-                                                    <label class="form-check-label" for="colorPurple">Púrpura</label>
-                                                </div>
-                                                <div class="form-check form-check-inline">
-                                                    <input class="form-check-input" type="checkbox" id="colorGrey" value="Grey" checked>
-                                                    <label class="form-check-label" for="colorGrey">Gris</label>
-                                                </div>
-                                                <div class="form-check form-check-inline">
-                                                    <input class="form-check-input" type="checkbox" id="colorBlack" value="Black" checked>
-                                                    <label class="form-check-label" for="colorBlack">Negro</label>
-                                                </div>
-                                                <div class="form-check form-check-inline">
-                                                    <input class="form-check-input" type="checkbox" id="colorWhite" value="White" checked>
-                                                    <label class="form-check-label" for="colorWhite">Blanco</label>
-                                                </div>
-                                                <div class="form-check form-check-inline">
-                                                    <input class="form-check-input" type="checkbox" id="colorMetallic" value="Metallic" checked>
-                                                    <label class="form-check-label" for="colorMetallic">Metálico</label>
                                                 </div>
                                             </div>
                                         </div>
@@ -748,89 +694,35 @@
                 savePaint();
             });
             
-            // Configurar botón de confirmación de eliminación
-            document.getElementById('confirmDeleteBtn').addEventListener('click', () => {
-                if (paintToDelete) {
-                    deletePaint(paintToDelete);
-                    paintToDelete = null;
-                    confirmDeleteModal.hide();
-                }
-            });
-            
-            // Configurar botón de edición en el modal de vista
-            document.getElementById('editPaintBtn').addEventListener('click', () => {
-                const paintId = document.getElementById('editPaintBtn').getAttribute('data-id');
-                if (paintId) {
-                    viewPaintModal.hide();
-                    editPaint(paintId);
-                }
-            });
-            
-            // Configurar vista previa en tiempo real
-            setupLivePreview();
-            
-            // Escuchar la tecla Enter en el campo de búsqueda
-            document.getElementById('searchInput').addEventListener('keypress', (e) => {
-                if (e.key === 'Enter') {
-                    e.preventDefault();
-                    searchPaints();
-                }
-            });
+            // ... (otros event listeners)
             
             // Inicializar filtros
             initializeFilters();
             
             // Cargar pinturas al inicio
-            fetchPaints();
+            fetchPaints().then(() => {
+                // Solo cargar opciones de filtro después de que los datos estén disponibles
+                loadFilterOptions();
+            }).catch(error => {
+                console.error("Error al cargar pinturas iniciales:", error);
+            });
         });
-        
+        // Función para inicializar los filtros
+        // Función para inicializar los filtros
         // Función para inicializar los filtros
         function initializeFilters() {
-            // Obtener todos los checkboxes de marca
-            const brandCheckboxes = document.querySelectorAll('#brandFilters input[type="checkbox"]');
-            filteredBrands = Array.from(brandCheckboxes)
-                .filter(cb => cb.checked)
-                .map(cb => cb.value);
-            
-            // Obtener todos los checkboxes de tipo
-            const typeCheckboxes = document.querySelectorAll('#typeFilters input[type="checkbox"]');
-            filteredTypes = Array.from(typeCheckboxes)
-                .filter(cb => cb.checked)
-                .map(cb => cb.value);
-            
-            // Obtener todos los checkboxes de stock
+            // Obtener todos los checkboxes de stock (estos se mantienen igual)
             const stockCheckboxes = document.querySelectorAll('#stockFilters input[type="checkbox"]');
             filteredStockStatus = Array.from(stockCheckboxes)
                 .filter(cb => cb.checked)
                 .map(cb => cb.value);
             
-            // Obtener todos los checkboxes de familia de color
-            const colorFamilyCheckboxes = document.querySelectorAll('#colorFamilyFilters input[type="checkbox"]');
-            filteredColorFamilies = Array.from(colorFamilyCheckboxes)
-                .filter(cb => cb.checked)
-                .map(cb => cb.value);
+            // Inicializar arrays vacíos para los nuevos selectores
+            filteredBrands = [];
+            filteredTypes = [];
+            filteredColorFamilies = [];
             
-            // Añadir eventos de cambio para cada filtro
-            brandCheckboxes.forEach(cb => {
-                cb.addEventListener('change', () => {
-                    if (cb.checked) {
-                        filteredBrands.push(cb.value);
-                    } else {
-                        filteredBrands = filteredBrands.filter(b => b !== cb.value);
-                    }
-                });
-            });
-            
-            typeCheckboxes.forEach(cb => {
-                cb.addEventListener('change', () => {
-                    if (cb.checked) {
-                        filteredTypes.push(cb.value);
-                    } else {
-                        filteredTypes = filteredTypes.filter(t => t !== cb.value);
-                    }
-                });
-            });
-            
+            // Añadir eventos de cambio para los checkboxes de stock
             stockCheckboxes.forEach(cb => {
                 cb.addEventListener('change', () => {
                     if (cb.checked) {
@@ -840,18 +732,7 @@
                     }
                 });
             });
-            
-            colorFamilyCheckboxes.forEach(cb => {
-                cb.addEventListener('change', () => {
-                    if (cb.checked) {
-                        filteredColorFamilies.push(cb.value);
-                    } else {
-                        filteredColorFamilies = filteredColorFamilies.filter(c => c !== cb.value);
-                    }
-                });
-            });
         }
-        
         // Función para configurar la vista previa en tiempo real
         function setupLivePreview() {
             const updatePreview = () => {
@@ -972,6 +853,7 @@
         }
         
         // Función para filtrar y mostrar las pinturas
+        // Función para filtrar y mostrar las pinturas
         function filterAndDisplayPaints() {
             let filteredPaints = [...allPaints];
             
@@ -981,13 +863,14 @@
                     return (
                         (paint.name && paint.name.toLowerCase().includes(currentSearchTerm)) ||
                         (paint.color_code && paint.color_code.toLowerCase().includes(currentSearchTerm)) ||
-                        (paint.description && paint.description.toLowerCase().includes(currentSearchTerm))
+                        (paint.description && paint.description.toLowerCase().includes(currentSearchTerm)) ||
+                        (paint.brand && paint.brand.toLowerCase().includes(currentSearchTerm))
                     );
                 });
             }
             
             // Filtrar por marca
-            if (filteredBrands.length > 0) {
+            if (filteredBrands && filteredBrands.length > 0) {
                 filteredPaints = filteredPaints.filter(paint => {
                     return filteredBrands.includes(paint.brand);
                 });
@@ -1401,6 +1284,218 @@
             // Disparar evento para actualizar la vista previa
             document.getElementById('name').dispatchEvent(new Event('input'));
         }
+
+        // Función para cargar las opciones de filtro dinámicamente
+        function loadFilterOptions() {
+            // Verificar que allPaints tenga datos
+            if (!allPaints || allPaints.length === 0) {
+                console.log("No hay datos de pinturas para cargar opciones de filtro");
+                return;
+            }
+            
+            // Obtener valores únicos para cada filtro
+            const brands = getUniqueValues(allPaints, 'brand');
+            const types = getUniqueValues(allPaints, 'color_type');
+            const colorFamilies = getUniqueValues(allPaints, 'color_family');
+            
+            // Llenar los selectores
+            fillSelectOptions('brandFilterSelect', brands);
+            fillSelectOptions('typeFilterSelect', types);
+            fillSelectOptions('colorFamilyFilterSelect', colorFamilies);            
+            // Configurar eventos para los selectores
+            setupFilterSelect('brandFilterSelect', 'activeBrandFilters', 'brand');
+            setupFilterSelect('typeFilterSelect', 'activeTypeFilters', 'color_type');
+            setupFilterSelect('colorFamilyFilterSelect', 'activeColorFamilyFilters', 'color_family');
+            
+            // Configurar eventos para los botones de eliminación
+            setupDeleteButton('deleteBrandBtn', 'brandFilterSelect', 'brand');
+            setupDeleteButton('deleteTypeBtn', 'typeFilterSelect', 'color_type');
+            setupDeleteButton('deleteColorFamilyBtn', 'colorFamilyFilterSelect', 'color_family');
+        }
+
+        // Función para obtener valores únicos de una propiedad
+        function getUniqueValues(items, prop) {
+            const values = items
+                .map(item => item[prop])
+                .filter(value => value !== null && value !== undefined && value !== '');
+            
+            return [...new Set(values)].sort();
+        }
+
+        // Función para llenar un selector con opciones
+        function fillSelectOptions(selectId, options) {
+            const select = document.getElementById(selectId);
+            
+            // Mantener la primera opción
+            const defaultOption = select.options[0];
+            select.innerHTML = '';
+            select.appendChild(defaultOption);
+            
+            // Añadir las opciones
+            options.forEach(option => {
+                const optionElement = document.createElement('option');
+                optionElement.value = option;
+                optionElement.textContent = option;
+                select.appendChild(optionElement);
+            });
+        }
+
+        // Función para configurar eventos del selector
+        function setupFilterSelect(selectId, filtersContainerId, filterType) {
+            const select = document.getElementById(selectId);
+            const container = document.getElementById(filtersContainerId);
+            
+            select.addEventListener('change', function() {
+                const value = this.value;
+                if (!value) return;
+                
+                // Añadir filtro
+                addFilterChip(container, value, filterType);
+                
+                // Resetear selector
+                this.value = '';
+                
+                // Actualizar filtros
+                updateFilters();
+            });
+        }
+
+        // Función para añadir un chip de filtro
+        function addFilterChip(container, value, filterType) {
+            // Comprobar si ya existe
+            const existingChips = container.querySelectorAll('.filter-chip');
+            for (const chip of existingChips) {
+                if (chip.getAttribute('data-value') === value) return;
+            }
+            
+            // Crear chip
+            const chip = document.createElement('div');
+            chip.className = 'filter-chip';
+            chip.setAttribute('data-value', value);
+            chip.setAttribute('data-type', filterType);
+            chip.innerHTML = `
+                ${value}
+                <span class="close" onclick="removeFilterChip(this.parentNode)">&times;</span>
+            `;
+            
+            container.appendChild(chip);
+        }
+
+        // Función para eliminar un chip de filtro
+        function removeFilterChip(chip) {
+            chip.remove();
+            updateFilters();
+        }
+
+        // Función para actualizar filtros activos
+        // Función para actualizar filtros activos
+        function updateFilters() {
+            // Recopilar todos los filtros activos
+            filteredBrands = getActiveFilterValues('activeBrandFilters');
+            filteredTypes = getActiveFilterValues('activeTypeFilters');
+            filteredColorFamilies = getActiveFilterValues('activeColorFamilyFilters');
+            
+            // Actualizar filtros activos
+            updateActiveFilters();
+        }
+
+        // Función para actualizar la visualización de filtros activos
+        function updateActiveFilters() {
+            const activeFiltersContainer = document.getElementById('activeFilters');
+            activeFiltersContainer.innerHTML = '';
+            
+            // Mostrar filtros de marca
+            if (filteredBrands && filteredBrands.length > 0) {
+                const filterGroup = document.createElement('div');
+                filterGroup.className = 'mb-2';
+                filterGroup.innerHTML = '<strong>Marcas:</strong> ';
+                
+                filteredBrands.forEach(brand => {
+                    const chip = document.createElement('span');
+                    chip.className = 'badge bg-secondary me-1';
+                    chip.textContent = brand;
+                    filterGroup.appendChild(chip);
+                });
+                
+                activeFiltersContainer.appendChild(filterGroup);
+            }
+            
+            // Código adicional para otros filtros...
+        }
+
+        // Función para obtener valores de filtros activos
+        function getActiveFilterValues(containerId) {
+            const chips = document.getElementById(containerId).querySelectorAll('.filter-chip');
+            return Array.from(chips).map(chip => chip.getAttribute('data-value'));
+        }
+
+        // Función para configurar el botón de eliminación
+        function setupDeleteButton(buttonId, selectId, propertyName) {
+            const button = document.getElementById(buttonId);
+            const select = document.getElementById(selectId);
+            
+            // Habilitar/deshabilitar el botón según la selección
+            select.addEventListener('change', function() {
+                button.disabled = !this.value;
+            });
+            
+            // Configurar acción del botón
+            button.addEventListener('click', function() {
+                const selectedValue = select.value;
+                if (!selectedValue) return;
+                
+                // Verificar si el valor está en uso
+                verifyAndDeleteOption(selectedValue, propertyName, select);
+            });
+        }
+
+        // Función para verificar y eliminar una opción
+        // Función para verificar y eliminar una opción
+        async function verifyAndDeleteOption(value, propertyName, select) {
+            // Contar pinturas que usan este valor
+            const paintCount = allPaints.filter(paint => paint[propertyName] === value).length;
+            
+            if (paintCount > 0) {
+                alert(`No se puede eliminar "${value}" porque está siendo utilizado en ${paintCount} pinturas.`);
+                select.value = '';
+                return;
+            }
+            
+            // Confirmar eliminación
+            if (!confirm(`¿Estás seguro de que deseas eliminar "${value}" de las opciones de filtro?`)) {
+                select.value = '';
+                return;
+            }
+            
+            try {
+                // Eliminar la opción del selector
+                for (let i = 0; i < select.options.length; i++) {
+                    if (select.options[i].value === value) {
+                        select.remove(i);
+                        break;
+                    }
+                }
+                
+                // Notificar el cambio
+                alert(`"${value}" eliminado correctamente de las opciones de filtro.`);
+                select.value = '';
+                
+                // Nota: Para implementar una eliminación real en la base de datos
+                // necesitarías agregar aquí una llamada a un endpoint específico:
+                /*
+                const response = await fetch(`/api/options/${propertyName}/${encodeURIComponent(value)}`, {
+                    method: 'DELETE'
+                });
+                
+                if (!response.ok) {
+                    throw new Error('Error al eliminar la opción del servidor');
+                }
+                */
+            } catch (error) {
+                console.error('Error al eliminar la opción:', error);
+                alert(`Error al eliminar "${value}": ${error.message}`);
+            }
+        }      
     </script>
 </body>
 </html>

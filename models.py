@@ -101,17 +101,17 @@ class Paint(db.Model):
     __tablename__ = 'paints'
     
     id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String(100), nullable=False)
-    brand = db.Column(db.String(50), nullable=False)
-    color_code = db.Column(db.String(20))
-    color_type = db.Column(db.String(50))  # Base, Layer, Wash, etc.
-    color_family = db.Column(db.String(50))  # Red, Blue, Green, etc.
-    image_url = db.Column(db.String(255))
+    name = db.Column(db.Text, nullable=False)
+    brand = db.Column(db.Text, nullable=False)
+    color_code = db.Column(db.Text)
+    color_type = db.Column(db.Text)
+    color_family = db.Column(db.Text)
+    image_url = db.Column(db.Text)
     stock = db.Column(db.Integer, default=0)
     price = db.Column(db.Float)
     description = db.Column(db.Text)
-    color_preview = db.Column(db.String(20))
+    color_preview = db.Column(db.Text)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     
     def __repr__(self):
-        return f'<Paint {self.brand} - {self.name}>'     
+        return f'<Paint {self.brand} - {self.name}>'      
