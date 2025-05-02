@@ -114,4 +114,4 @@ class Paint(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     
     def __repr__(self):
-        return f'<Paint {self.brand} - {self.name}>'      
+        return f'<Paint {self.brand} - {self.name}>'

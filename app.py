@@ -55,7 +55,7 @@ def api_search_images():
     print(f"Iniciando búsqueda de imágenes para: {query}")
     
     try:
-        # Primer intento: usando DDGS
+        # Usar DDGS para buscar imágenes
         images = []
         try:
             with DDGS() as ddgs:
@@ -80,7 +80,6 @@ def api_search_images():
             # Si falló DDGS, usar respaldo con placeholders
             if not images:
                 # Generar URLs de placeholder basadas en la consulta
-                # Para fines de ejemplo
                 brand_part = query.split()[0] if query.split() else ""
                 color_part = query.split()[-1] if query.split() else ""
                 
