@@ -736,6 +736,8 @@
                 savePaint();
             });
             
+            imageSearchModal = new bootstrap.Modal(document.getElementById('imageSearchModal'));
+            
             // ... (otros event listeners)
             
             // Inicializar filtros
@@ -1574,6 +1576,7 @@
 
         // Función para buscar imágenes
         // Ubicación: templates/admin/paints.html (función searchImages)
+        // Función para buscar imágenes
         async function searchImages(brand, name) {
             try {
                 // Mostrar indicador de carga con información
@@ -1660,63 +1663,63 @@
 
         // Ubicación: templates/admin/paints.html (función displayImageResults)
         function displayImageResults(images) {
-            const resultsContainer = document.getElementById('imageSearchResults');
-            resultsContainer.innerHTML = '';
+        const resultsContainer = document.getElementById('imageSearchResults');
+        resultsContainer.innerHTML = '';
+        
+        console.log(`Mostrando ${images.length} imágenes encontradas`);
+        
+        images.forEach((image, index) => {
+            // Registrar información de cada imagen para depuración
+            console.log(`Imagen ${index+1}:`, image.url);
             
-            console.log(`Mostrando ${images.length} imágenes encontradas`);
+            const imageCard = document.createElement('div');
+            imageCard.className = 'col-md-4 col-lg-3 mb-4';
             
-            images.forEach((image, index) => {
-                // Registrar información de cada imagen para depuración
-                console.log(`Imagen ${index+1}:`, image.url);
-                
-                const imageCard = document.createElement('div');
-                imageCard.className = 'col-md-4 col-lg-3 mb-4';
-                
-                // Crear estructura de tarjeta con manejo de errores mejorado
-                imageCard.innerHTML = `
-                    <div class="card h-100">
-                        <div style="height: 200px; background-color: #f8f9fa; display: flex; align-items: center; justify-content: center; position: relative;">
-                            <div class="spinner-border text-primary position-absolute" role="status" id="spinner-${index}">
-                                <span class="visually-hidden">Cargando...</span>
-                            </div>
-                            <img src="${image.url}" alt="Resultado ${index + 1}" 
-                                class="card-img-top" style="max-height: 180px; max-width: 90%; object-fit: contain;"
-                                onload="document.getElementById('spinner-${index}').style.display='none';"
-                                onerror="this.onerror=null; this.src='https://via.placeholder.com/200x150/f8f9fa/666666?text=Error+de+imagen'; document.getElementById('spinner-${index}').style.display='none'; console.error('Error al cargar imagen:', '${image.url}');">
+            // Crear estructura de tarjeta con manejo de errores mejorado
+            imageCard.innerHTML = `
+                <div class="card h-100">
+                    <div style="height: 200px; background-color: #f8f9fa; display: flex; align-items: center; justify-content: center; position: relative;">
+                        <div class="spinner-border text-primary position-absolute" role="status" id="spinner-${index}">
+                            <span class="visually-hidden">Cargando...</span>
                         </div>
-                        <div class="card-body">
-                            <p class="card-text small text-muted mb-2" style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${image.title || 'Sin título'}</p>
-                            <button class="btn btn-sm btn-primary w-100 select-image-btn" 
-                                    data-url="${image.url}">
-                                <i class="bi bi-check-circle me-1"></i> Seleccionar
-                            </button>
-                        </div>
+                        <img src="${image.url}" alt="Resultado ${index + 1}" 
+                            class="card-img-top" style="max-height: 180px; max-width: 90%; object-fit: contain;"
+                            onload="document.getElementById('spinner-${index}').style.display='none';"
+                            onerror="this.onerror=null; this.src='https://via.placeholder.com/200x150/f8f9fa/666666?text=Error+de+imagen'; document.getElementById('spinner-${index}').style.display='none'; console.error('Error al cargar imagen:', '${image.url}');">
                     </div>
-                `;
-                
-                resultsContainer.appendChild(imageCard);
-            });
-            
-            // Si no hay imágenes después de todo, mostrar mensaje
-            if (images.length === 0) {
-                resultsContainer.innerHTML = `
-                    <div class="col-12 text-center">
-                        <div class="alert alert-info">
-                            <i class="bi bi-info-circle me-2"></i>
-                            No se encontraron imágenes para esta búsqueda.
-                        </div>
+                    <div class="card-body">
+                        <p class="card-text small text-muted mb-2" style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${image.title || 'Sin título'}</p>
+                        <button class="btn btn-sm btn-primary w-100 select-image-btn" 
+                                data-url="${image.url}">
+                            <i class="bi bi-check-circle me-1"></i> Seleccionar
+                        </button>
                     </div>
-                `;
-            }
+                </div>
+            `;
             
-            // Añadir eventos a los botones de selección
-            document.querySelectorAll('.select-image-btn').forEach(btn => {
-                btn.addEventListener('click', () => {
-                    const imageUrl = btn.getAttribute('data-url');
-                    selectImage(imageUrl);
-                });
-            });
+            resultsContainer.appendChild(imageCard);
+        });
+        
+        // Si no hay imágenes después de todo, mostrar mensaje
+        if (images.length === 0) {
+            resultsContainer.innerHTML = `
+                <div class="col-12 text-center">
+                    <div class="alert alert-info">
+                        <i class="bi bi-info-circle me-2"></i>
+                        No se encontraron imágenes para esta búsqueda.
+                    </div>
+                </div>
+            `;
         }
+        
+        // Añadir eventos a los botones de selección
+        document.querySelectorAll('.select-image-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const imageUrl = btn.getAttribute('data-url');
+                selectImage(imageUrl);
+            });
+        });
+    }
 
         // Función para seleccionar una imagen
         function selectImage(url) {
