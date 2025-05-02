@@ -42,6 +42,7 @@ def debug_template_paths():
 
 # Añadir esta ruta cerca de las otras rutas de API
 # Añadir esta ruta cerca de las otras rutas de API
+# Modificar esta ruta en app.py
 @app.route('/api/search-images', methods=['GET'])
 @admin_required
 def api_search_images():
@@ -53,37 +54,43 @@ def api_search_images():
         # Para depuración
         print(f"Iniciando búsqueda de imágenes para: {query}")
         
-        # Intentar usar DuckDuckGo para buscar imágenes
+        # Intentar usar DuckDuckGo para buscar imágenes - usando técnicas de boton_imagen1.py
         with DDGS() as ddgs:
-            # Limitar a menos resultados para evitar problemas de tiempo de espera
-            results = list(ddgs.images(query, safesearch='Moderate', max_results=8))
+            # Usar safesearch='Moderate' como en boton_imagen1.py y aumentar max_results
+            results = list(ddgs.images(query, safesearch='Moderate', max_results=15))
             print(f"Resultados obtenidos: {len(results)}")
         
-        # Preparar resultados
+        # Preparar resultados - verificando y validando las URLs como en boton_imagen1.py
         images = []
         for result in results:
             if 'image' in result and result['image']:
-                images.append({
-                    'url': result['image'],
-                    'title': result.get('title', ''),
-                    'source': result.get('url', '')
-                })
+                # Solo incluimos URLs que parecen válidas
+                url_imagen = result.get('image')
+                if url_imagen and (url_imagen.startswith('http://') or url_imagen.startswith('https://')):
+                    images.append({
+                        'url': url_imagen,
+                        'title': result.get('title', ''),
+                        'source': result.get('url', '')
+                    })
         
-        print(f"Imágenes procesadas: {len(images)}")
+        print(f"Imágenes procesadas/validadas: {len(images)}")
         
-        # Si no se encontraron imágenes, devolver imágenes de ejemplo
+        # Si no se encontraron imágenes, devolver imágenes de ejemplo más descriptivas
         if not images:
             print("No se encontraron imágenes para la consulta")
             # Proporcionar imágenes de ejemplo si no se encontraron resultados
             placeholder_images = [
                 {
-                    'url': f"https://via.placeholder.com/300x200/cccccc/666666?text=No+Image+{i}",
-                    'title': f"Imagen de muestra {i}",
+                    'url': f"https://via.placeholder.com/300x200/e9ecef/495057?text=Sin+resultados",
+                    'title': f"No se encontraron imágenes",
                     'source': ""
-                } for i in range(1, 5)
+                }
             ]
             
-            return jsonify({"images": placeholder_images, "message": "No se encontraron imágenes. Mostrando ejemplos."})
+            return jsonify({
+                "images": placeholder_images, 
+                "message": "No se encontraron imágenes. Prueba con términos de búsqueda diferentes."
+            })
         
         return jsonify({"images": images})
     
@@ -92,21 +99,21 @@ def api_search_images():
         print(f"Error en búsqueda de imágenes: {str(e)}")
         traceback.print_exc()
         
-        # Proporcionar imágenes de placeholder en caso de error
+        # Proporcionar imágenes de placeholder en caso de error - más descriptivas
         placeholder_images = [
             {
-                'url': f"https://via.placeholder.com/300x200/ffdddd/cc0000?text=Error+{i}",
-                'title': f"Error en la búsqueda - Imagen {i}",
+                'url': f"https://via.placeholder.com/300x200/f8d7da/721c24?text=Error+de+búsqueda",
+                'title': f"Error: {str(e)[:50]}...",
                 'source': ""
-            } for i in range(1, 3)
+            }
         ]
         
         return jsonify({
             "images": placeholder_images, 
             "error": str(e),
-            "message": "Error al buscar imágenes. Mostrando imágenes de muestra."
-        }), 200  # Devolver 200 en vez de 500 para manejar el error en el cliente
-       
+            "message": "Error al buscar imágenes. Por favor, inténtelo de nuevo más tarde."
+        }), 200  # Devolver 200 en vez de 500 para manejar el error en el cliente     
+    
 # Configuración de la base de datos
 db_url = os.environ.get('DATABASE_URL')
 print(f"URL original de la base de datos: {db_url}")
