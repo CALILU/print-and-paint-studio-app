@@ -41,7 +41,7 @@ def debug_template_paths():
         print(f"Ruta: {rule}")
 
 # Añadir esta ruta cerca de las otras rutas de API
-@app.route('/api/search-images', methods=['GET'])
+@@app.route('/api/search-images', methods=['GET'])
 @admin_required
 def api_search_images():
     query = request.args.get('query', '')
@@ -49,9 +49,14 @@ def api_search_images():
         return jsonify({"error": "Consulta de búsqueda vacía"}), 400
     
     try:
-        # Usar DuckDuckGo para buscar imágenes
+        # Para depuración
+        print(f"Iniciando búsqueda de imágenes para: {query}")
+        
+        # Intentar usar DuckDuckGo para buscar imágenes
         with DDGS() as ddgs:
-            results = list(ddgs.images(query, safesearch='Moderate', max_results=12))
+            # Limitar a menos resultados para evitar problemas de tiempo de espera
+            results = list(ddgs.images(query, safesearch='Moderate', max_results=8))
+            print(f"Resultados obtenidos: {len(results)}")
         
         # Preparar resultados
         images = []
@@ -63,13 +68,42 @@ def api_search_images():
                     'source': result.get('url', '')
                 })
         
+        print(f"Imágenes procesadas: {len(images)}")
+        
+        # Si no se encontraron imágenes, devolver una respuesta más descriptiva
+        if not images:
+            print("No se encontraron imágenes para la consulta")
+            # Proporcionar imágenes de ejemplo si no se encontraron resultados
+            placeholder_images = [
+                {
+                    'url': f"https://via.placeholder.com/300x200/cccccc/666666?text=No+Image+{i}",
+                    'title': f"Imagen de muestra {i}",
+                    'source': ""
+                } for i in range(1, 5)
+            ]
+            return jsonify({"images": placeholder_images, "message": "No se encontraron imágenes. Mostrando ejemplos."})
+        
         return jsonify({"images": images})
     
     except Exception as e:
         import traceback
         print(f"Error en búsqueda de imágenes: {str(e)}")
         traceback.print_exc()
-        return jsonify({"error": str(e)}), 500        
+        
+        # Proporcionar imágenes de placeholder en caso de error
+        placeholder_images = [
+            {
+                'url': f"https://via.placeholder.com/300x200/ffdddd/cc0000?text=Error+{i}",
+                'title': f"Error en la búsqueda - Imagen {i}",
+                'source': ""
+            } for i in range(1, 3)
+        ]
+        
+        return jsonify({
+            "images": placeholder_images, 
+            "error": str(e),
+            "message": "Error al buscar imágenes. Mostrando imágenes de muestra."
+        }), 200  # Devolver 200 en vez de 500 para manejar el error en el cliente       
 
 # Configuración de la base de datos
 db_url = os.environ.get('DATABASE_URL')
