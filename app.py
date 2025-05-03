@@ -57,52 +57,64 @@ def api_search_images():
     try:
         # Usar DDGS para buscar imágenes
         images = []
-        max_intentos = 2  # Intentar hasta 2 veces
-        
-        for intento in range(max_intentos):
-            try:
-                print(f"Intento {intento+1} de búsqueda con DDGS")
-                with DDGS() as ddgs:
-                    # Modificar la consulta para hacerla más específica
-                    consulta_efectiva = f"{query} paint miniature model"
-                    print(f"Consulta efectiva: {consulta_efectiva}")
-                    
-                    resultados = list(ddgs.images(
-                        consulta_efectiva, 
-                        safesearch='Moderate', 
-                        max_results=15  # Aumentar el número de resultados
-                    ))
-                    
-                    print(f"Resultados obtenidos con DDGS: {len(resultados)}")
+        try:
+            # Modificamos la forma de instanciar DDGS para evitar el error de 'proxies'
+            with DDGS() as ddgs:
+                # Usar una consulta más específica para mejorar resultados
+                consulta_efectiva = f"{query} paint miniature model color"
+                print(f"Consulta efectiva: {consulta_efectiva}")
                 
-                # Si tenemos resultados, salir del bucle
-                if resultados:
-                    break
+                resultados = list(ddgs.images(
+                    consulta_efectiva, 
+                    safesearch='Moderate', 
+                    max_results=15
+                ))
+                print(f"Resultados obtenidos con DDGS: {len(resultados)}")
+            
+            # Procesar resultados de DDGS
+            for r in resultados:
+                url_imagen = r.get('image')
+                if url_imagen and url_imagen not in [img.get('url') for img in images]:
+                    images.append({
+                        'url': url_imagen,
+                        'title': r.get('title', ''),
+                        'source': r.get('url', '')
+                    })
                     
-            except Exception as e:
-                print(f"Error en intento {intento+1}: {str(e)}")
-                # Si es el último intento, propagar la excepción
-                if intento == max_intentos - 1:
-                    raise
-        
-        # Procesar resultados de DDGS
-        for r in resultados:
-            url_imagen = r.get('image')
-            if url_imagen and url_imagen not in [img.get('url') for img in images]:
-                images.append({
-                    'url': url_imagen,
-                    'title': r.get('title', ''),
-                    'source': r.get('url', '')
-                })
+            print(f"Imágenes procesadas desde DDGS: {len(images)}")
+        except TypeError as type_error:
+            # Capturar específicamente el error de 'proxies'
+            if "unexpected keyword argument 'proxies'" in str(type_error):
+                print(f"Error con parámetro 'proxies' en DDGS: {str(type_error)}")
+                # Intento alternativo sin proxies (versión anterior de DDGS)
+                try:
+                    ddgs = DDGS()
+                    resultados = list(ddgs.images(query, max_results=15))
                     
-        print(f"Imágenes procesadas desde DDGS: {len(images)}")
+                    for r in resultados:
+                        url_imagen = r.get('image')
+                        if url_imagen and url_imagen not in [img.get('url') for img in images]:
+                            images.append({
+                                'url': url_imagen,
+                                'title': r.get('title', ''),
+                                'source': r.get('url', '')
+                            })
+                            
+                    print(f"Imágenes procesadas con versión alternativa: {len(images)}")
+                except Exception as alt_error:
+                    print(f"Error con método alternativo: {str(alt_error)}")
+            else:
+                raise  # Re-lanzar el error si no es el esperado
+        except Exception as ddgs_error:
+            # Capturar cualquier otro error de DDGS
+            print(f"Error con DDGS: {str(ddgs_error)}")
         
-        # Solo si no se encontraron imágenes después de los intentos
+        # Si no se encontraron imágenes
         if not images:
-            print("No se encontraron imágenes, generando mensaje de error")
+            print("No se encontraron imágenes para la consulta")
             return jsonify({
-                "images": [],
-                "message": "No se pudieron encontrar imágenes para esta búsqueda. Intente con términos más generales."
+                "images": [], 
+                "message": "No se encontraron imágenes para esta búsqueda."
             })
         
         return jsonify({"images": images})

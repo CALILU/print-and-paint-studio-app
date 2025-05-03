@@ -1625,6 +1625,7 @@
 
         // Función para buscar imágenes
         // Función para buscar imágenes
+        // Función para buscar imágenes
         async function searchImages(brand, name, colorCode) {
             try {
                 // Componer una consulta más efectiva
@@ -1641,9 +1642,8 @@
                 // Construir consulta completa con términos adicionales
                 const baseQuery = baseTerms.join(' ');
                 
-                // Consulta completa similar a la de boton_imagen1.py, combinando marca y código
-                // pero adaptada para buscar por nombre en lugar de ser tan específica
-                const consulta = `${baseQuery} paint color miniature`.trim();
+                // Consulta más simple para evitar problemas
+                const consulta = baseQuery; // Simplificamos la consulta
                 
                 // Actualizar visualización
                 document.getElementById('searchTermDisplay').textContent = baseQuery;
@@ -1659,23 +1659,17 @@
                 document.getElementById('imageSearchResults').style.display = 'none';
                 document.getElementById('imageSearchError').style.display = 'none';
                 
-                // Consulta al servidor
+                // Consulta al servidor utilizando el endpoint existente pero con la consulta mejorada
                 const searchQuery = encodeURIComponent(consulta);
                 console.log('Iniciando búsqueda de imágenes con consulta:', consulta);
                 
-                // Añadir timeout para la solicitud
-                const timeoutPromise = new Promise((_, reject) => 
-                    setTimeout(() => reject(new Error('La solicitud ha excedido el tiempo de espera')), 20000)
-                );
-                
-                // Hacer solicitud con timeout
-                const fetchPromise = fetch(`/api/search-images?query=${searchQuery}`);
-                const response = await Promise.race([fetchPromise, timeoutPromise]);
+                // Hacer la solicitud sin timeout para simplificar
+                const response = await fetch(`/api/search-images?query=${searchQuery}`);
                 const data = await response.json();
                 
                 console.log('Respuesta recibida:', data);
                 
-                // Comprobar si hay error en la respuesta (incluso con código 200)
+                // Comprobar si hay error en la respuesta
                 if (data.error) {
                     throw new Error(data.error);
                 }
@@ -1688,24 +1682,24 @@
                                 <i class="bi bi-exclamation-triangle me-2"></i>
                                 No se encontraron imágenes para "${baseQuery}".
                                 <br>
-                                <small>Prueba con estos términos alternativos:
+                                <small>Prueba con estos consejos:
                                     <ul class="text-start mt-2">
-                                        <li>Solo con el nombre: "${name || ''}"</li>
-                                        <li>Solo con la marca: "${brand || ''}"</li>
-                                        <li>Con términos más genéricos: "${brand || ''} paint" o "${name || ''} miniature"</li>
+                                        <li>Utiliza términos más generales (ej: "${brand}" o "${name}")</li>
+                                        <li>Verifica que no haya errores de escritura</li>
+                                        <li>Prueba con otra marca o código similar</li>
                                     </ul>
                                 </small>
                             </div>
                         </div>
                     `;
+                    document.getElementById('imageSearchResults').style.display = 'block';
                 } else {
                     // Mostrar las imágenes encontradas
                     displayImageResults(data.images);
                 }
                 
-                // Ocultar carga y mostrar resultados
+                // Ocultar carga
                 document.getElementById('imageSearchLoading').style.display = 'none';
-                document.getElementById('imageSearchResults').style.display = 'block';
                 
             } catch (error) {
                 console.error('Error en búsqueda de imágenes:', error);
