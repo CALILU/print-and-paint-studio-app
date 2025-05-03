@@ -1,4 +1,3 @@
-```html
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -224,38 +223,6 @@
             border-radius: 10px;
             margin: 20px 0;
         }
-        .hidden {
-            display: none;
-        }
-        .url-container {
-            font-family: monospace;
-            background-color: #f8f8f8;
-            padding: 10px;
-            border: 1px solid #eee;
-            border-radius: 3px;
-            display: block;
-            margin-top: 10px;
-            word-break: break-all;
-        }
-        .image-info {
-            margin-top: 15px;
-            padding: 10px;
-            background-color: #f9f9f9;
-            border-radius: 4px;
-            border-left: 3px solid #4CAF50;
-        }
-        .info-row {
-            display: flex;
-            margin: 5px 0;
-        }
-        .info-label {
-            font-weight: bold;
-            width: 100px;
-            flex-shrink: 0;
-        }
-        .info-value {
-            flex-grow: 1;
-        }
         .color-family-tag {
             display: inline-block;
             padding: 2px 8px;
@@ -268,22 +235,6 @@
         .brand-logo {
             height: 30px;
             margin-right: 10px;
-        }
-        .filter-chip {
-            display: inline-block;
-            background-color: #f8f9fa;
-            color: #495057;
-            padding: 4px 10px;
-            border-radius: 20px;
-            margin-right: 5px;
-            margin-bottom: 5px;
-            font-size: 0.9rem;
-            border: 1px solid #dee2e6;
-        }
-        .filter-chip .close {
-            margin-left: 5px;
-            cursor: pointer;
-            font-weight: bold;
         }
         @media (max-width: 768px) {
             .sidebar {
@@ -373,6 +324,7 @@
                         </button>
                     </li>
                 </ul>
+                
                 <!-- Tab Content -->
                 <div class="tab-content" id="adminPaintsTabsContent">
                     <!-- Paints List Tab -->
@@ -397,54 +349,59 @@
                                             <i class="bi bi-funnel"></i> Filtros avanzados
                                         </button>
                                     </div>
-                                </div>                 
+                                </div>
+                                
                                 <div class="collapse" id="advancedFilters">
                                     <div class="row">
                                         <div class="col-md-4 mb-3">
                                             <label class="form-label fw-bold">Filtrar por marca:</label>
-                                            <div class="input-group mb-2">
-                                                <select class="form-select" id="brandFilterSelect">
-                                                    <option value="">Seleccionar marca...</option>
-                                                    <!-- Las opciones se cargarán dinámicamente -->
-                                                </select>
-                                                <button class="btn btn-outline-danger" type="button" id="deleteBrandBtn" disabled>
-                                                    <i class="bi bi-trash"></i>
-                                                </button>
+                                            <div id="brandFilters" class="d-flex flex-wrap">
+                                                <div class="form-check form-check-inline">
+                                                    <input class="form-check-input" type="checkbox" id="brandVallejo" value="Vallejo" checked>
+                                                    <label class="form-check-label" for="brandVallejo">Vallejo</label>
+                                                </div>
+                                                <div class="form-check form-check-inline">
+                                                    <input class="form-check-input" type="checkbox" id="brandCitadel" value="Citadel" checked>
+                                                    <label class="form-check-label" for="brandCitadel">Citadel</label>
+                                                </div>
+                                                <div class="form-check form-check-inline">
+                                                    <input class="form-check-input" type="checkbox" id="brandArmyPainter" value="Army Painter" checked>
+                                                    <label class="form-check-label" for="brandArmyPainter">Army Painter</label>
+                                                </div>
+                                                <div class="form-check form-check-inline">
+                                                    <input class="form-check-input" type="checkbox" id="brandAK" value="AK Interactive" checked>
+                                                    <label class="form-check-label" for="brandAK">AK Interactive</label>
+                                                </div>
                                             </div>
-                                            <div id="activeBrandFilters" class="d-flex flex-wrap"></div>
                                         </div>
                                         
                                         <div class="col-md-4 mb-3">
                                             <label class="form-label fw-bold">Filtrar por tipo:</label>
-                                            <div class="input-group mb-2">
-                                                <select class="form-select" id="typeFilterSelect">
-                                                    <option value="">Seleccionar tipo...</option>
-                                                    <!-- Las opciones se cargarán dinámicamente -->
-                                                </select>
-                                                <button class="btn btn-outline-danger" type="button" id="deleteTypeBtn" disabled>
-                                                    <i class="bi bi-trash"></i>
-                                                </button>
+                                            <div id="typeFilters" class="d-flex flex-wrap">
+                                                <div class="form-check form-check-inline">
+                                                    <input class="form-check-input" type="checkbox" id="typeBase" value="Base" checked>
+                                                    <label class="form-check-label" for="typeBase">Base</label>
+                                                </div>
+                                                <div class="form-check form-check-inline">
+                                                    <input class="form-check-input" type="checkbox" id="typeLayer" value="Layer" checked>
+                                                    <label class="form-check-label" for="typeLayer">Layer</label>
+                                                </div>
+                                                <div class="form-check form-check-inline">
+                                                    <input class="form-check-input" type="checkbox" id="typeShade" value="Shade" checked>
+                                                    <label class="form-check-label" for="typeShade">Shade</label>
+                                                </div>
+                                                <div class="form-check form-check-inline">
+                                                    <input class="form-check-input" type="checkbox" id="typePrimer" value="Primer" checked>
+                                                    <label class="form-check-label" for="typePrimer">Primer</label>
+                                                </div>
+                                                <div class="form-check form-check-inline">
+                                                    <input class="form-check-input" type="checkbox" id="typeEffects" value="Effects" checked>
+                                                    <label class="form-check-label" for="typeEffects">Effects</label>
+                                                </div>
                                             </div>
-                                            <div id="activeTypeFilters" class="d-flex flex-wrap"></div>
                                         </div>
                                         
                                         <div class="col-md-4 mb-3">
-                                            <label class="form-label fw-bold">Filtrar por familia de color:</label>
-                                            <div class="input-group mb-2">
-                                                <select class="form-select" id="colorFamilyFilterSelect">
-                                                    <option value="">Seleccionar familia...</option>
-                                                    <!-- Las opciones se cargarán dinámicamente -->
-                                                </select>
-                                                <button class="btn btn-outline-danger" type="button" id="deleteColorFamilyBtn" disabled>
-                                                    <i class="bi bi-trash"></i>
-                                                </button>
-                                            </div>
-                                            <div id="activeColorFamilyFilters" class="d-flex flex-wrap"></div>
-                                        </div>
-                                    </div>
-                                    
-                                    <div class="row">
-                                        <div class="col-md-12 mb-3">
                                             <label class="form-label fw-bold">Filtrar por stock:</label>
                                             <div id="stockFilters" class="d-flex flex-wrap">
                                                 <div class="form-check form-check-inline">
@@ -458,6 +415,54 @@
                                                 <div class="form-check form-check-inline">
                                                     <input class="form-check-input" type="checkbox" id="stockOut" value="out" checked>
                                                     <label class="form-check-label" for="stockOut">Sin stock</label>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="row">
+                                        <div class="col-md-12 mb-3">
+                                            <label class="form-label fw-bold">Familia de color:</label>
+                                            <div id="colorFamilyFilters" class="d-flex flex-wrap">
+                                                <div class="form-check form-check-inline">
+                                                    <input class="form-check-input" type="checkbox" id="colorRed" value="Red" checked>
+                                                    <label class="form-check-label" for="colorRed">Rojo</label>
+                                                </div>
+                                                <div class="form-check form-check-inline">
+                                                    <input class="form-check-input" type="checkbox" id="colorBlue" value="Blue" checked>
+                                                    <label class="form-check-label" for="colorBlue">Azul</label>
+                                                </div>
+                                                <div class="form-check form-check-inline">
+                                                    <input class="form-check-input" type="checkbox" id="colorGreen" value="Green" checked>
+                                                    <label class="form-check-label" for="colorGreen">Verde</label>
+                                                </div>
+                                                <div class="form-check form-check-inline">
+                                                    <input class="form-check-input" type="checkbox" id="colorYellow" value="Yellow" checked>
+                                                    <label class="form-check-label" for="colorYellow">Amarillo</label>
+                                                </div>
+                                                <div class="form-check form-check-inline">
+                                                    <input class="form-check-input" type="checkbox" id="colorBrown" value="Brown" checked>
+                                                    <label class="form-check-label" for="colorBrown">Marrón</label>
+                                                </div>
+                                                <div class="form-check form-check-inline">
+                                                    <input class="form-check-input" type="checkbox" id="colorPurple" value="Purple" checked>
+                                                    <label class="form-check-label" for="colorPurple">Púrpura</label>
+                                                </div>
+                                                <div class="form-check form-check-inline">
+                                                    <input class="form-check-input" type="checkbox" id="colorGrey" value="Grey" checked>
+                                                    <label class="form-check-label" for="colorGrey">Gris</label>
+                                                </div>
+                                                <div class="form-check form-check-inline">
+                                                    <input class="form-check-input" type="checkbox" id="colorBlack" value="Black" checked>
+                                                    <label class="form-check-label" for="colorBlack">Negro</label>
+                                                </div>
+                                                <div class="form-check form-check-inline">
+                                                    <input class="form-check-input" type="checkbox" id="colorWhite" value="White" checked>
+                                                    <label class="form-check-label" for="colorWhite">Blanco</label>
+                                                </div>
+                                                <div class="form-check form-check-inline">
+                                                    <input class="form-check-input" type="checkbox" id="colorMetallic" value="Metallic" checked>
+                                                    <label class="form-check-label" for="colorMetallic">Metálico</label>
                                                 </div>
                                             </div>
                                         </div>
@@ -599,7 +604,7 @@
                                         </div>
                                     </div>
                                     
-                                    <!-- Ubicación: Dentro de la sección "Description and Image" -->
+                                    <!-- Description and Image -->
                                     <div class="form-section">
                                         <h5 class="mb-3"><i class="bi bi-card-text me-2"></i> Descripción e Imagen</h5>
                                         <div class="row">
@@ -619,12 +624,6 @@
                                                     <div class="color-picker-wrapper">
                                                         <input type="color" id="color_preview" class="form-control">
                                                     </div>
-                                                </div>
-                                                <!-- Botón de búsqueda de imágenes mejorado -->
-                                                <div class="mb-3">
-                                                    <button type="button" class="btn btn-outline-primary w-100" id="searchImagesBtn">
-                                                        <i class="bi bi-search me-2"></i> Buscar y mostrar imágenes
-                                                    </button>
                                                 </div>
                                             </div>
                                         </div>
@@ -681,7 +680,8 @@
                             </div>
                         </div>
                     </div>
-                </div>               
+                </div>
+                
                 <!-- View Paint Modal -->
                 <div class="modal fade" id="viewPaintModal" tabindex="-1" aria-labelledby="viewPaintModalLabel" aria-hidden="true">
                     <div class="modal-dialog modal-lg">
@@ -718,47 +718,6 @@
                         </div>
                     </div>
                 </div>
-                
-                <!-- Modal mejorado para seleccionar imágenes -->
-                <div class="modal fade" id="imageSearchModal" tabindex="-1" aria-labelledby="imageSearchModalLabel" aria-hidden="true">
-                    <div class="modal-dialog modal-xl modal-dialog-scrollable">
-                        <div class="modal-content">
-                            <div class="modal-header">
-                                <h5 class="modal-title" id="imageSearchModalLabel">Seleccionar imagen para la pintura</h5>
-                                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                            </div>
-                            <div class="modal-body">
-                                <div id="searchQuery" class="alert alert-info mb-3">
-                                    Buscando imágenes para: <strong id="searchTermDisplay"></strong>
-                                </div>
-                                
-                                <!-- Indicador de carga -->
-                                <div id="imageSearchLoading" class="text-center py-5">
-                                    <div class="spinner-border text-primary" role="status">
-                                        <span class="visually-hidden">Buscando imágenes...</span>
-                                    </div>
-                                    <p class="mt-3">Buscando imágenes. Esto puede tardar unos segundos...</p>
-                                </div>
-                                
-                                <!-- Resultados de la búsqueda -->
-                                <div id="imageSearchResults" class="row" style="display: none;">
-                                    <!-- Aquí se mostrarán los resultados de la búsqueda -->
-                                </div>
-                                
-                                <!-- Mensaje de error -->
-                                <div id="imageSearchError" class="alert alert-danger" style="display: none;">
-                                    Error al buscar imágenes. Por favor, inténtalo de nuevo.
-                                </div>
-                            </div>
-                            <div class="modal-footer">
-                                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
-                                <button type="button" class="btn btn-primary" id="refreshSearchBtn" style="display: none;">
-                                    <i class="bi bi-arrow-clockwise me-2"></i> Buscar de nuevo
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
             </main>
         </div>
     </div>
@@ -776,13 +735,11 @@
         let paintToDelete = null;
         let confirmDeleteModal;
         let viewPaintModal;
-        let imageSearchModal;
         
         document.addEventListener('DOMContentLoaded', () => {
             // Inicializar modales
             confirmDeleteModal = new bootstrap.Modal(document.getElementById('confirmDeleteModal'));
             viewPaintModal = new bootstrap.Modal(document.getElementById('viewPaintModal'));
-            imageSearchModal = new bootstrap.Modal(document.getElementById('imageSearchModal'));
             
             // Configurar formulario de pinturas
             const paintForm = document.getElementById('paintForm');
@@ -791,19 +748,20 @@
                 savePaint();
             });
             
-            // Configurar botón de eliminación de pintura
+            // Configurar botón de confirmación de eliminación
             document.getElementById('confirmDeleteBtn').addEventListener('click', () => {
                 if (paintToDelete) {
                     deletePaint(paintToDelete);
+                    paintToDelete = null;
                     confirmDeleteModal.hide();
                 }
             });
             
-            // Configurar botón de edición en el modal de detalles
+            // Configurar botón de edición en el modal de vista
             document.getElementById('editPaintBtn').addEventListener('click', () => {
                 const paintId = document.getElementById('editPaintBtn').getAttribute('data-id');
-                viewPaintModal.hide();
                 if (paintId) {
+                    viewPaintModal.hide();
                     editPaint(paintId);
                 }
             });
@@ -811,71 +769,84 @@
             // Configurar vista previa en tiempo real
             setupLivePreview();
             
-            // Añadir evento al botón de búsqueda de imágenes
-            document.getElementById('searchImagesBtn').addEventListener('click', () => {
-                const paintName = document.getElementById('name').value.trim();
-                const paintBrand = document.getElementById('brand').value.trim();
-                const colorCode = document.getElementById('color_code').value.trim();
-                
-                // Verificar que tengamos al menos la marca o el código
-                if (!paintBrand && !colorCode) {
-                    alert('Por favor, introduce al menos la marca o el código para buscar imágenes.');
-                    return;
+            // Escuchar la tecla Enter en el campo de búsqueda
+            document.getElementById('searchInput').addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    searchPaints();
                 }
-                
-                // Mostrar el modal
-                document.getElementById('searchTermDisplay').textContent = `${paintBrand} ${colorCode}`.trim();
-                document.getElementById('imageSearchLoading').style.display = 'block';
-                document.getElementById('imageSearchResults').style.display = 'none';
-                document.getElementById('imageSearchError').style.display = 'none';
-                document.getElementById('refreshSearchBtn').style.display = 'none';
-                
-                imageSearchModal.show();
-                
-                // Iniciar búsqueda de imágenes
-                searchImages(paintBrand, paintName, colorCode);
-            });
-            
-            // Configurar el botón de refrescar búsqueda
-            document.getElementById('refreshSearchBtn').addEventListener('click', () => {
-                const brand = document.getElementById('brand').value.trim();
-                const name = document.getElementById('name').value.trim();
-                const colorCode = document.getElementById('color_code').value.trim();
-                searchImages(brand, name, colorCode);
             });
             
             // Inicializar filtros
             initializeFilters();
             
             // Cargar pinturas al inicio
-            fetchPaints().then(() => {
-                // Solo cargar opciones de filtro después de que los datos estén disponibles
-                loadFilterOptions();
-            }).catch(error => {
-                console.error("Error al cargar pinturas iniciales:", error);
-            });
+            fetchPaints();
         });
         
         // Función para inicializar los filtros
         function initializeFilters() {
+            // Obtener todos los checkboxes de marca
+            const brandCheckboxes = document.querySelectorAll('#brandFilters input[type="checkbox"]');
+            filteredBrands = Array.from(brandCheckboxes)
+                .filter(cb => cb.checked)
+                .map(cb => cb.value);
+            
+            // Obtener todos los checkboxes de tipo
+            const typeCheckboxes = document.querySelectorAll('#typeFilters input[type="checkbox"]');
+            filteredTypes = Array.from(typeCheckboxes)
+                .filter(cb => cb.checked)
+                .map(cb => cb.value);
+            
             // Obtener todos los checkboxes de stock
             const stockCheckboxes = document.querySelectorAll('#stockFilters input[type="checkbox"]');
             filteredStockStatus = Array.from(stockCheckboxes)
                 .filter(cb => cb.checked)
                 .map(cb => cb.value);
             
-            // Inicializar arrays vacíos para los nuevos selectores
-            filteredBrands = [];
-            filteredTypes = [];
-            filteredColorFamilies = [];
+            // Obtener todos los checkboxes de familia de color
+            const colorFamilyCheckboxes = document.querySelectorAll('#colorFamilyFilters input[type="checkbox"]');
+            filteredColorFamilies = Array.from(colorFamilyCheckboxes)
+                .filter(cb => cb.checked)
+                .map(cb => cb.value);
             
-            // Añadir eventos de cambio para los checkboxes de stock
+            // Añadir eventos de cambio para cada filtro
+            brandCheckboxes.forEach(cb => {
+                cb.addEventListener('change', () => {
+                    if (cb.checked) {
+                        filteredBrands.push(cb.value);
+                    } else {
+                        filteredBrands = filteredBrands.filter(b => b !== cb.value);
+                    }
+                });
+            });
+            
+            typeCheckboxes.forEach(cb => {
+                cb.addEventListener('change', () => {
+                    if (cb.checked) {
+                        filteredTypes.push(cb.value);
+                    } else {
+                        filteredTypes = filteredTypes.filter(t => t !== cb.value);
+                    }
+                });
+            });
+            
             stockCheckboxes.forEach(cb => {
                 cb.addEventListener('change', () => {
                     if (cb.checked) {
                         filteredStockStatus.push(cb.value);
                     } else {
                         filteredStockStatus = filteredStockStatus.filter(s => s !== cb.value);
+                    }
+                });
+            });
+            
+            colorFamilyCheckboxes.forEach(cb => {
+                cb.addEventListener('change', () => {
+                    if (cb.checked) {
+                        filteredColorFamilies.push(cb.value);
+                    } else {
+                        filteredColorFamilies = filteredColorFamilies.filter(c => c !== cb.value);
                     }
                 });
             });
@@ -892,7 +863,6 @@
                 const stock = document.getElementById('stock').value || 0;
                 const price = document.getElementById('price').value || 0;
                 const colorPreview = document.getElementById('color_preview').value;
-                const imageUrl = document.getElementById('image_url').value;
                 
                 // Actualizar la vista previa
                 const previewContainer = document.getElementById('imagePreview');
@@ -919,23 +889,6 @@
                 // Actualizar precio
                 const priceTag = previewContainer.querySelector('.price-tag');
                 priceTag.textContent = price ? `${price}€` : 'Precio no disponible';
-                
-                // Si hay una imagen, añadirla a la vista previa
-                if (imageUrl) {
-                    // Verificar si ya existe una imagen en la vista previa
-                    let imgElement = previewContainer.querySelector('.paint-image');
-                    if (!imgElement) {
-                        // Crear elemento de imagen y añadirlo antes del color-preview
-                        imgElement = document.createElement('img');
-                        imgElement.className = 'paint-image';
-                        const colorPreviewElement = previewContainer.querySelector('.paint-color-preview');
-                        previewContainer.insertBefore(imgElement, colorPreviewElement);
-                    }
-                    
-                    // Actualizar URL de la imagen
-                    imgElement.src = imageUrl;
-                    imgElement.alt = name;
-                }
             };
             
             // Añadir eventos de input a todos los campos
@@ -947,13 +900,12 @@
             document.getElementById('stock').addEventListener('input', updatePreview);
             document.getElementById('price').addEventListener('input', updatePreview);
             document.getElementById('color_preview').addEventListener('input', updatePreview);
-            document.getElementById('image_url').addEventListener('input', updatePreview);
             
             // Actualizar la vista previa inicialmente
             updatePreview();
         }
         
-        // Función mejorada para obtener todas las pinturas
+        // Función para obtener todas las pinturas
         async function fetchPaints() {
             const container = document.getElementById('paints-container');
             container.innerHTML = `
@@ -966,17 +918,14 @@
             `;
             
             try {
-                console.log("Iniciando solicitud de pinturas");
                 const response = await fetch('/api/paints');
-                console.log("Respuesta recibida:", response);
                 
                 if (!response.ok) {
                     throw new Error(`Error HTTP: ${response.status}`);
                 }
                 
-                console.log("Procesando datos JSON...");
                 const paints = await response.json();
-                console.log(`Pinturas cargadas: ${paints.length}`, paints);
+                console.log(`Pinturas cargadas: ${paints.length}`);
                 
                 // Actualizar la variable global
                 allPaints = paints;
@@ -988,7 +937,7 @@
                 filterAndDisplayPaints();
                 
             } catch (error) {
-                console.error('Error detallado al cargar pinturas:', error);
+                console.error('Error al cargar pinturas:', error);
                 container.innerHTML = `
                     <div class="empty-message">
                         <div class="alert alert-danger">
@@ -1032,14 +981,13 @@
                     return (
                         (paint.name && paint.name.toLowerCase().includes(currentSearchTerm)) ||
                         (paint.color_code && paint.color_code.toLowerCase().includes(currentSearchTerm)) ||
-                        (paint.description && paint.description.toLowerCase().includes(currentSearchTerm)) ||
-                        (paint.brand && paint.brand.toLowerCase().includes(currentSearchTerm))
+                        (paint.description && paint.description.toLowerCase().includes(currentSearchTerm))
                     );
                 });
             }
             
             // Filtrar por marca
-            if (filteredBrands && filteredBrands.length > 0) {
+            if (filteredBrands.length > 0) {
                 filteredPaints = filteredPaints.filter(paint => {
                     return filteredBrands.includes(paint.brand);
                 });
@@ -1130,7 +1078,7 @@
                         <i class="bi bi-pencil action-icon" onclick="editPaint(${paint.id})" title="Editar"></i>
                         <i class="bi bi-trash action-icon" onclick="confirmDelete(${paint.id})" title="Eliminar"></i>
                     </div>
-                    <img src="${imageUrl}" alt="${paint.name}" class="paint-image" onerror="this.onerror=null; this.src='https://via.placeholder.com/150?text=No+Image';">
+                    <img src="${imageUrl}" alt="${paint.name}" class="paint-image">
                     <div class="paint-color-preview" style="background-color: ${paint.color_preview || '#cccccc'}"></div>
                     <div class="paint-title">${paint.name}</div>
                     <div class="paint-code">${paint.color_code || ''}</div>
@@ -1183,10 +1131,8 @@
                 const row = document.createElement('tr');
                 row.innerHTML = `
                     <td>
-                        <div style="position: relative; width: 50px; height: 50px; overflow: hidden; display: flex; align-items: center; justify-content: center;">
-                            <img src="${imageUrl}" alt="${paint.name}" style="max-width: 100%; max-height: 100%; object-fit: contain;" onerror="this.onerror=null; this.src='https://via.placeholder.com/50?text=No+Image';">
-                        </div>
-                        <div style="width: 25px; height: 25px; background-color: ${paint.color_preview || '#cccccc'}; display: inline-block; border-radius: 50%; border: 1px solid #ddd; vertical-align: middle; margin-top: 5px;"></div>
+                        <img src="${imageUrl}" alt="${paint.name}" style="width: 50px; height: 50px; object-fit: contain;">
+                        <div style="width: 25px; height: 25px; background-color: ${paint.color_preview || '#cccccc'}; display: inline-block; border-radius: 50%; border: 1px solid #ddd; vertical-align: middle;"></div>
                     </td>
                     <td>
                         <strong>${paint.name}</strong>
@@ -1236,23 +1182,29 @@
             currentSearchTerm = '';
             document.getElementById('searchInput').value = '';
             
-            // Reestablecer filtros de marca
-            filteredBrands = [];
-            document.getElementById('activeBrandFilters').innerHTML = '';
+            // Activar todos los checkboxes de marca
+            document.querySelectorAll('#brandFilters input[type="checkbox"]').forEach(cb => {
+                cb.checked = true;
+            });
+            filteredBrands = Array.from(document.querySelectorAll('#brandFilters input[type="checkbox"]')).map(cb => cb.value);
             
-            // Reestablecer filtros de tipo
-            filteredTypes = [];
-            document.getElementById('activeTypeFilters').innerHTML = '';
-            
-            // Reestablecer filtros de familia de color
-            filteredColorFamilies = [];
-            document.getElementById('activeColorFamilyFilters').innerHTML = '';
+            // Activar todos los checkboxes de tipo
+            document.querySelectorAll('#typeFilters input[type="checkbox"]').forEach(cb => {
+                cb.checked = true;
+            });
+            filteredTypes = Array.from(document.querySelectorAll('#typeFilters input[type="checkbox"]')).map(cb => cb.value);
             
             // Activar todos los checkboxes de stock
             document.querySelectorAll('#stockFilters input[type="checkbox"]').forEach(cb => {
                 cb.checked = true;
             });
-            filteredStockStatus = ['in', 'low', 'out'];
+            filteredStockStatus = Array.from(document.querySelectorAll('#stockFilters input[type="checkbox"]')).map(cb => cb.value);
+            
+            // Activar todos los checkboxes de familia de color
+            document.querySelectorAll('#colorFamilyFilters input[type="checkbox"]').forEach(cb => {
+                cb.checked = true;
+            });
+            filteredColorFamilies = Array.from(document.querySelectorAll('#colorFamilyFilters input[type="checkbox"]')).map(cb => cb.value);
             
             // Actualizar la visualización
             filterAndDisplayPaints();
@@ -1260,7 +1212,7 @@
         
         // Función para aplicar los filtros
         function applyFilters() {
-            // Los filtros ya se actualizan con los eventos de cambio
+            // Los filtros ya se actualizan con los eventos de cambio de los checkboxes
             // Solo necesitamos actualizar la visualización
             filterAndDisplayPaints();
             
@@ -1294,12 +1246,7 @@
                 
                 // Imagen
                 const imageUrl = paint.image_url || 'https://via.placeholder.com/300?text=No+Image';
-                const detailImage = document.getElementById('detailImage');
-                detailImage.src = imageUrl;
-                detailImage.onerror = function() {
-                    this.onerror = null;
-                    this.src = 'https://via.placeholder.com/300?text=No+Image';
-                };
+                document.getElementById('detailImage').src = imageUrl;
                 
                 // Color preview
                 document.getElementById('detailColorPreview').style.backgroundColor = paint.color_preview || '#cccccc';
@@ -1343,9 +1290,6 @@
                 document.getElementById('image_url').value = paint.image_url || '';
                 document.getElementById('color_preview').value = paint.color_preview || '#cccccc';
                 
-                // Cambiar texto
-                document.getElementById('name').dispatchEvent(new Event('input'));
-                
                 // Cambiar texto del formulario
                 document.getElementById('form-title').textContent = 'Editar Pintura';
                 document.getElementById('submit-btn').textContent = 'Actualizar Pintura';
@@ -1380,21 +1324,7 @@
                 fetchPaints();
                 
                 // Mostrar mensaje de éxito
-                const alertContainer = document.createElement('div');
-                alertContainer.className = 'alert alert-success alert-dismissible fade show';
-                alertContainer.innerHTML = `
-                    <i class="bi bi-check-circle me-2"></i> Pintura eliminada correctamente
-                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-                `;
-                
-                // Insertar el mensaje al principio del contenedor principal
-                const mainContent = document.querySelector('main.content');
-                mainContent.insertBefore(alertContainer, mainContent.firstChild);
-                
-                // Quitar el mensaje después de 3 segundos
-                setTimeout(() => {
-                    alertContainer.remove();
-                }, 3000);
+                alert('Pintura eliminada correctamente');
                 
             } catch (error) {
                 console.error('Error:', error);
@@ -1452,21 +1382,7 @@
                 fetchPaints();
                 
                 // Mostrar mensaje de éxito
-                const alertContainer = document.createElement('div');
-                alertContainer.className = 'alert alert-success alert-dismissible fade show';
-                alertContainer.innerHTML = `
-                    <i class="bi bi-check-circle me-2"></i> ${isEdit ? 'Pintura actualizada correctamente' : 'Pintura guardada correctamente'}
-                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-                `;
-                
-                // Insertar el mensaje al principio del contenedor principal
-                const mainContent = document.querySelector('main.content');
-                mainContent.insertBefore(alertContainer, mainContent.firstChild);
-                
-                // Quitar el mensaje después de 3 segundos
-                setTimeout(() => {
-                    alertContainer.remove();
-                }, 3000);
+                alert(isEdit ? 'Pintura actualizada correctamente' : 'Pintura guardada correctamente');
                 
             } catch (error) {
                 console.error('Error:', error);
@@ -1484,470 +1400,6 @@
             
             // Disparar evento para actualizar la vista previa
             document.getElementById('name').dispatchEvent(new Event('input'));
-        }
-
-        // Función para cargar las opciones de filtro dinámicamente
-        function loadFilterOptions() {
-            // Verificar que allPaints tenga datos
-            if (!allPaints || allPaints.length === 0) {
-                console.log("No hay datos de pinturas para cargar opciones de filtro");
-                return;
-            }
-            
-            // Obtener valores únicos para cada filtro
-            const brands = getUniqueValues(allPaints, 'brand');
-            const types = getUniqueValues(allPaints, 'color_type');
-            const colorFamilies = getUniqueValues(allPaints, 'color_family');
-            
-            // Llenar los selectores
-            fillSelectOptions('brandFilterSelect', brands);
-            fillSelectOptions('typeFilterSelect', types);
-            fillSelectOptions('colorFamilyFilterSelect', colorFamilies);
-            
-            // Configurar eventos para los selectores
-            setupFilterSelect('brandFilterSelect', 'activeBrandFilters', 'brand');
-            setupFilterSelect('typeFilterSelect', 'activeTypeFilters', 'color_type');
-            setupFilterSelect('colorFamilyFilterSelect', 'activeColorFamilyFilters', 'color_family');
-            
-            // Configurar eventos para los botones de eliminación
-            setupDeleteButton('deleteBrandBtn', 'brandFilterSelect', 'brand');
-            setupDeleteButton('deleteTypeBtn', 'typeFilterSelect', 'color_type');
-            setupDeleteButton('deleteColorFamilyBtn', 'colorFamilyFilterSelect', 'color_family');
-        }
-
-        // Función para obtener valores únicos de una propiedad
-        function getUniqueValues(items, prop) {
-            const values = items
-                .map(item => item[prop])
-                .filter(value => value !== null && value !== undefined && value !== '');
-            
-            return [...new Set(values)].sort();
-        }
-
-        // Función para llenar un selector con opciones
-        function fillSelectOptions(selectId, options) {
-            const select = document.getElementById(selectId);
-            
-            // Mantener la primera opción
-            const defaultOption = select.options[0];
-            select.innerHTML = '';
-            select.appendChild(defaultOption);
-            
-            // Añadir las opciones
-            options.forEach(option => {
-                const optionElement = document.createElement('option');
-                optionElement.value = option;
-                optionElement.textContent = option;
-                select.appendChild(optionElement);
-            });
-        }
-
-        // Función para configurar eventos del selector
-        function setupFilterSelect(selectId, filtersContainerId, filterType) {
-            const select = document.getElementById(selectId);
-            const container = document.getElementById(filtersContainerId);
-            
-            select.addEventListener('change', function() {
-                const value = this.value;
-                if (!value) return;
-                
-                // Añadir filtro
-                addFilterChip(container, value, filterType);
-                
-                // Resetear selector
-                this.value = '';
-                
-                // Actualizar filtros
-                updateFilters();
-            });
-        }
-
-        // Función para añadir un chip de filtro
-        function addFilterChip(container, value, filterType) {
-            // Comprobar si ya existe
-            const existingChips = container.querySelectorAll('.filter-chip');
-            for (const chip of existingChips) {
-                if (chip.getAttribute('data-value') === value) return;
-            }
-            
-            // Crear chip
-            const chip = document.createElement('div');
-            chip.className = 'filter-chip';
-            chip.setAttribute('data-value', value);
-            chip.setAttribute('data-type', filterType);
-            chip.innerHTML = `
-                ${value}
-                <span class="close" onclick="removeFilterChip(this.parentNode)">&times;</span>
-            `;
-            
-            container.appendChild(chip);
-        }
-
-        // Función para eliminar un chip de filtro
-        function removeFilterChip(chip) {
-            chip.remove();
-            updateFilters();
-        }
-
-        // Función para actualizar filtros activos
-        function updateFilters() {
-            // Recopilar todos los filtros activos
-            filteredBrands = getActiveFilterValues('activeBrandFilters');
-            filteredTypes = getActiveFilterValues('activeTypeFilters');
-            filteredColorFamilies = getActiveFilterValues('activeColorFamilyFilters');
-            
-            // Actualizar filtros activos
-            updateActiveFilters();
-            
-            // Aplicar filtros
-            filterAndDisplayPaints();
-        }
-
-        // Función para actualizar la visualización de filtros activos
-        function updateActiveFilters() {
-            const activeFiltersContainer = document.getElementById('activeFilters');
-            activeFiltersContainer.innerHTML = '';
-            
-            // Mostrar filtros de marca
-            if (filteredBrands && filteredBrands.length > 0) {
-                const filterGroup = document.createElement('div');
-                filterGroup.className = 'mb-2';
-                filterGroup.innerHTML = '<strong>Marcas:</strong> ';
-                
-                filteredBrands.forEach(brand => {
-                    const chip = document.createElement('span');
-                    chip.className = 'badge bg-secondary me-1';
-                    chip.textContent = brand;
-                    filterGroup.appendChild(chip);
-                });
-                
-                activeFiltersContainer.appendChild(filterGroup);
-            }
-            
-            // Mostrar filtros de tipo
-            if (filteredTypes && filteredTypes.length > 0) {
-                const filterGroup = document.createElement('div');
-                filterGroup.className = 'mb-2';
-                filterGroup.innerHTML = '<strong>Tipos:</strong> ';
-                
-                filteredTypes.forEach(type => {
-                    const chip = document.createElement('span');
-                    chip.className = 'badge bg-secondary me-1';
-                    chip.textContent = type;
-                    filterGroup.appendChild(chip);
-                });
-                
-                activeFiltersContainer.appendChild(filterGroup);
-            }
-            
-            // Mostrar filtros de familia de color
-            if (filteredColorFamilies && filteredColorFamilies.length > 0) {
-                const filterGroup = document.createElement('div');
-                filterGroup.className = 'mb-2';
-                filterGroup.innerHTML = '<strong>Familias de color:</strong> ';
-                
-                filteredColorFamilies.forEach(family => {
-                    const chip = document.createElement('span');
-                    chip.className = 'badge bg-secondary me-1';
-                    chip.textContent = family;
-                    filterGroup.appendChild(chip);
-                });
-                
-                activeFiltersContainer.appendChild(filterGroup);
-            }
-        }
-
-        // Función para obtener valores de filtros activos
-        function getActiveFilterValues(containerId) {
-            const chips = document.getElementById(containerId).querySelectorAll('.filter-chip');
-            return Array.from(chips).map(chip => chip.getAttribute('data-value'));
-        }
-
-        // Función para configurar el botón de eliminación
-        function setupDeleteButton(buttonId, selectId, propertyName) {
-            const button = document.getElementById(buttonId);
-            const select = document.getElementById(selectId);
-            
-            // Habilitar/deshabilitar el botón según la selección
-            select.addEventListener('change', function() {
-                button.disabled = !this.value;
-            });
-            
-            // Configurar acción del botón
-            button.addEventListener('click', function() {
-                const selectedValue = select.value;
-                if (!selectedValue) return;
-                
-                // Verificar si el valor está en uso
-                verifyAndDeleteOption(selectedValue, propertyName, select);
-            });
-        }
-
-        // Función para verificar y eliminar una opción
-        async function verifyAndDeleteOption(value, propertyName, select) {
-            // Contar pinturas que usan este valor
-            const paintCount = allPaints.filter(paint => paint[propertyName] === value).length;
-            
-            if (paintCount > 0) {
-                alert(`No se puede eliminar "${value}" porque está siendo utilizado en ${paintCount} pinturas.`);
-                select.value = '';
-                return;
-            }
-            
-            // Confirmar eliminación
-            if (!confirm(`¿Estás seguro de que deseas eliminar "${value}" de las opciones de filtro?`)) {
-                select.value = '';
-                return;
-            }
-            
-            try {
-                // Eliminar la opción del selector
-                for (let i = 0; i < select.options.length; i++) {
-                    if (select.options[i].value === value) {
-                        select.remove(i);
-                        break;
-                    }
-                }
-                
-                // Notificar el cambio
-                alert(`"${value}" eliminado correctamente de las opciones de filtro.`);
-                select.value = '';
-                
-                // Nota: Para implementar una eliminación real en la base de datos
-                // necesitarías agregar aquí una llamada a un endpoint específico:
-                /*
-                const response = await fetch(`/api/options/${propertyName}/${encodeURIComponent(value)}`, {
-                    method: 'DELETE'
-                });
-                
-                if (!response.ok) {
-                    throw new Error('Error al eliminar la opción del servidor');
-                }
-                */
-            } catch (error) {
-                console.error('Error al eliminar la opción:', error);
-                alert(`Error al eliminar "${value}": ${error.message}`);
-            }
-        }
-
-        // Función mejorada para buscar imágenes
-        async function searchImages(brand, name, colorCode) {
-            try {
-                // Verificar que tengamos al menos marca o código
-                if (!brand && !colorCode) {
-                    alert("Por favor, ingresa al menos la marca o el código para buscar imágenes.");
-                    return;
-                }
-                
-                // Construir consulta específica para mejores resultados
-                let consulta = "";
-                
-                if (brand && colorCode) {
-                    // Formato específico para búsqueda de pinturas
-                    consulta = `${brand} ${colorCode} paint`;
-                } else if (brand) {
-                    consulta = brand;
-                    if (colorCode) consulta += ` ${colorCode}`;
-                    if (name && name !== brand) consulta += ` ${name}`;
-                    consulta += " miniature paint";
-                } else {
-                    consulta = colorCode;
-                    if (name) consulta += ` ${name}`;
-                    consulta += " model paint";
-                }
-                
-                // Actualizar visualización
-                document.getElementById('searchTermDisplay').textContent = consulta;
-                document.getElementById('imageSearchLoading').style.display = 'block';
-                document.getElementById('imageSearchResults').style.display = 'none';
-                document.getElementById('imageSearchError').style.display = 'none';
-                document.getElementById('refreshSearchBtn').style.display = 'none';
-                
-                // Enviar consulta al servidor
-                const searchQuery = encodeURIComponent(consulta);
-                console.log('Iniciando búsqueda con consulta:', consulta);
-                
-                // Iniciar solicitud con un timeout de 15 segundos
-                let controller = new AbortController();
-                let timeoutId = setTimeout(() => controller.abort(), 15000);
-                
-                try {
-                    const response = await fetch(`/api/search-images?query=${searchQuery}`, {
-                        signal: controller.signal
-                    });
-                    clearTimeout(timeoutId);
-                    
-                    if (!response.ok) {
-                        throw new Error(`Error HTTP: ${response.status}`);
-                    }
-                    
-                    const data = await response.json();
-                    console.log('Respuesta recibida:', data);
-                    
-                    // Verificar si tenemos imágenes
-                    if (data.images && data.images.length > 0) {
-                        // Mostrar las imágenes
-                        displayImageResults(data.images);
-                        document.getElementById('imageSearchResults').style.display = 'block';
-                    } else {
-                        // No se encontraron imágenes
-                        document.getElementById('imageSearchResults').innerHTML = `
-                            <div class="col-12 text-center">
-                                <div class="alert alert-warning">
-                                    <i class="bi bi-exclamation-triangle me-2"></i>
-                                    No se encontraron imágenes para "${consulta}".
-                                </div>
-                            </div>
-                        `;
-                        document.getElementById('imageSearchResults').style.display = 'block';
-                    }
-                    
-                    // Mostrar el botón de refrescar búsqueda
-                    document.getElementById('refreshSearchBtn').style.display = 'block';
-                    
-                } catch (fetchError) {
-                    if (fetchError.name === 'AbortError') {
-                        throw new Error('La búsqueda ha excedido el tiempo límite (15 segundos)');
-                    } else {
-                        throw fetchError;
-                    }
-                }
-                
-                // Ocultar carga
-                document.getElementById('imageSearchLoading').style.display = 'none';
-                
-            } catch (error) {
-                console.error('Error en búsqueda de imágenes:', error);
-                document.getElementById('imageSearchLoading').style.display = 'none';
-                document.getElementById('imageSearchError').style.display = 'block';
-                document.getElementById('imageSearchError').innerHTML = `
-                    <div class="alert alert-danger">
-                        <i class="bi bi-exclamation-triangle me-2"></i>
-                        <strong>Error al buscar imágenes:</strong> ${error.message}
-                        <br>
-                        <small>Intenta con estas opciones:</small>
-                        <ul class="mt-2">
-                            <li>Verifica que el código y la marca sean correctos</li>
-                            <li>Intenta con una combinación diferente de marca y código</li>
-                            <li>Introduce la URL de la imagen manualmente si la conoces</li>
-                        </ul>
-                    </div>
-                `;
-                
-                // Mostrar el botón de refrescar búsqueda
-                document.getElementById('refreshSearchBtn').style.display = 'block';
-            }
-        }
-
-        // Función mejorada para mostrar los resultados de la búsqueda
-        function displayImageResults(images) {
-            const resultsContainer = document.getElementById('imageSearchResults');
-            resultsContainer.innerHTML = '';
-            
-            console.log("Mostrando imágenes:", images);
-            
-            if (!Array.isArray(images) || images.length === 0) {
-                resultsContainer.innerHTML = `
-                    <div class="col-12 text-center">
-                        <div class="alert alert-warning">
-                            <i class="bi bi-exclamation-triangle me-2"></i>
-                            No se encontraron imágenes para esta búsqueda.
-                        </div>
-                    </div>
-                `;
-                return;
-            }
-
-            // Crear una fila para las imágenes
-            let row = document.createElement('div');
-            row.className = 'row';
-            
-            // Limitar a un máximo de 9 imágenes para una visualización óptima
-            const maxImages = Math.min(images.length, 9);
-            
-            for (let i = 0; i < maxImages; i++) {
-                const image = images[i];
-                
-                // Verificar que la imagen tenga una URL válida
-                if (!image || !image.url) {
-                    console.warn("Imagen sin URL en posición", i);
-                    continue;
-                }
-                
-                // Crear un elemento para la imagen
-                const imageCol = document.createElement('div');
-                imageCol.className = 'col-md-4 col-sm-6 mb-4';
-                
-                // Contenido del elemento con manejo de errores de carga
-                const title = image.title || 'Sin título';
-                const source = image.source || '#';
-                
-                imageCol.innerHTML = `
-                    <div class="card h-100">
-                        <div class="card-img-container" style="height: 200px; position: relative; overflow: hidden; display: flex; align-items: center; justify-content: center; background-color: #f8f9fa;">
-                            <img src="${image.url}" class="card-img-top" alt="${title}" 
-                                style="max-width: 100%; max-height: 100%; object-fit: contain;"
-                                onerror="this.onerror=null; this.src='https://via.placeholder.com/400x300/cccccc/666666?text=Imagen+no+disponible'; this.parentNode.classList.add('img-error');">
-                            <div class="img-loading-spinner" style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);">
-                                <div class="spinner-border text-primary" role="status" style="width: 1.5rem; height: 1.5rem;">
-                                    <span class="visually-hidden">Cargando...</span>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="card-body">
-                            <h6 class="card-title text-truncate" title="${title}">${title}</h6>
-                            <div class="d-flex justify-content-between mb-2">
-                                <a href="${source}" class="btn btn-sm btn-outline-secondary" target="_blank" rel="noopener noreferrer">
-                                    <i class="bi bi-link-45deg"></i> Ver fuente
-                                </a>
-                            </div>
-                            <button class="btn btn-sm btn-primary w-100" onclick="selectImage('${image.url}')">
-                                <i class="bi bi-check-lg"></i> Seleccionar esta imagen
-                            </button>
-                        </div>
-                    </div>
-                `;
-                
-                // Añadir evento para ocultar el spinner cuando la imagen se carga
-                const imgElement = imageCol.querySelector('img');
-                imgElement.onload = function() {
-                    const spinner = this.parentNode.querySelector('.img-loading-spinner');
-                    if (spinner) spinner.style.display = 'none';
-                };
-                
-                row.appendChild(imageCol);
-            }
-            
-            resultsContainer.appendChild(row);
-        }
-
-        // Función mejorada para seleccionar una imagen
-        function selectImage(url) {
-            // Actualizar el campo de URL de la imagen
-            document.getElementById('image_url').value = url;
-            
-            // Cerrar el modal
-            imageSearchModal.hide();
-            
-            // Mostrar un mensaje de confirmación temporal
-            const alertContainer = document.createElement('div');
-            alertContainer.className = 'alert alert-success alert-dismissible fade show';
-            alertContainer.innerHTML = `
-                <i class="bi bi-check-circle me-2"></i> ¡Imagen seleccionada correctamente!
-                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-            `;
-            
-            // Insertar el mensaje antes del formulario
-            const form = document.getElementById('paintForm');
-            form.parentNode.insertBefore(alertContainer, form);
-            
-            // Quitar el mensaje después de 3 segundos
-            setTimeout(() => {
-                alertContainer.remove();
-            }, 3000);
-            
-            // Disparar evento de cambio para actualizar la vista previa
-            document.getElementById('image_url').dispatchEvent(new Event('input'));
         }
     </script>
 </body>
