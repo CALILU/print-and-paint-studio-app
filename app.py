@@ -980,7 +980,11 @@ def admin_paints():
 @app.route('/api/paints', methods=['GET'])
 def get_paints():
     try:
+        # Añadir log para depuración
+        print("Solicitud recibida en /api/paints")
         paints = Paint.query.all()
+        print(f"Pinturas encontradas: {len(paints)}")
+        
         result = []
         for paint in paints:
             result.append({
@@ -997,6 +1001,7 @@ def get_paints():
                 'color_preview': paint.color_preview,
                 'created_at': paint.created_at.isoformat() if paint.created_at else None
             })
+        print("Enviando respuesta JSON")
         return jsonify(result)
     except Exception as e:
         print(f"Error en get_paints(): {str(e)}")

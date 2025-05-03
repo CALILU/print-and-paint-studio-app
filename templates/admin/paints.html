@@ -889,6 +889,7 @@
         }
         
         // Función para obtener todas las pinturas
+        // Modificación de la función fetchPaints()
         async function fetchPaints() {
             const container = document.getElementById('paints-container');
             container.innerHTML = `
@@ -901,14 +902,17 @@
             `;
             
             try {
+                console.log("Iniciando solicitud de pinturas");
                 const response = await fetch('/api/paints');
+                console.log("Respuesta recibida:", response);
                 
                 if (!response.ok) {
                     throw new Error(`Error HTTP: ${response.status}`);
                 }
                 
+                console.log("Procesando datos JSON...");
                 const paints = await response.json();
-                console.log(`Pinturas cargadas: ${paints.length}`);
+                console.log(`Pinturas cargadas: ${paints.length}`, paints);
                 
                 // Actualizar la variable global
                 allPaints = paints;
@@ -920,7 +924,7 @@
                 filterAndDisplayPaints();
                 
             } catch (error) {
-                console.error('Error al cargar pinturas:', error);
+                console.error('Error detallado al cargar pinturas:', error);
                 container.innerHTML = `
                     <div class="empty-message">
                         <div class="alert alert-danger">
