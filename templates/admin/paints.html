@@ -1,4 +1,3 @@
-```html
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -720,7 +719,6 @@
                 </div>
                 
                 <!-- Modal mejorado para seleccionar imágenes -->
-                <!-- Modal para búsqueda de imágenes -->
                 <div class="modal fade" id="imageSearchModal" tabindex="-1" aria-labelledby="imageSearchModalLabel" aria-hidden="true">
                     <div class="modal-dialog modal-xl modal-dialog-scrollable">
                         <div class="modal-content">
@@ -814,68 +812,40 @@
             
             // Añadir evento al botón de búsqueda de imágenes
             document.getElementById('searchImagesBtn').addEventListener('click', () => {
-            const paintName = document.getElementById('name').value.trim();
-            const paintBrand = document.getElementById('brand').value.trim();
-            const colorCode = document.getElementById('color_code').value.trim();
+                const paintName = document.getElementById('name').value.trim();
+                const paintBrand = document.getElementById('brand').value.trim();
+                const colorCode = document.getElementById('color_code').value.trim();
+                
+                // Verificar que tengamos al menos la marca o el código
+                if (!paintBrand && !colorCode) {
+                    alert('Por favor, introduce al menos la marca o el código para buscar imágenes.');
+                    return;
+                }
+                
+                // Mostrar el modal
+                document.getElementById('searchTermDisplay').textContent = `${paintBrand} ${colorCode}`.trim();
+                document.getElementById('imageSearchLoading').style.display = 'block';
+                document.getElementById('imageSearchResults').style.display = 'none';
+                document.getElementById('imageSearchError').style.display = 'none';
+                document.getElementById('refreshSearchBtn').style.display = 'none';
+                
+                imageSearchModal.show();
+                
+                // Iniciar búsqueda de imágenes
+                searchImages(paintBrand, paintName, colorCode);
+            });
             
-            // Verificar que tengamos al menos la marca o el código
-            if (!paintBrand && !colorCode) {
-                alert('Por favor, introduce al menos la marca o el código para buscar imágenes.');
-                return;
+            // Configurar el botón de refrescar búsqueda
+            const refreshSearchBtn = document.getElementById('refreshSearchBtn');
+            if (refreshSearchBtn) {
+                refreshSearchBtn.addEventListener('click', function() {
+                    const brand = document.getElementById('brand').value.trim();
+                    const name = document.getElementById('name').value.trim();
+                    const colorCode = document.getElementById('color_code').value.trim();
+                    searchImages(brand, name, colorCode);
+                });
             }
             
-            // Mostrar el modal
-            document.getElementById('searchTermDisplay').textContent = `${paintBrand} ${colorCode}`.trim();
-            document.getElementById('imageSearchLoading').style.display = 'block';
-            document.getElementById('imageSearchResults').style.display = 'none';
-            document.getElementById('imageSearchError').style.display = 'none';
-            document.getElementById('refreshSearchBtn').style.display = 'none';
-            
-            imageSearchModal.show();
-            
-            // Iniciar búsqueda de imágenes
-            searchImages(paintBrand, paintName, colorCode);
-        });
-            
-            // Configuración para el botón de refrescar búsqueda y búsqueda de imágenes
-            document.addEventListener('DOMContentLoaded', function() {
-                // Asegurarse de que el botón "Buscar de nuevo" funcione correctamente
-                const refreshSearchBtn = document.getElementById('refreshSearchBtn');
-                if (refreshSearchBtn) {
-                    refreshSearchBtn.addEventListener('click', function() {
-                        const brand = document.getElementById('brand').value.trim();
-                        const name = document.getElementById('name').value.trim();
-                        const colorCode = document.getElementById('color_code').value.trim();
-                        searchImages(brand, name, colorCode);
-                    });
-                }
-            });
-
-            // Inicializar filtros
-            initializeFilters();
-
-
-                // Configurar el botón de búsqueda de imágenes si existe un evento previo
-                const searchImagesBtn = document.getElementById('searchImagesBtn');
-                if (searchImagesBtn) {
-                    // Comprobar si ya tiene un event listener
-                    const existingListener = searchImagesBtn.getAttribute('data-has-listener');
-                    if (!existingListener) {
-                        searchImagesBtn.addEventListener('click', function() {
-                            const brand = document.getElementById('brand').value.trim();
-                            const name = document.getElementById('name').value.trim();
-                            const colorCode = document.getElementById('color_code').value.trim();
-                            
-                            // Verificar que tengamos al menos la marca o el código
-                            if (!brand && !colorCode) {
-                                alert("Por favor, introduce al menos la marca o el código para buscar imágenes.");
-                                return;
-                            }
-                            
-                            // Iniciar búsqueda
-                            searchImages(brand, name, colorCode);
-                        });      
-                // Marcar que el listener ya ha sido añadido    
             // Inicializar filtros
             initializeFilters();
             
@@ -1003,12 +973,22 @@
                 console.log("Respuesta recibida:", response);
                 
                 if (!response.ok) {
-                    throw new Error(`Error HTTP: ${response.status}`);
+                    throw new Error(`Error HTTP: ${response.status} - ${response.statusText}`);
+                }
+                
+                const contentType = response.headers.get("content-type");
+                if (!contentType || !contentType.includes("application/json")) {
+                    throw new Error("La respuesta no es JSON válido");
                 }
                 
                 console.log("Procesando datos JSON...");
                 const paints = await response.json();
                 console.log(`Pinturas cargadas: ${paints.length}`, paints);
+                
+                // Verificar si paints es un array
+                if (!Array.isArray(paints)) {
+                    throw new Error("La respuesta no es un array de pinturas");
+                }
                 
                 // Actualizar la variable global
                 allPaints = paints;
@@ -1373,10 +1353,8 @@
                 document.getElementById('price').value = paint.price || '';
                 document.getElementById('description').value = paint.description || '';
                 document.getElementById('image_url').value = paint.image_url || '';
+                document.getElementById('color_preview').value
                 document.getElementById('color_preview').value = paint.color_preview || '#cccccc';
-                
-                // Cambiar texto
-                document.getElementById('name').dispatchEvent(new Event('input'));
                 
                 // Cambiar texto del formulario
                 document.getElementById('form-title').textContent = 'Editar Pintura';
@@ -1745,33 +1723,12 @@
                 alert(`"${value}" eliminado correctamente de las opciones de filtro.`);
                 select.value = '';
                 
-                // Nota: Para implementar una eliminación real en la base de datos
-                // necesitarías agregar aquí una llamada a un endpoint específico:
-                /*
-                const response = await fetch(`/api/options/${propertyName}/${encodeURIComponent(value)}`, {
-                    method: 'DELETE'
-                });
-                
-                if (!response.ok) {
-                    throw new Error('Error al eliminar la opción del servidor');
-                }
-                */
             } catch (error) {
                 console.error('Error al eliminar la opción:', error);
                 alert(`Error al eliminar "${value}": ${error.message}`);
             }
         }
 
-        // Función mejorada para buscar imágenes
-        // Función modificada para buscar imágenes
-        // Función corregida para buscar imágenes
-        // Función para buscar imágenes usando el backend de Flask
-        // Modificación para el modal de búsqueda de imágenes en paints.html
-        // Buscar y reemplazar la función searchImages por esta versión corregida
-
-        // Función para buscar imágenes
-        // Función para buscar imágenes modificada
-        // Función para buscar imágenes modificada
         // Función para buscar imágenes
         async function searchImages(brand, name, colorCode) {
             try {
@@ -1879,8 +1836,7 @@
                 alert(`Error: ${error.message}`);
             }
         }
-       
-        // Función para usar una imagen ingresada manualmente
+
         // Función para usar una imagen ingresada manualmente
         function useManualImage() {
             const manualUrl = document.getElementById('manualImageUrl').value.trim();
@@ -1900,9 +1856,6 @@
             selectImage(manualUrl);
         }
 
-        // Función para seleccionar una imagen
-        // Añadir/verificar que esta función esté en paints.html
-        // Función mejorada para seleccionar una imagen
         // Función para seleccionar una imagen
         function selectImage(url) {
             if (!url) {
@@ -1945,25 +1898,6 @@
                 imageUrlInput.dispatchEvent(new Event('input'));
             }
         }
-
-        // Añadir la función para usar una imagen ingresada manualmente
-        function useManualImage() {
-            const manualUrl = document.getElementById('manualImageUrl').value.trim();
-            
-            if (!manualUrl) {
-                alert("Por favor, introduce una URL válida.");
-                return;
-            }
-            
-            // Validar URL básica
-            if (!manualUrl.startsWith('http')) {
-                alert("Por favor, introduce una URL válida que comience con http:// o https://");
-                return;
-            }
-            
-            // Seleccionar la imagen
-            selectImage(manualUrl);
-        }
     </script>
 </body>
-</html>
+</html>                
