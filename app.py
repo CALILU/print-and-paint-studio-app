@@ -80,9 +80,17 @@ def api_search_images():
         # Usar DDGS para buscar imágenes
         images = []
         try:
+            # Modificar la consulta para obtener mejores resultados para pinturas de modelismo
+            optimized_query = f"{query} miniature paint bottle"
+            print(f"Consulta optimizada: {optimized_query}")
+            
             with DDGS() as ddgs:
-                # Usar la consulta tal como viene, pero limitarnos a 15 resultados
-                resultados = list(ddgs.images(query, safesearch='Moderate', max_results=15))
+                # Buscar imágenes con la consulta optimizada
+                resultados = list(ddgs.images(
+                    optimized_query, 
+                    safesearch='Moderate', 
+                    max_results=20  # Aumentar el número de resultados
+                ))
                 print(f"Resultados obtenidos con DDGS: {len(resultados)}")
             
             # Procesar resultados de DDGS
@@ -97,33 +105,44 @@ def api_search_images():
                     
             print(f"Imágenes procesadas desde DDGS: {len(images)}")
         except Exception as ddgs_error:
-            # Capturar error de DDGS
             print(f"Error con DDGS: {str(ddgs_error)}")
         
-        # Si no se encontraron imágenes o hubo un error, usar placeholders
+        # Si no se encontraron imágenes, intentar con una consulta más genérica
         if not images:
-            print("No se encontraron imágenes, generando placeholders")
-            # Generar URLs de placeholder basadas en términos de búsqueda
+            print("Intento con consulta alternativa...")
+            try:
+                # Extraer la marca y el código de la consulta original
+                terms = query.split()
+                brand = terms[0] if terms else ""
+                
+                # Usar una consulta más genérica con solo la marca
+                with DDGS() as ddgs:
+                    fallback_query = f"{brand} paints miniature"
+                    resultados = list(ddgs.images(fallback_query, safesearch='Moderate', max_results=10))
+                    
+                    for r in resultados:
+                        url_imagen = r.get('image')
+                        if url_imagen and url_imagen not in [img.get('url') for img in images]:
+                            images.append({
+                                'url': url_imagen,
+                                'title': r.get('title', ''),
+                                'source': r.get('url', '')
+                            })
+            except Exception as alt_error:
+                print(f"Error con consulta alternativa: {str(alt_error)}")
+        
+        # Solo usar placeholders si realmente no se encontraron imágenes
+        if not images:
+            print("No se encontraron imágenes, generando placeholders...")
             terms = query.split()
-            colors = ['5D8AA8', '7FFFD4', 'D2691E', 'DC143C', '008000', 'FFD700']
+            brand = terms[0] if terms else "Paint"
+            code = terms[1] if len(terms) > 1 else "Color"
             
-            for i in range(min(6, max(1, len(terms)))):
-                color = colors[i % len(colors)]
-                term = terms[i] if i < len(terms) else query.replace(' ', '+')
-                
-                images.append({
-                    'url': f'https://via.placeholder.com/400x300/{color}/FFFFFF?text={term}',
-                    'title': f'Placeholder para {term}',
-                    'source': 'Generado automáticamente'
-                })
-                
-            # Añadir siempre al menos un placeholder con toda la consulta
-            if not images:
-                images.append({
-                    'url': f'https://via.placeholder.com/400x300/2196F3/FFFFFF?text={query.replace(" ", "+")}',
-                    'title': f'Visualización para {query}',
-                    'source': 'Generado automáticamente'
-                })
+            images.append({
+                'url': f'https://via.placeholder.com/400x300/2196F3/FFFFFF?text={brand}+{code}',
+                'title': f'No se encontraron imágenes para {query}',
+                'source': 'Placeholder generado'
+            })
         
         return jsonify({"images": images})
     
@@ -132,11 +151,11 @@ def api_search_images():
         print(f"Error en búsqueda de imágenes: {str(e)}")
         traceback.print_exc()
         
-        # Generar al menos una imagen de fallback
+        # Devolver código 200 con mensaje de error
         return jsonify({
             "images": [{
-                'url': f'https://via.placeholder.com/400x300/F44336/FFFFFF?text=Error+de+búsqueda',
-                'title': f'Error: No se pudo completar la búsqueda',
+                'url': f'https://via.placeholder.com/400x300/F44336/FFFFFF?text=Error',
+                'title': f'Error: {str(e)}',
                 'source': 'Error generado'
             }],
             "error": str(e),

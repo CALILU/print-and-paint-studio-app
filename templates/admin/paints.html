@@ -776,12 +776,13 @@
             
             // Añadir evento al botón de búsqueda de imágenes
             // Añadir evento al botón de búsqueda de imágenes
+            // Configurar botón de búsqueda de imágenes
             document.getElementById('searchImagesBtn').addEventListener('click', () => {
                 const paintName = document.getElementById('name').value.trim();
                 const paintBrand = document.getElementById('brand').value.trim();
                 const colorCode = document.getElementById('color_code').value.trim();
                 
-                // Priorizar marca y código como en boton_imagen1.py
+                // Verificar que tengamos al menos la marca o el código
                 if (!paintBrand && !colorCode) {
                     alert('Por favor, introduce al menos la marca o el código para buscar imágenes.');
                     return;
@@ -795,7 +796,7 @@
                 
                 imageSearchModal.show();
                 
-                // Iniciar búsqueda de imágenes priorizando marca y código
+                // Iniciar búsqueda de imágenes
                 searchImages(paintBrand, paintName, colorCode);
             });
                         
@@ -1630,32 +1631,42 @@
         // Función para buscar imágenes
         // Función para buscar imágenes - versión mejorada basada en boton_imagen1.py
         // Función para buscar imágenes
+        // Función para buscar imágenes
         async function searchImages(brand, name, colorCode) {
             try {
-                // Componer una consulta más efectiva
-                let baseTerms = [];
-                if (brand) baseTerms.push(brand);
-                if (colorCode) baseTerms.push(colorCode);
-                if (name && name !== brand) baseTerms.push(name);
-                
-                // Si no hay términos, mostrar error
-                if (baseTerms.length === 0) {
-                    throw new Error("Por favor, proporciona al menos un término de búsqueda");
+                // Verificar que tengamos al menos marca o código
+                if (!brand && !colorCode) {
+                    alert("Por favor, ingresa al menos la marca o el código para buscar imágenes.");
+                    return;
                 }
                 
-                // Construir consulta completa con términos adicionales
-                const baseQuery = baseTerms.join(' ');
+                // Construir consulta específica dando prioridad a marca y código
+                let consulta = "";
                 
-                // Consulta completa similar a la de boton_imagen1.py
-                const consulta = `${baseQuery} paint color miniature`.trim();
+                if (brand && colorCode) {
+                    // Formato prioritario: Marca + Código (como en boton_imagen1.py)
+                    consulta = `${brand} ${colorCode}`;
+                } else if (brand) {
+                    // Solo marca
+                    consulta = brand;
+                    if (name && name !== brand) {
+                        consulta += ` ${name}`;
+                    }
+                } else if (colorCode) {
+                    // Solo código
+                    consulta = colorCode;
+                    if (name) {
+                        consulta += ` ${name}`;
+                    }
+                }
                 
                 // Actualizar visualización
-                document.getElementById('searchTermDisplay').textContent = baseQuery;
+                document.getElementById('searchTermDisplay').textContent = consulta;
                 document.getElementById('imageSearchLoading').innerHTML = `
                     <div class="spinner-border text-primary" role="status">
                         <span class="visually-hidden">Buscando imágenes...</span>
                     </div>
-                    <p class="mt-3">Buscando imágenes para: "${baseQuery}"</p>
+                    <p class="mt-3">Buscando imágenes para: "${consulta}"</p>
                     <small class="text-muted">Por favor espere, esto puede tardar unos segundos...</small>
                 `;
                 
@@ -1663,17 +1674,11 @@
                 document.getElementById('imageSearchResults').style.display = 'none';
                 document.getElementById('imageSearchError').style.display = 'none';
                 
-                // Consulta al servidor
+                // Enviar consulta al servidor
                 const searchQuery = encodeURIComponent(consulta);
-                console.log('Iniciando búsqueda de imágenes con consulta:', consulta);
+                console.log('Iniciando búsqueda con consulta:', consulta);
                 
-                // Realizar la solicitud - establecemos un timeout de 15 segundos
-                const fetchPromise = fetch(`/api/search-images?query=${searchQuery}`);
-                const timeoutPromise = new Promise((_, reject) => 
-                    setTimeout(() => reject(new Error('La solicitud ha excedido el tiempo de espera (15s)')), 15000)
-                );
-                
-                const response = await Promise.race([fetchPromise, timeoutPromise]);
+                const response = await fetch(`/api/search-images?query=${searchQuery}`);
                 const data = await response.json();
                 
                 console.log('Respuesta recibida:', data);
@@ -1684,20 +1689,12 @@
                     displayImageResults(data.images);
                     document.getElementById('imageSearchResults').style.display = 'block';
                 } else {
-                    // Mostrar mensaje de no resultados
+                    // No se encontraron imágenes
                     document.getElementById('imageSearchResults').innerHTML = `
                         <div class="col-12 text-center">
                             <div class="alert alert-warning">
                                 <i class="bi bi-exclamation-triangle me-2"></i>
-                                No se encontraron imágenes para "${baseQuery}".
-                                <br>
-                                <small>Prueba con estos consejos:
-                                    <ul class="text-start mt-2">
-                                        <li>Usa términos más específicos (ej: número exacto del código)</li>
-                                        <li>Intenta solo con la marca (ej: "${brand}")</li>
-                                        <li>Verifica que no haya errores de escritura</li>
-                                    </ul>
-                                </small>
+                                No se encontraron imágenes para "${consulta}".
                             </div>
                         </div>
                     `;
@@ -1716,11 +1713,11 @@
                         <i class="bi bi-exclamation-triangle me-2"></i>
                         <strong>Error al buscar imágenes:</strong> ${error.message}
                         <br>
-                        <small>Es posible que el servicio de búsqueda no esté disponible en este momento. Puedes:</small>
+                        <small>Intenta con estas opciones:</small>
                         <ul class="mt-2">
-                            <li>Intentar con términos de búsqueda más sencillos</li>
-                            <li>Introducir manualmente la URL de la imagen si la conoces</li>
-                            <li>Probar más tarde cuando el servicio esté disponible</li>
+                            <li>Verifica que el código y la marca sean correctos</li>
+                            <li>Intenta con una combinación diferente de marca y código</li>
+                            <li>Introduce la URL de la imagen manualmente si la conoces</li>
                         </ul>
                         <div class="d-flex justify-content-end mt-3">
                             <button class="btn btn-sm btn-outline-secondary" onclick="imageSearchModal.hide()">
@@ -1737,11 +1734,12 @@
 
         // Función para mostrar los resultados de la búsqueda
         // Función para mostrar los resultados de la búsqueda
+        // Función para mostrar los resultados de la búsqueda
         function displayImageResults(images) {
             const resultsContainer = document.getElementById('imageSearchResults');
             resultsContainer.innerHTML = '';
             
-            console.log("Mostrando imágenes:", images); // Añadir para depuración
+            console.log("Mostrando imágenes:", images);
             
             if (!Array.isArray(images) || images.length === 0) {
                 resultsContainer.innerHTML = `
@@ -1755,8 +1753,8 @@
                 return;
             }
 
-            // Limitar a un máximo de 12 imágenes para no sobrecargar la interfaz
-            const maxImages = Math.min(images.length, 12);
+            // Limitar a un máximo de 9 imágenes para no sobrecargar la interfaz
+            const maxImages = Math.min(images.length, 9);
             
             for (let i = 0; i < maxImages; i++) {
                 const image = images[i];
@@ -1777,9 +1775,11 @@
                 
                 imageCol.innerHTML = `
                     <div class="card h-100">
-                        <img src="${image.url}" class="card-img-top" alt="${title}" 
-                            style="height: 200px; object-fit: contain; padding: 10px;"
-                            onerror="this.onerror=null; this.src='https://via.placeholder.com/400x300/cccccc/666666?text=Imagen+no+disponible';">
+                        <div class="position-relative" style="height: 200px;">
+                            <img src="${image.url}" class="card-img-top" alt="${title}" 
+                                style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: contain; padding: 10px;"
+                                onerror="this.onerror=null; this.src='https://via.placeholder.com/400x300/cccccc/666666?text=Imagen+no+disponible';">
+                        </div>
                         <div class="card-body">
                             <h6 class="card-title text-truncate" title="${title}">${title}</h6>
                             <a href="${source}" class="btn btn-sm btn-outline-secondary mb-2" target="_blank">
@@ -1793,19 +1793,6 @@
                 `;
                 
                 resultsContainer.appendChild(imageCol);
-            }
-            
-            // Si hay más imágenes, mostrar un mensaje
-            if (images.length > maxImages) {
-                const moreImagesMessage = document.createElement('div');
-                moreImagesMessage.className = 'col-12 mt-3 text-center';
-                moreImagesMessage.innerHTML = `
-                    <div class="alert alert-info">
-                        <i class="bi bi-info-circle me-2"></i>
-                        Se encontraron ${images.length} imágenes en total. Mostrando las primeras ${maxImages}.
-                    </div>
-                `;
-                resultsContainer.appendChild(moreImagesMessage);
             }
         }
         
