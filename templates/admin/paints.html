@@ -1731,67 +1731,63 @@
         }
 
         // Función mejorada para buscar imágenes
-        // Función modificada para buscar imágenes
-        // Función corregida para buscar imágenes
-        // Función para buscar imágenes usando el backend de Flask
         async function searchImages(brand, name, colorCode) {
             try {
                 // Verificar que tengamos al menos marca o código
                 if (!brand && !colorCode) {
-                    alert("Por favor, introduce al menos la marca o el código para buscar imágenes.");
+                    alert("Por favor, ingresa al menos la marca o el código para buscar imágenes.");
                     return;
                 }
                 
-                // Mostrar el modal
-                document.getElementById('searchTermDisplay').textContent = `${brand} ${colorCode}`.trim();
+                // Construir consulta específica para mejores resultados
+                let consulta = "";
+                
+                if (brand && colorCode) {
+                    // Formato específico para búsqueda de pinturas
+                    consulta = `${brand} ${colorCode} paint`;
+                } else if (brand) {
+                    consulta = brand;
+                    if (colorCode) consulta += ` ${colorCode}`;
+                    if (name && name !== brand) consulta += ` ${name}`;
+                    consulta += " miniature paint";
+                } else {
+                    consulta = colorCode;
+                    if (name) consulta += ` ${name}`;
+                    consulta += " model paint";
+                }
+                
+                // Actualizar visualización
+                document.getElementById('searchTermDisplay').textContent = consulta;
                 document.getElementById('imageSearchLoading').style.display = 'block';
                 document.getElementById('imageSearchResults').style.display = 'none';
                 document.getElementById('imageSearchError').style.display = 'none';
+                document.getElementById('refreshSearchBtn').style.display = 'none';
                 
-                imageSearchModal.show();
+                // Enviar consulta al servidor
+                const searchQuery = encodeURIComponent(consulta);
+                console.log('Iniciando búsqueda con consulta:', consulta);
                 
-                // Deshabilitar botones y mostrar progreso
-                const buscarBtn = document.getElementById('searchImagesBtn');
-                if (buscarBtn) buscarBtn.disabled = true;
+                // Iniciar solicitud con un timeout de 15 segundos
+                let controller = new AbortController();
+                let timeoutId = setTimeout(() => controller.abort(), 15000);
                 
                 try {
-                    // Realizar la búsqueda a través del backend exactamente como en index.html
-                    const response = await fetch('/api/buscar_imagen', {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                        },
-                        body: JSON.stringify({ 
-                            marca: brand, 
-                            codigo: colorCode,
-                            timestamp: Date.now()
-                        }),
+                    const response = await fetch(`/api/search-images?query=${searchQuery}`, {
+                        signal: controller.signal
                     });
+                    clearTimeout(timeoutId);
                     
                     if (!response.ok) {
-                        const errorData = await response.json();
-                        throw new Error(errorData.error || 'Error al buscar la imagen');
+                        throw new Error(`Error HTTP: ${response.status}`);
                     }
                     
-                    const resultado = await response.json();
+                    const data = await response.json();
+                    console.log('Respuesta recibida:', data);
                     
-                    // Mostrar la imagen encontrada
-                    if (resultado.success && resultado.imagen_base64) {
-                        // Mostrar el resultado en el modal
-                        document.getElementById('imageSearchResults').innerHTML = `
-                            <div class="col-12 text-center">
-                                <div class="card">
-                                    <div class="card-body">
-                                        <h5 class="card-title">${resultado.nombre_sugerido || `${brand} ${colorCode}`}</h5>
-                                        <img src="${resultado.imagen_base64}" class="img-fluid mb-3" 
-                                            style="max-height: 300px;" alt="${brand} ${colorCode}">
-                                        <button class="btn btn-primary" onclick="selectImage('${resultado.url_original}')">
-                                            <i class="bi bi-check-lg"></i> Seleccionar esta imagen
-                                        </button>
-                                    </div>
-                                </div>
-                            </div>
-                        `;
+                    // Verificar si tenemos imágenes
+                    if (data.images && data.images.length > 0) {
+                        // Mostrar las imágenes
+                        displayImageResults(data.images);
                         document.getElementById('imageSearchResults').style.display = 'block';
                     } else {
                         // No se encontraron imágenes
@@ -1799,75 +1795,141 @@
                             <div class="col-12 text-center">
                                 <div class="alert alert-warning">
                                     <i class="bi bi-exclamation-triangle me-2"></i>
-                                    No se encontraron imágenes para "${brand} ${colorCode}".
+                                    No se encontraron imágenes para "${consulta}".
                                 </div>
                             </div>
                         `;
                         document.getElementById('imageSearchResults').style.display = 'block';
                     }
                     
-                } catch (error) {
-                    console.error('Error en búsqueda:', error);
-                    document.getElementById('imageSearchError').style.display = 'block';
-                    document.getElementById('imageSearchError').innerHTML = `
-                        <div class="alert alert-danger">
-                            <i class="bi bi-exclamation-triangle me-2"></i>
-                            <strong>Error al buscar imágenes:</strong> ${error.message}
-                            <p class="mt-2">Puedes intentar con una URL de imagen directa:</p>
-                            <div class="input-group mt-2">
-                                <input type="text" id="manualImageUrl" class="form-control" 
-                                    placeholder="https://ejemplo.com/imagen.jpg">
-                                <button class="btn btn-primary" onclick="useManualImage()">
-                                    Usar esta imagen
-                                </button>
-                            </div>
-                        </div>
-                    `;
-                } finally {
-                    // Habilitar botones y ocultar progreso
-                    if (buscarBtn) buscarBtn.disabled = false;
-                    document.getElementById('imageSearchLoading').style.display = 'none';
+                    // Mostrar el botón de refrescar búsqueda
+                    document.getElementById('refreshSearchBtn').style.display = 'block';
+                    
+                } catch (fetchError) {
+                    if (fetchError.name === 'AbortError') {
+                        throw new Error('La búsqueda ha excedido el tiempo límite (15 segundos)');
+                    } else {
+                        throw fetchError;
+                    }
                 }
                 
+                // Ocultar carga
+                document.getElementById('imageSearchLoading').style.display = 'none';
+                
             } catch (error) {
-                console.error('Error general:', error);
-                alert(`Error: ${error.message}`);
+                console.error('Error en búsqueda de imágenes:', error);
+                document.getElementById('imageSearchLoading').style.display = 'none';
+                document.getElementById('imageSearchError').style.display = 'block';
+                document.getElementById('imageSearchError').innerHTML = `
+                    <div class="alert alert-danger">
+                        <i class="bi bi-exclamation-triangle me-2"></i>
+                        <strong>Error al buscar imágenes:</strong> ${error.message}
+                        <br>
+                        <small>Intenta con estas opciones:</small>
+                        <ul class="mt-2">
+                            <li>Verifica que el código y la marca sean correctos</li>
+                            <li>Intenta con una combinación diferente de marca y código</li>
+                            <li>Introduce la URL de la imagen manualmente si la conoces</li>
+                        </ul>
+                    </div>
+                `;
+                
+                // Mostrar el botón de refrescar búsqueda
+                document.getElementById('refreshSearchBtn').style.display = 'block';
             }
         }
 
-        // Función para usar una imagen ingresada manualmente
-        function useManualImage() {
-            const manualUrl = document.getElementById('manualImageUrl').value.trim();
+        // Función mejorada para mostrar los resultados de la búsqueda
+        function displayImageResults(images) {
+            const resultsContainer = document.getElementById('imageSearchResults');
+            resultsContainer.innerHTML = '';
             
-            if (!manualUrl) {
-                alert("Por favor, introduce una URL válida.");
+            console.log("Mostrando imágenes:", images);
+            
+            if (!Array.isArray(images) || images.length === 0) {
+                resultsContainer.innerHTML = `
+                    <div class="col-12 text-center">
+                        <div class="alert alert-warning">
+                            <i class="bi bi-exclamation-triangle me-2"></i>
+                            No se encontraron imágenes para esta búsqueda.
+                        </div>
+                    </div>
+                `;
                 return;
             }
+
+            // Crear una fila para las imágenes
+            let row = document.createElement('div');
+            row.className = 'row';
             
-            // Validar URL básica
-            if (!manualUrl.startsWith('http')) {
-                alert("Por favor, introduce una URL válida que comience con http:// o https://");
-                return;
+            // Limitar a un máximo de 9 imágenes para una visualización óptima
+            const maxImages = Math.min(images.length, 9);
+            
+            for (let i = 0; i < maxImages; i++) {
+                const image = images[i];
+                
+                // Verificar que la imagen tenga una URL válida
+                if (!image || !image.url) {
+                    console.warn("Imagen sin URL en posición", i);
+                    continue;
+                }
+                
+                // Crear un elemento para la imagen
+                const imageCol = document.createElement('div');
+                imageCol.className = 'col-md-4 col-sm-6 mb-4';
+                
+                // Contenido del elemento con manejo de errores de carga
+                const title = image.title || 'Sin título';
+                const source = image.source || '#';
+                
+                imageCol.innerHTML = `
+                    <div class="card h-100">
+                        <div class="card-img-container" style="height: 200px; position: relative; overflow: hidden; display: flex; align-items: center; justify-content: center; background-color: #f8f9fa;">
+                            <img src="${image.url}" class="card-img-top" alt="${title}" 
+                                style="max-width: 100%; max-height: 100%; object-fit: contain;"
+                                onerror="this.onerror=null; this.src='https://via.placeholder.com/400x300/cccccc/666666?text=Imagen+no+disponible'; this.parentNode.classList.add('img-error');">
+                            <div class="img-loading-spinner" style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);">
+                                <div class="spinner-border text-primary" role="status" style="width: 1.5rem; height: 1.5rem;">
+                                    <span class="visually-hidden">Cargando...</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="card-body">
+                            <h6 class="card-title text-truncate" title="${title}">${title}</h6>
+                            <div class="d-flex justify-content-between mb-2">
+                                <a href="${source}" class="btn btn-sm btn-outline-secondary" target="_blank" rel="noopener noreferrer">
+                                    <i class="bi bi-link-45deg"></i> Ver fuente
+                                </a>
+                            </div>
+                            <button class="btn btn-sm btn-primary w-100" onclick="selectImage('${image.url}')">
+                                <i class="bi bi-check-lg"></i> Seleccionar esta imagen
+                            </button>
+                        </div>
+                    </div>
+                `;
+                
+                // Añadir evento para ocultar el spinner cuando la imagen se carga
+                const imgElement = imageCol.querySelector('img');
+                imgElement.onload = function() {
+                    const spinner = this.parentNode.querySelector('.img-loading-spinner');
+                    if (spinner) spinner.style.display = 'none';
+                };
+                
+                row.appendChild(imageCol);
             }
             
-            // Seleccionar la imagen
-            selectImage(manualUrl);
+            resultsContainer.appendChild(row);
         }
 
-        // Función para seleccionar una imagen
+        // Función mejorada para seleccionar una imagen
         function selectImage(url) {
-            if (!url) {
-                alert("URL de imagen no válida.");
-                return;
-            }
-            
-            // Actualizar el campo del formulario
+            // Actualizar el campo de URL de la imagen
             document.getElementById('image_url').value = url;
             
-            // Cerrar modal
+            // Cerrar el modal
             imageSearchModal.hide();
             
-            // Mostrar mensaje de confirmación
+            // Mostrar un mensaje de confirmación temporal
             const alertContainer = document.createElement('div');
             alertContainer.className = 'alert alert-success alert-dismissible fade show';
             alertContainer.innerHTML = `
@@ -1875,7 +1937,7 @@
                 <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
             `;
             
-            // Insertar mensaje antes del formulario
+            // Insertar el mensaje antes del formulario
             const form = document.getElementById('paintForm');
             form.parentNode.insertBefore(alertContainer, form);
             
@@ -1884,7 +1946,7 @@
                 alertContainer.remove();
             }, 3000);
             
-            // Actualizar la vista previa
+            // Disparar evento de cambio para actualizar la vista previa
             document.getElementById('image_url').dispatchEvent(new Event('input'));
         }
     </script>
