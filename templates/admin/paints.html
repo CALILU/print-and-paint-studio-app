@@ -1,3 +1,4 @@
+```html
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -222,6 +223,38 @@
             text-align: center;
             border-radius: 10px;
             margin: 20px 0;
+        }
+        .hidden {
+            display: none;
+        }
+        .url-container {
+            font-family: monospace;
+            background-color: #f8f8f8;
+            padding: 10px;
+            border: 1px solid #eee;
+            border-radius: 3px;
+            display: block;
+            margin-top: 10px;
+            word-break: break-all;
+        }
+        .image-info {
+            margin-top: 15px;
+            padding: 10px;
+            background-color: #f9f9f9;
+            border-radius: 4px;
+            border-left: 3px solid #4CAF50;
+        }
+        .info-row {
+            display: flex;
+            margin: 5px 0;
+        }
+        .info-label {
+            font-weight: bold;
+            width: 100px;
+            flex-shrink: 0;
+        }
+        .info-value {
+            flex-grow: 1;
         }
         .color-family-tag {
             display: inline-block;
@@ -587,10 +620,10 @@
                                                         <input type="color" id="color_preview" class="form-control">
                                                     </div>
                                                 </div>
-                                                <!-- Añadir botón de búsqueda de imágenes aquí -->
+                                                <!-- Botón de búsqueda de imágenes mejorado -->
                                                 <div class="mb-3">
                                                     <button type="button" class="btn btn-outline-primary w-100" id="searchImagesBtn">
-                                                        <i class="bi bi-search me-2"></i> Buscar imágenes en internet
+                                                        <i class="bi bi-search me-2"></i> Buscar y mostrar imágenes
                                                     </button>
                                                 </div>
                                             </div>
@@ -685,8 +718,8 @@
                         </div>
                     </div>
                 </div>
-                <!-- Modal para seleccionar imágenes -->
-                <!-- Modal para seleccionar imágenes - Código optimizado -->
+                
+                <!-- Modal mejorado para seleccionar imágenes -->
                 <div class="modal fade" id="imageSearchModal" tabindex="-1" aria-labelledby="imageSearchModalLabel" aria-hidden="true">
                     <div class="modal-dialog modal-xl modal-dialog-scrollable">
                         <div class="modal-content">
@@ -795,11 +828,20 @@
                 document.getElementById('imageSearchLoading').style.display = 'block';
                 document.getElementById('imageSearchResults').style.display = 'none';
                 document.getElementById('imageSearchError').style.display = 'none';
+                document.getElementById('refreshSearchBtn').style.display = 'none';
                 
                 imageSearchModal.show();
                 
                 // Iniciar búsqueda de imágenes
                 searchImages(paintBrand, paintName, colorCode);
+            });
+            
+            // Configurar el botón de refrescar búsqueda
+            document.getElementById('refreshSearchBtn').addEventListener('click', () => {
+                const brand = document.getElementById('brand').value.trim();
+                const name = document.getElementById('name').value.trim();
+                const colorCode = document.getElementById('color_code').value.trim();
+                searchImages(brand, name, colorCode);
             });
             
             // Inicializar filtros
@@ -850,6 +892,7 @@
                 const stock = document.getElementById('stock').value || 0;
                 const price = document.getElementById('price').value || 0;
                 const colorPreview = document.getElementById('color_preview').value;
+                const imageUrl = document.getElementById('image_url').value;
                 
                 // Actualizar la vista previa
                 const previewContainer = document.getElementById('imagePreview');
@@ -876,6 +919,23 @@
                 // Actualizar precio
                 const priceTag = previewContainer.querySelector('.price-tag');
                 priceTag.textContent = price ? `${price}€` : 'Precio no disponible';
+                
+                // Si hay una imagen, añadirla a la vista previa
+                if (imageUrl) {
+                    // Verificar si ya existe una imagen en la vista previa
+                    let imgElement = previewContainer.querySelector('.paint-image');
+                    if (!imgElement) {
+                        // Crear elemento de imagen y añadirlo antes del color-preview
+                        imgElement = document.createElement('img');
+                        imgElement.className = 'paint-image';
+                        const colorPreviewElement = previewContainer.querySelector('.paint-color-preview');
+                        previewContainer.insertBefore(imgElement, colorPreviewElement);
+                    }
+                    
+                    // Actualizar URL de la imagen
+                    imgElement.src = imageUrl;
+                    imgElement.alt = name;
+                }
             };
             
             // Añadir eventos de input a todos los campos
@@ -887,13 +947,13 @@
             document.getElementById('stock').addEventListener('input', updatePreview);
             document.getElementById('price').addEventListener('input', updatePreview);
             document.getElementById('color_preview').addEventListener('input', updatePreview);
+            document.getElementById('image_url').addEventListener('input', updatePreview);
             
             // Actualizar la vista previa inicialmente
             updatePreview();
         }
         
-        // Función para obtener todas las pinturas
-        // Modificación de la función fetchPaints()
+        // Función mejorada para obtener todas las pinturas
         async function fetchPaints() {
             const container = document.getElementById('paints-container');
             container.innerHTML = `
@@ -1070,7 +1130,7 @@
                         <i class="bi bi-pencil action-icon" onclick="editPaint(${paint.id})" title="Editar"></i>
                         <i class="bi bi-trash action-icon" onclick="confirmDelete(${paint.id})" title="Eliminar"></i>
                     </div>
-                    <img src="${imageUrl}" alt="${paint.name}" class="paint-image">
+                    <img src="${imageUrl}" alt="${paint.name}" class="paint-image" onerror="this.onerror=null; this.src='https://via.placeholder.com/150?text=No+Image';">
                     <div class="paint-color-preview" style="background-color: ${paint.color_preview || '#cccccc'}"></div>
                     <div class="paint-title">${paint.name}</div>
                     <div class="paint-code">${paint.color_code || ''}</div>
@@ -1123,8 +1183,10 @@
                 const row = document.createElement('tr');
                 row.innerHTML = `
                     <td>
-                        <img src="${imageUrl}" alt="${paint.name}" style="width: 50px; height: 50px; object-fit: contain;">
-                        <div style="width: 25px; height: 25px; background-color: ${paint.color_preview || '#cccccc'}; display: inline-block; border-radius: 50%; border: 1px solid #ddd; vertical-align: middle;"></div>
+                        <div style="position: relative; width: 50px; height: 50px; overflow: hidden; display: flex; align-items: center; justify-content: center;">
+                            <img src="${imageUrl}" alt="${paint.name}" style="max-width: 100%; max-height: 100%; object-fit: contain;" onerror="this.onerror=null; this.src='https://via.placeholder.com/50?text=No+Image';">
+                        </div>
+                        <div style="width: 25px; height: 25px; background-color: ${paint.color_preview || '#cccccc'}; display: inline-block; border-radius: 50%; border: 1px solid #ddd; vertical-align: middle; margin-top: 5px;"></div>
                     </td>
                     <td>
                         <strong>${paint.name}</strong>
@@ -1232,7 +1294,12 @@
                 
                 // Imagen
                 const imageUrl = paint.image_url || 'https://via.placeholder.com/300?text=No+Image';
-                document.getElementById('detailImage').src = imageUrl;
+                const detailImage = document.getElementById('detailImage');
+                detailImage.src = imageUrl;
+                detailImage.onerror = function() {
+                    this.onerror = null;
+                    this.src = 'https://via.placeholder.com/300?text=No+Image';
+                };
                 
                 // Color preview
                 document.getElementById('detailColorPreview').style.backgroundColor = paint.color_preview || '#cccccc';
@@ -1276,6 +1343,9 @@
                 document.getElementById('image_url').value = paint.image_url || '';
                 document.getElementById('color_preview').value = paint.color_preview || '#cccccc';
                 
+                // Cambiar texto
+                document.getElementById('name').dispatchEvent(new Event('input'));
+                
                 // Cambiar texto del formulario
                 document.getElementById('form-title').textContent = 'Editar Pintura';
                 document.getElementById('submit-btn').textContent = 'Actualizar Pintura';
@@ -1310,7 +1380,21 @@
                 fetchPaints();
                 
                 // Mostrar mensaje de éxito
-                alert('Pintura eliminada correctamente');
+                const alertContainer = document.createElement('div');
+                alertContainer.className = 'alert alert-success alert-dismissible fade show';
+                alertContainer.innerHTML = `
+                    <i class="bi bi-check-circle me-2"></i> Pintura eliminada correctamente
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                `;
+                
+                // Insertar el mensaje al principio del contenedor principal
+                const mainContent = document.querySelector('main.content');
+                mainContent.insertBefore(alertContainer, mainContent.firstChild);
+                
+                // Quitar el mensaje después de 3 segundos
+                setTimeout(() => {
+                    alertContainer.remove();
+                }, 3000);
                 
             } catch (error) {
                 console.error('Error:', error);
@@ -1368,7 +1452,21 @@
                 fetchPaints();
                 
                 // Mostrar mensaje de éxito
-                alert(isEdit ? 'Pintura actualizada correctamente' : 'Pintura guardada correctamente');
+                const alertContainer = document.createElement('div');
+                alertContainer.className = 'alert alert-success alert-dismissible fade show';
+                alertContainer.innerHTML = `
+                    <i class="bi bi-check-circle me-2"></i> ${isEdit ? 'Pintura actualizada correctamente' : 'Pintura guardada correctamente'}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                `;
+                
+                // Insertar el mensaje al principio del contenedor principal
+                const mainContent = document.querySelector('main.content');
+                mainContent.insertBefore(alertContainer, mainContent.firstChild);
+                
+                // Quitar el mensaje después de 3 segundos
+                setTimeout(() => {
+                    alertContainer.remove();
+                }, 3000);
                 
             } catch (error) {
                 console.error('Error:', error);
@@ -1385,7 +1483,6 @@
             document.getElementById('color_preview').value = '#cccccc';
             
             // Disparar evento para actualizar la vista previa
-            document.getElementById('name').dispatchEvent(new Event
             document.getElementById('name').dispatchEvent(new Event('input'));
         }
 
@@ -1633,7 +1730,7 @@
             }
         }
 
-        // Función para buscar imágenes
+        // Función mejorada para buscar imágenes
         async function searchImages(brand, name, colorCode) {
             try {
                 // Verificar que tengamos al menos marca o código
@@ -1642,34 +1739,29 @@
                     return;
                 }
                 
-                // Construir consulta específica siguiendo el patrón de boton_imagen1.py
+                // Construir consulta específica para mejores resultados
                 let consulta = "";
                 
                 if (brand && colorCode) {
-                    // Formato exacto de boton_imagen1.py: Marca + Código
-                    consulta = `${brand} ${colorCode}`;
+                    // Formato específico para búsqueda de pinturas
+                    consulta = `${brand} ${colorCode} paint`;
                 } else if (brand) {
                     consulta = brand;
                     if (colorCode) consulta += ` ${colorCode}`;
                     if (name && name !== brand) consulta += ` ${name}`;
+                    consulta += " miniature paint";
                 } else {
                     consulta = colorCode;
                     if (name) consulta += ` ${name}`;
+                    consulta += " model paint";
                 }
                 
                 // Actualizar visualización
                 document.getElementById('searchTermDisplay').textContent = consulta;
-                document.getElementById('imageSearchLoading').innerHTML = `
-                    <div class="spinner-border text-primary" role="status">
-                        <span class="visually-hidden">Buscando imágenes...</span>
-                    </div>
-                    <p class="mt-3">Buscando imágenes para: "${consulta}"</p>
-                    <small class="text-muted">Por favor espere, esto puede tardar unos segundos...</small>
-                `;
-                
                 document.getElementById('imageSearchLoading').style.display = 'block';
                 document.getElementById('imageSearchResults').style.display = 'none';
                 document.getElementById('imageSearchError').style.display = 'none';
+                document.getElementById('refreshSearchBtn').style.display = 'none';
                 
                 // Enviar consulta al servidor
                 const searchQuery = encodeURIComponent(consulta);
@@ -1684,6 +1776,10 @@
                         signal: controller.signal
                     });
                     clearTimeout(timeoutId);
+                    
+                    if (!response.ok) {
+                        throw new Error(`Error HTTP: ${response.status}`);
+                    }
                     
                     const data = await response.json();
                     console.log('Respuesta recibida:', data);
@@ -1705,6 +1801,10 @@
                         `;
                         document.getElementById('imageSearchResults').style.display = 'block';
                     }
+                    
+                    // Mostrar el botón de refrescar búsqueda
+                    document.getElementById('refreshSearchBtn').style.display = 'block';
+                    
                 } catch (fetchError) {
                     if (fetchError.name === 'AbortError') {
                         throw new Error('La búsqueda ha excedido el tiempo límite (15 segundos)');
@@ -1731,20 +1831,15 @@
                             <li>Intenta con una combinación diferente de marca y código</li>
                             <li>Introduce la URL de la imagen manualmente si la conoces</li>
                         </ul>
-                        <div class="d-flex justify-content-end mt-3">
-                            <button class="btn btn-sm btn-outline-secondary" onclick="imageSearchModal.hide()">
-                                Cancelar
-                            </button>
-                            <button class="btn btn-sm btn-primary ms-2" onclick="searchImages('${brand || ''}', '${name || ''}', '${colorCode || ''}')">
-                                <i class="bi bi-arrow-clockwise me-1"></i> Intentar de nuevo
-                            </button>
-                        </div>
                     </div>
                 `;
+                
+                // Mostrar el botón de refrescar búsqueda
+                document.getElementById('refreshSearchBtn').style.display = 'block';
             }
         }
 
-        // Función para mostrar los resultados de la búsqueda
+        // Función mejorada para mostrar los resultados de la búsqueda
         function displayImageResults(images) {
             const resultsContainer = document.getElementById('imageSearchResults');
             resultsContainer.innerHTML = '';
@@ -1763,10 +1858,12 @@
                 return;
             }
 
-            // Limitar a un máximo de 9 imágenes 
-            const maxImages = Math.min(images.length, 9);
+            // Crear una fila para las imágenes
             let row = document.createElement('div');
             row.className = 'row';
+            
+            // Limitar a un máximo de 9 imágenes para una visualización óptima
+            const maxImages = Math.min(images.length, 9);
             
             for (let i = 0; i < maxImages; i++) {
                 const image = images[i];
@@ -1787,7 +1884,7 @@
                 
                 imageCol.innerHTML = `
                     <div class="card h-100">
-                        <div class="card-img-container" style="height: 200px; position: relative; overflow: hidden; display: flex; align-items: center; justify-content: center;">
+                        <div class="card-img-container" style="height: 200px; position: relative; overflow: hidden; display: flex; align-items: center; justify-content: center; background-color: #f8f9fa;">
                             <img src="${image.url}" class="card-img-top" alt="${title}" 
                                 style="max-width: 100%; max-height: 100%; object-fit: contain;"
                                 onerror="this.onerror=null; this.src='https://via.placeholder.com/400x300/cccccc/666666?text=Imagen+no+disponible'; this.parentNode.classList.add('img-error');">
@@ -1800,7 +1897,7 @@
                         <div class="card-body">
                             <h6 class="card-title text-truncate" title="${title}">${title}</h6>
                             <div class="d-flex justify-content-between mb-2">
-                                <a href="${source}" class="btn btn-sm btn-outline-secondary" target="_blank">
+                                <a href="${source}" class="btn btn-sm btn-outline-secondary" target="_blank" rel="noopener noreferrer">
                                     <i class="bi bi-link-45deg"></i> Ver fuente
                                 </a>
                             </div>
@@ -1823,8 +1920,8 @@
             
             resultsContainer.appendChild(row);
         }
-        
-        // Función para seleccionar una imagen
+
+        // Función mejorada para seleccionar una imagen
         function selectImage(url) {
             // Actualizar el campo de URL de la imagen
             document.getElementById('image_url').value = url;
@@ -1832,13 +1929,25 @@
             // Cerrar el modal
             imageSearchModal.hide();
             
-            // Mostrar mensaje de confirmación
-            alert('¡Imagen seleccionada con éxito!');
+            // Mostrar un mensaje de confirmación temporal
+            const alertContainer = document.createElement('div');
+            alertContainer.className = 'alert alert-success alert-dismissible fade show';
+            alertContainer.innerHTML = `
+                <i class="bi bi-check-circle me-2"></i> ¡Imagen seleccionada correctamente!
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            `;
             
-            // Actualizar la vista previa si existe la función
-            if (typeof updatePreview === 'function') {
-                updatePreview();
-            }
+            // Insertar el mensaje antes del formulario
+            const form = document.getElementById('paintForm');
+            form.parentNode.insertBefore(alertContainer, form);
+            
+            // Quitar el mensaje después de 3 segundos
+            setTimeout(() => {
+                alertContainer.remove();
+            }, 3000);
+            
+            // Disparar evento de cambio para actualizar la vista previa
+            document.getElementById('image_url').dispatchEvent(new Event('input'));
         }
     </script>
 </body>

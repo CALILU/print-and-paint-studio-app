@@ -67,6 +67,7 @@ def debug_template_paths():
 # Modificar esta ruta en app.py
 # Modificar esta ruta en app.py
 # Ruta modificada para la búsqueda de imágenes
+# Ruta modificada para la búsqueda de imágenes
 @app.route('/api/search-images', methods=['GET'])
 @admin_required
 def api_search_images():
