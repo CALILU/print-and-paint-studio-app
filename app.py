@@ -57,7 +57,7 @@ def api_search_images():
     try:
         # Usar DDGS para buscar imágenes
         images = []
-        max_intentos = 3  # Intentar hasta 3 veces
+        max_intentos = 2  # Intentar hasta 2 veces
         
         for intento in range(max_intentos):
             try:
@@ -70,7 +70,7 @@ def api_search_images():
                     resultados = list(ddgs.images(
                         consulta_efectiva, 
                         safesearch='Moderate', 
-                        max_results=20  # Aumentar el número de resultados
+                        max_results=15  # Aumentar el número de resultados
                     ))
                     
                     print(f"Resultados obtenidos con DDGS: {len(resultados)}")
@@ -81,40 +81,43 @@ def api_search_images():
                     
             except Exception as e:
                 print(f"Error en intento {intento+1}: {str(e)}")
-                # Esperar brevemente antes del siguiente intento
-                import time
-                time.sleep(1)
+                # Si es el último intento, propagar la excepción
+                if intento == max_intentos - 1:
+                    raise
         
         # Procesar resultados de DDGS
         for r in resultados:
             url_imagen = r.get('image')
             if url_imagen and url_imagen not in [img.get('url') for img in images]:
-                # Verificar que la URL sea válida intentando acceder a ella
-                try:
-                    # Hacer una solicitud HEAD para verificar la imagen sin descargarla completamente
-                    import requests
-                    response = requests.head(url_imagen, timeout=2)
-                    
-                    # Solo agregar si la respuesta es exitosa
-                    if response.status_code == 200:
-                        images.append({
-                            'url': url_imagen,
-                            'title': r.get('title', ''),
-                            'source': r.get('url', '')
-                        })
-                except Exception as img_error:
-                    print(f"Error verificando imagen {url_imagen}: {str(img_error)}")
-                    continue
+                images.append({
+                    'url': url_imagen,
+                    'title': r.get('title', ''),
+                    'source': r.get('url', '')
+                })
                     
         print(f"Imágenes procesadas desde DDGS: {len(images)}")
         
-        # Solo usar placeholders si realmente no se encontraron imágenes
+        # Solo si no se encontraron imágenes después de los intentos
         if not images:
-            print("No se encontraron imágenes válidas, generando mensaje de error")
+            print("No se encontraron imágenes, generando mensaje de error")
             return jsonify({
                 "images": [],
-                "error": "No se pudieron encontrar imágenes para esta búsqueda. Intente con términos más generales."
+                "message": "No se pudieron encontrar imágenes para esta búsqueda. Intente con términos más generales."
             })
+        
+        return jsonify({"images": images})
+    
+    except Exception as e:
+        import traceback
+        print(f"Error en búsqueda de imágenes: {str(e)}")
+        traceback.print_exc()
+        
+        # Devolver código 200 con mensaje de error
+        return jsonify({
+            "images": [],
+            "error": str(e),
+            "message": "Error al buscar imágenes: " + str(e)
+        }), 200
       
 # Configuración de la base de datos
 db_url = os.environ.get('DATABASE_URL')
