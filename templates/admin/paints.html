@@ -720,6 +720,7 @@
                 </div>
                 
                 <!-- Modal mejorado para seleccionar imágenes -->
+                <!-- Modal para búsqueda de imágenes -->
                 <div class="modal fade" id="imageSearchModal" tabindex="-1" aria-labelledby="imageSearchModalLabel" aria-hidden="true">
                     <div class="modal-dialog modal-xl modal-dialog-scrollable">
                         <div class="modal-content">
@@ -1734,6 +1735,10 @@
         // Función modificada para buscar imágenes
         // Función corregida para buscar imágenes
         // Función para buscar imágenes usando el backend de Flask
+        // Modificación para el modal de búsqueda de imágenes en paints.html
+        // Buscar y reemplazar la función searchImages por esta versión corregida
+
+        // Función para buscar imágenes
         async function searchImages(brand, name, colorCode) {
             try {
                 // Verificar que tengamos al menos marca o código
@@ -1742,68 +1747,67 @@
                     return;
                 }
                 
-                // Mostrar el modal
-                document.getElementById('searchTermDisplay').textContent = `${brand} ${colorCode}`.trim();
+                // Crear la consulta
+                const query = `${brand || ''} ${colorCode || ''}`.trim();
+                
+                // Mostrar el modal y estado de carga
+                document.getElementById('searchTermDisplay').textContent = query;
                 document.getElementById('imageSearchLoading').style.display = 'block';
                 document.getElementById('imageSearchResults').style.display = 'none';
                 document.getElementById('imageSearchError').style.display = 'none';
+                document.getElementById('refreshSearchBtn').style.display = 'none';
                 
-                imageSearchModal.show();
-                
-                // Deshabilitar botones y mostrar progreso
-                const buscarBtn = document.getElementById('searchImagesBtn');
-                if (buscarBtn) buscarBtn.disabled = true;
+                // Deshabilitar botones durante la búsqueda
+                const searchImagesBtn = document.getElementById('searchImagesBtn');
+                if (searchImagesBtn) searchImagesBtn.disabled = true;
                 
                 try {
-                    // Realizar la búsqueda a través del backend exactamente como en index.html
-                    const response = await fetch('/api/buscar_imagen', {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                        },
-                        body: JSON.stringify({ 
-                            marca: brand, 
-                            codigo: colorCode,
-                            timestamp: Date.now()
-                        }),
-                    });
+                    // Realizar búsqueda usando la API
+                    const response = await fetch(`/api/search-images?query=${encodeURIComponent(query)}`);
                     
                     if (!response.ok) {
-                        const errorData = await response.json();
-                        throw new Error(errorData.error || 'Error al buscar la imagen');
+                        throw new Error(`Error HTTP: ${response.status}`);
                     }
                     
-                    const resultado = await response.json();
+                    const data = await response.json();
                     
-                    // Mostrar la imagen encontrada
-                    if (resultado.success && resultado.imagen_base64) {
-                        // Mostrar el resultado en el modal
-                        document.getElementById('imageSearchResults').innerHTML = `
-                            <div class="col-12 text-center">
-                                <div class="card">
-                                    <div class="card-body">
-                                        <h5 class="card-title">${resultado.nombre_sugerido || `${brand} ${colorCode}`}</h5>
-                                        <img src="${resultado.imagen_base64}" class="img-fluid mb-3" 
-                                            style="max-height: 300px;" alt="${brand} ${colorCode}">
-                                        <button class="btn btn-primary" onclick="selectImage('${resultado.url_original}')">
-                                            <i class="bi bi-check-lg"></i> Seleccionar esta imagen
-                                        </button>
+                    // Mostrar resultados
+                    const resultsContainer = document.getElementById('imageSearchResults');
+                    
+                    if (data.images && data.images.length > 0) {
+                        let htmlContent = '<div class="row">';
+                        
+                        data.images.forEach(image => {
+                            htmlContent += `
+                                <div class="col-md-4 mb-3">
+                                    <div class="card">
+                                        <img src="${image.url}" class="card-img-top" alt="${image.title}"
+                                            onerror="this.onerror=null; this.src='https://via.placeholder.com/150?text=Error';">
+                                        <div class="card-body">
+                                            <h6 class="card-title text-truncate">${image.title || 'Sin título'}</h6>
+                                            <button class="btn btn-sm btn-primary select-image" 
+                                                onclick="selectImage('${image.url}')">
+                                                Seleccionar
+                                            </button>
+                                        </div>
                                     </div>
                                 </div>
-                            </div>
-                        `;
-                        document.getElementById('imageSearchResults').style.display = 'block';
+                            `;
+                        });
+                        
+                        htmlContent += '</div>';
+                        resultsContainer.innerHTML = htmlContent;
+                        resultsContainer.style.display = 'block';
+                        document.getElementById('refreshSearchBtn').style.display = 'inline-block';
                     } else {
-                        // No se encontraron imágenes
-                        document.getElementById('imageSearchResults').innerHTML = `
-                            <div class="col-12 text-center">
-                                <div class="alert alert-warning">
-                                    <i class="bi bi-exclamation-triangle me-2"></i>
-                                    No se encontraron imágenes para "${brand} ${colorCode}".
-                                </div>
+                        resultsContainer.innerHTML = `
+                            <div class="alert alert-warning">
+                                <i class="bi bi-exclamation-triangle me-2"></i>
+                                No se encontraron imágenes para "${query}".
                             </div>
                         `;
-                        document.getElementById('imageSearchResults').style.display = 'block';
+                        resultsContainer.style.display = 'block';
+                        document.getElementById('refreshSearchBtn').style.display = 'inline-block';
                     }
                     
                 } catch (error) {
@@ -1823,10 +1827,13 @@
                             </div>
                         </div>
                     `;
+                    document.getElementById('refreshSearchBtn').style.display = 'inline-block';
                 } finally {
-                    // Habilitar botones y ocultar progreso
-                    if (buscarBtn) buscarBtn.disabled = false;
+                    // Ocultar indicador de carga
                     document.getElementById('imageSearchLoading').style.display = 'none';
+                    
+                    // Habilitar botones
+                    if (searchImagesBtn) searchImagesBtn.disabled = false;
                 }
                 
             } catch (error) {
@@ -1855,6 +1862,7 @@
         }
 
         // Función para seleccionar una imagen
+        // Añadir/verificar que esta función esté en paints.html
         function selectImage(url) {
             if (!url) {
                 alert("URL de imagen no válida.");
@@ -1865,7 +1873,11 @@
             document.getElementById('image_url').value = url;
             
             // Cerrar modal
-            imageSearchModal.hide();
+            const modalElement = document.getElementById('imageSearchModal');
+            const modalInstance = bootstrap.Modal.getInstance(modalElement);
+            if (modalInstance) {
+                modalInstance.hide();
+            }
             
             // Mostrar mensaje de confirmación
             const alertContainer = document.createElement('div');
