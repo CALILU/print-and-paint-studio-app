@@ -1624,6 +1624,7 @@
         }
 
         // Función para buscar imágenes
+        // Función para buscar imágenes
         async function searchImages(brand, name, colorCode) {
             try {
                 // Componer una consulta más efectiva
@@ -1637,10 +1638,11 @@
                     throw new Error("Por favor, proporciona al menos un término de búsqueda");
                 }
                 
-                // Base de la consulta
+                // Construir consulta completa con términos adicionales
                 const baseQuery = baseTerms.join(' ');
                 
-                // Consulta completa con términos adicionales para mejorar resultados
+                // Consulta completa similar a la de boton_imagen1.py, combinando marca y código
+                // pero adaptada para buscar por nombre en lugar de ser tan específica
                 const consulta = `${baseQuery} paint color miniature`.trim();
                 
                 // Actualizar visualización
