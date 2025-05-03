@@ -1387,6 +1387,25 @@ def debug_db():
         return jsonify(debug_info)
     except Exception as e:
         return jsonify({'error': str(e)}), 500
+    
+    @app.route('/api/paints/test', methods=['GET'])
+    def test_paints_api():
+        try:
+            # Intentar contar las pinturas (operación más simple)
+            count = Paint.query.count()
+            return jsonify({
+                "status": "success", 
+                "message": f"Conexión exitosa. Número de pinturas: {count}",
+                "count": count
+            })
+        except Exception as e:
+            import traceback
+            error_traceback = traceback.format_exc()
+            return jsonify({
+                "status": "error",
+                "message": f"Error al acceder a la tabla de pinturas: {str(e)}",
+                "traceback": error_traceback
+            }), 500
 
 @app.route('/debug/reset-db', methods=['POST'])
 @admin_required
@@ -1413,6 +1432,40 @@ def reset_db():
         return jsonify({'message': 'Base de datos reiniciada correctamente'})
     except Exception as e:
         return jsonify({'error': str(e)}), 500
+    
+@app.route('/api/verify-table/<table_name>')
+@admin_required
+def verify_table(table_name):
+    try:
+        # Verificar si la tabla existe
+        from sqlalchemy import inspect
+        inspector = inspect(db.engine)
+        tables = inspector.get_table_names()
+        
+        if table_name not in tables:
+            return jsonify({
+                "status": "error",
+                "message": f"La tabla '{table_name}' no existe en la base de datos"
+            }), 404
+            
+        # Obtener columnas
+        columns = inspector.get_columns(table_name)
+        column_names = [column['name'] for column in columns]
+        
+        return jsonify({
+            "status": "success",
+            "message": f"La tabla '{table_name}' existe",
+            "columns": column_names
+        })
+        
+    except Exception as e:
+        import traceback
+        error_traceback = traceback.format_exc()
+        return jsonify({
+            "status": "error",
+            "message": f"Error al verificar tabla: {str(e)}",
+            "traceback": error_traceback
+        }), 500    
 
 if __name__ == '__main__':
     # Este bloque solo se ejecuta en desarrollo local
