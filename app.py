@@ -66,6 +66,7 @@ def debug_template_paths():
 # Añadir esta ruta cerca de las otras rutas de API
 # Modificar esta ruta en app.py
 # Modificar esta ruta en app.py
+# Ruta modificada para la búsqueda de imágenes
 @app.route('/api/search-images', methods=['GET'])
 @admin_required
 def api_search_images():
@@ -77,55 +78,49 @@ def api_search_images():
     print(f"Iniciando búsqueda de imágenes para: {query}")
     
     try:
-        # Usar DDGS para buscar imágenes - implementando lógica similar a boton_imagen1.py
+        # Usar DDGS para buscar imágenes
         images = []
         
-        # Extraer marca y código de la consulta (si existen)
-        terms = query.split()
+        # Mejorar la consulta para resultados más relevantes
         search_query = query
+        if not any(term in query.lower() for term in ['paint', 'color', 'bottle', 'model']):
+            search_query = f"{query} model paint color"
+            
+        print(f"Consulta final: {search_query}")
         
         try:
-            # Usar exactamente la misma técnica de boton_imagen1.py
             with DDGS() as ddgs:
-                # Añadir términos específicos para mejorar resultados de pinturas
-                if not any(term in query.lower() for term in ['paint', 'color', 'bottle', 'model']):
-                    search_query = f"{query} model paint color"
-                
-                print(f"Consulta final: {search_query}")
                 resultados = list(ddgs.images(search_query, safesearch='Moderate', max_results=20))
                 print(f"Resultados obtenidos: {len(resultados)}")
             
-            # Procesar resultados igual que en boton_imagen1.py
-            url_valida = None
-            imagen_descargada = None
-            
-            # Iterar sobre los resultados hasta encontrar una imagen válida
+            # Procesar y validar las URL de las imágenes
+            import requests
             for r in resultados:
                 url_imagen = r.get('image')
                 if not url_imagen:
                     continue
                 
                 try:
-                    # Verificar validez de la URL sin descargar completamente
-                    import requests
+                    # Verificar validez de la URL
                     resp = requests.head(url_imagen, timeout=3)
                     if resp.status_code == 200:
-                        # Guardar la URL y salir del bucle
-                        url_valida = url_imagen
-                        print(f"Imagen encontrada: {url_valida}")
                         images.append({
                             'url': url_imagen,
                             'title': r.get('title', ''),
                             'source': r.get('url', '')
                         })
+                        # Limitar a 9 imágenes para una visualización óptima
+                        if len(images) >= 9:
+                            break
                 except Exception as e:
                     print(f"Error verificando URL {url_imagen}: {str(e)}")
                     continue
             
-            # Si no encontramos ninguna URL válida, intentamos con una búsqueda alternativa
+            # Si no hay resultados, intentar con una búsqueda alternativa
             if not images:
                 print("No se encontraron imágenes válidas, intentando búsqueda alternativa...")
-                alt_query = terms[0] if terms else query  # Usar solo el primer término
+                terms = query.split()
+                alt_query = terms[0] if terms else query
                 with DDGS() as ddgs:
                     alt_resultados = list(ddgs.images(f"{alt_query} miniature paint", safesearch='Moderate', max_results=20))
                     
@@ -135,7 +130,6 @@ def api_search_images():
                             continue
                         
                         try:
-                            # Verificar validez 
                             resp = requests.head(url_imagen, timeout=3)
                             if resp.status_code == 200:
                                 images.append({
@@ -143,8 +137,7 @@ def api_search_images():
                                     'title': r.get('title', ''),
                                     'source': r.get('url', '')
                                 })
-                                # Solo necesitamos una imagen válida
-                                if len(images) >= 3:
+                                if len(images) >= 9:
                                     break
                         except Exception:
                             continue
@@ -152,7 +145,7 @@ def api_search_images():
         except Exception as e:
             print(f"Error en búsqueda principal: {str(e)}")
         
-        # Si después de todo no encontramos imágenes, generamos un placeholder
+        # Si no hay imágenes, generar un placeholder
         if not images:
             print("No se encontraron imágenes válidas, generando placeholder...")
             terms = query.split()
@@ -172,7 +165,6 @@ def api_search_images():
         print(f"Error en búsqueda de imágenes: {str(e)}")
         traceback.print_exc()
         
-        # Devolver código 200 con mensaje de error
         return jsonify({
             "images": [{
                 'url': f'https://via.placeholder.com/400x300/F44336/FFFFFF?text=Error',

@@ -686,11 +686,12 @@
                     </div>
                 </div>
                 <!-- Modal para seleccionar imágenes -->
+                <!-- Modal para seleccionar imágenes - Código optimizado -->
                 <div class="modal fade" id="imageSearchModal" tabindex="-1" aria-labelledby="imageSearchModalLabel" aria-hidden="true">
                     <div class="modal-dialog modal-xl modal-dialog-scrollable">
                         <div class="modal-content">
                             <div class="modal-header">
-                                <h5 class="modal-title" id="imageSearchModalLabel">Seleccionar imagen</h5>
+                                <h5 class="modal-title" id="imageSearchModalLabel">Seleccionar imagen para la pintura</h5>
                                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                             </div>
                             <div class="modal-body">
@@ -717,7 +718,10 @@
                                 </div>
                             </div>
                             <div class="modal-footer">
-                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+                                <button type="button" class="btn btn-primary" id="refreshSearchBtn" style="display: none;">
+                                    <i class="bi bi-arrow-clockwise me-2"></i> Buscar de nuevo
+                                </button>
                             </div>
                         </div>
                     </div>
