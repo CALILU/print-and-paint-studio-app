@@ -1731,6 +1731,7 @@
         }
 
         // Función mejorada para buscar imágenes
+        // Función modificada para buscar imágenes
         async function searchImages(brand, name, colorCode) {
             try {
                 // Verificar que tengamos al menos marca o código
@@ -1739,79 +1740,63 @@
                     return;
                 }
                 
-                // Construir consulta específica para mejores resultados
-                let consulta = "";
-                
-                if (brand && colorCode) {
-                    // Formato específico para búsqueda de pinturas
-                    consulta = `${brand} ${colorCode} paint`;
-                } else if (brand) {
-                    consulta = brand;
-                    if (colorCode) consulta += ` ${colorCode}`;
-                    if (name && name !== brand) consulta += ` ${name}`;
-                    consulta += " miniature paint";
-                } else {
-                    consulta = colorCode;
-                    if (name) consulta += ` ${name}`;
-                    consulta += " model paint";
-                }
-                
-                // Actualizar visualización
-                document.getElementById('searchTermDisplay').textContent = consulta;
+                // Mostrar el modal y estados de carga
+                document.getElementById('searchTermDisplay').textContent = `${brand} ${colorCode}`.trim();
                 document.getElementById('imageSearchLoading').style.display = 'block';
                 document.getElementById('imageSearchResults').style.display = 'none';
                 document.getElementById('imageSearchError').style.display = 'none';
                 document.getElementById('refreshSearchBtn').style.display = 'none';
                 
-                // Enviar consulta al servidor
-                const searchQuery = encodeURIComponent(consulta);
-                console.log('Iniciando búsqueda con consulta:', consulta);
+                imageSearchModal.show();
                 
-                // Iniciar solicitud con un timeout de 15 segundos
-                let controller = new AbortController();
-                let timeoutId = setTimeout(() => controller.abort(), 15000);
+                // Realizar la solicitud al endpoint correcto que funciona
+                const response = await fetch('/api/buscar_imagen', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        marca: brand,
+                        codigo: colorCode,
+                        timestamp: Date.now() // Para evitar el caché
+                    }),
+                });
                 
-                try {
-                    const response = await fetch(`/api/search-images?query=${searchQuery}`, {
-                        signal: controller.signal
-                    });
-                    clearTimeout(timeoutId);
-                    
-                    if (!response.ok) {
-                        throw new Error(`Error HTTP: ${response.status}`);
-                    }
-                    
-                    const data = await response.json();
-                    console.log('Respuesta recibida:', data);
-                    
-                    // Verificar si tenemos imágenes
-                    if (data.images && data.images.length > 0) {
-                        // Mostrar las imágenes
-                        displayImageResults(data.images);
-                        document.getElementById('imageSearchResults').style.display = 'block';
-                    } else {
-                        // No se encontraron imágenes
-                        document.getElementById('imageSearchResults').innerHTML = `
-                            <div class="col-12 text-center">
-                                <div class="alert alert-warning">
-                                    <i class="bi bi-exclamation-triangle me-2"></i>
-                                    No se encontraron imágenes para "${consulta}".
-                                </div>
-                            </div>
-                        `;
-                        document.getElementById('imageSearchResults').style.display = 'block';
-                    }
-                    
-                    // Mostrar el botón de refrescar búsqueda
-                    document.getElementById('refreshSearchBtn').style.display = 'block';
-                    
-                } catch (fetchError) {
-                    if (fetchError.name === 'AbortError') {
-                        throw new Error('La búsqueda ha excedido el tiempo límite (15 segundos)');
-                    } else {
-                        throw fetchError;
-                    }
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.error || 'Error al buscar la imagen');
                 }
+                
+                const data = await response.json();
+                
+                // Procesar la respuesta
+                if (data.success && data.imagen_base64) {
+                    // Crear un solo resultado con la imagen encontrada
+                    const images = [{
+                        url: data.url_original,
+                        title: data.nombre_sugerido || `${brand} ${colorCode}`,
+                        source: '#',
+                        image_base64: data.imagen_base64
+                    }];
+                    
+                    // Mostrar el resultado
+                    displayImageResults(images);
+                    document.getElementById('imageSearchResults').style.display = 'block';
+                } else {
+                    // No se encontraron imágenes
+                    document.getElementById('imageSearchResults').innerHTML = `
+                        <div class="col-12 text-center">
+                            <div class="alert alert-warning">
+                                <i class="bi bi-exclamation-triangle me-2"></i>
+                                No se encontraron imágenes para "${brand} ${colorCode}".
+                            </div>
+                        </div>
+                    `;
+                    document.getElementById('imageSearchResults').style.display = 'block';
+                }
+                
+                // Mostrar el botón de refrescar búsqueda
+                document.getElementById('refreshSearchBtn').style.display = 'block';
                 
                 // Ocultar carga
                 document.getElementById('imageSearchLoading').style.display = 'none';
@@ -1839,12 +1824,10 @@
             }
         }
 
-        // Función mejorada para mostrar los resultados de la búsqueda
+        // Función modificada para mostrar los resultados de la búsqueda
         function displayImageResults(images) {
             const resultsContainer = document.getElementById('imageSearchResults');
             resultsContainer.innerHTML = '';
-            
-            console.log("Mostrando imágenes:", images);
             
             if (!Array.isArray(images) || images.length === 0) {
                 resultsContainer.innerHTML = `
@@ -1862,15 +1845,11 @@
             let row = document.createElement('div');
             row.className = 'row';
             
-            // Limitar a un máximo de 9 imágenes para una visualización óptima
-            const maxImages = Math.min(images.length, 9);
-            
-            for (let i = 0; i < maxImages; i++) {
+            for (let i = 0; i < images.length; i++) {
                 const image = images[i];
                 
                 // Verificar que la imagen tenga una URL válida
                 if (!image || !image.url) {
-                    console.warn("Imagen sin URL en posición", i);
                     continue;
                 }
                 
@@ -1881,11 +1860,12 @@
                 // Contenido del elemento con manejo de errores de carga
                 const title = image.title || 'Sin título';
                 const source = image.source || '#';
+                const imageUrl = image.image_base64 || image.url;
                 
                 imageCol.innerHTML = `
                     <div class="card h-100">
                         <div class="card-img-container" style="height: 200px; position: relative; overflow: hidden; display: flex; align-items: center; justify-content: center; background-color: #f8f9fa;">
-                            <img src="${image.url}" class="card-img-top" alt="${title}" 
+                            <img src="${imageUrl}" class="card-img-top" alt="${title}" 
                                 style="max-width: 100%; max-height: 100%; object-fit: contain;"
                                 onerror="this.onerror=null; this.src='https://via.placeholder.com/400x300/cccccc/666666?text=Imagen+no+disponible'; this.parentNode.classList.add('img-error');">
                             <div class="img-loading-spinner" style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);">
@@ -1896,12 +1876,7 @@
                         </div>
                         <div class="card-body">
                             <h6 class="card-title text-truncate" title="${title}">${title}</h6>
-                            <div class="d-flex justify-content-between mb-2">
-                                <a href="${source}" class="btn btn-sm btn-outline-secondary" target="_blank" rel="noopener noreferrer">
-                                    <i class="bi bi-link-45deg"></i> Ver fuente
-                                </a>
-                            </div>
-                            <button class="btn btn-sm btn-primary w-100" onclick="selectImage('${image.url}')">
+                            <button class="btn btn-sm btn-primary w-100 mt-2" onclick="selectImage('${image.url}')">
                                 <i class="bi bi-check-lg"></i> Seleccionar esta imagen
                             </button>
                         </div>
