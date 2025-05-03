@@ -2,66 +2,13 @@ from flask import Flask, render_template, request, jsonify, redirect, url_for, s
 from models import db, User, Video, Favorite, Technique, Category, Paint
 from functools import wraps
 import os
-import random
-import requests
-from PIL import Image
-import io
-import base64
-import time
-import traceback
-import re
-import json
 from datetime import datetime
-# Manejo flexible de la importación de duckduckgo_search
-# Manejo flexible de la importación de duckduckgo_search
-try:
-    # Intento 1: Importar DDGS directamente (versiones más nuevas)
-    from duckduckgo_search import DDGS
-    print("Importación exitosa de DDGS desde duckduckgo_search")
-except ImportError:
-    try:
-        # Intento 2: Importar DDGS desde el módulo 'api' (versiones intermedias)
-        from duckduckgo_search.api import DDGS
-        print("Importación exitosa de DDGS desde duckduckgo_search.api")
-    except ImportError:
-        # Intento 3: Usar el cliente de API más básico (versiones más antiguas)
-        from duckduckgo_search import ddg_images
-        print("Usando ddg_images como alternativa a DDGS")
-        
-        # Crear una clase de wrapper simple para mantener la compatibilidad
-        class DDGSWrapper:
-            def images(self, query, **kwargs):
-                max_results = kwargs.get('max_results', 100)
-                return ddg_images(query, max_results=max_results)
-        
-        # Reemplazar DDGS con nuestro wrapper
-        DDGS = DDGSWrapper
-
+from duckduckgo_search import DDGS
+import random
 
 app = Flask(__name__)
 app.config['DEBUG'] = True
 app.config['TEMPLATES_AUTO_RELOAD'] = True
-
-# Decoradores para proteger rutas
-def login_required(f):
-    @wraps(f)
-    def decorated_function(*args, **kwargs):
-        if 'user_id' not in session:
-            return redirect(url_for('login'))
-        return f(*args, **kwargs)
-    return decorated_function
-
-def admin_required(f):
-    @wraps(f)
-    def decorated_function(*args, **kwargs):
-        if 'user_id' not in session:
-            return redirect(url_for('login'))
-        user = User.query.get(session['user_id'])
-        if not user or user.role != 'admin':
-            flash('Acceso denegado. Se requieren privilegios de administrador.', 'danger')
-            return redirect(url_for('user_dashboard'))
-        return f(*args, **kwargs)
-    return decorated_function
 
 # Añadir código de depuración después de crear la app Flask
 @app.before_request
@@ -71,7 +18,38 @@ def debug_template_paths():
         print(f"Rutas de búsqueda de plantillas: {app.jinja_loader.searchpath}")
     for rule in app.url_map.iter_rules():
         print(f"Ruta: {rule}")
-     
+
+# Añadir esta ruta cerca de las otras rutas de API
+@app.route('/api/search-images', methods=['GET'])
+@admin_required
+def api_search_images():
+    query = request.args.get('query', '')
+    if not query:
+        return jsonify({"error": "Consulta de búsqueda vacía"}), 400
+    
+    try:
+        # Usar DuckDuckGo para buscar imágenes
+        with DDGS() as ddgs:
+            results = list(ddgs.images(query, safesearch='Moderate', max_results=12))
+        
+        # Preparar resultados
+        images = []
+        for result in results:
+            if 'image' in result and result['image']:
+                images.append({
+                    'url': result['image'],
+                    'title': result.get('title', ''),
+                    'source': result.get('url', '')
+                })
+        
+        return jsonify({"images": images})
+    
+    except Exception as e:
+        import traceback
+        print(f"Error en búsqueda de imágenes: {str(e)}")
+        traceback.print_exc()
+        return jsonify({"error": str(e)}), 500        
+
 # Configuración de la base de datos
 db_url = os.environ.get('DATABASE_URL')
 print(f"URL original de la base de datos: {db_url}")
@@ -100,7 +78,26 @@ app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'print_and_paint_studio_
 # Inicializar la base de datos
 db.init_app(app)
 
+# Decoradores para proteger rutas
+def login_required(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if 'user_id' not in session:
+            return redirect(url_for('login'))
+        return f(*args, **kwargs)
+    return decorated_function
 
+def admin_required(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if 'user_id' not in session:
+            return redirect(url_for('login'))
+        user = User.query.get(session['user_id'])
+        if not user or user.role != 'admin':
+            flash('Acceso denegado. Se requieren privilegios de administrador.', 'danger')
+            return redirect(url_for('user_dashboard'))
+        return f(*args, **kwargs)
+    return decorated_function
 
 # Rutas públicas
 @app.route('/')
@@ -871,11 +868,7 @@ def admin_paints():
 @app.route('/api/paints', methods=['GET'])
 def get_paints():
     try:
-        # Añadir log para depuración
-        print("Solicitud recibida en /api/paints")
         paints = Paint.query.all()
-        print(f"Pinturas encontradas: {len(paints)}")
-        
         result = []
         for paint in paints:
             result.append({
@@ -892,7 +885,6 @@ def get_paints():
                 'color_preview': paint.color_preview,
                 'created_at': paint.created_at.isoformat() if paint.created_at else None
             })
-        print("Enviando respuesta JSON")
         return jsonify(result)
     except Exception as e:
         print(f"Error en get_paints(): {str(e)}")
@@ -1278,25 +1270,6 @@ def debug_db():
         return jsonify(debug_info)
     except Exception as e:
         return jsonify({'error': str(e)}), 500
-    
-    @app.route('/api/paints/test', methods=['GET'])
-    def test_paints_api():
-        try:
-            # Intentar contar las pinturas (operación más simple)
-            count = Paint.query.count()
-            return jsonify({
-                "status": "success", 
-                "message": f"Conexión exitosa. Número de pinturas: {count}",
-                "count": count
-            })
-        except Exception as e:
-            import traceback
-            error_traceback = traceback.format_exc()
-            return jsonify({
-                "status": "error",
-                "message": f"Error al acceder a la tabla de pinturas: {str(e)}",
-                "traceback": error_traceback
-            }), 500
 
 @app.route('/debug/reset-db', methods=['POST'])
 @admin_required
@@ -1323,40 +1296,6 @@ def reset_db():
         return jsonify({'message': 'Base de datos reiniciada correctamente'})
     except Exception as e:
         return jsonify({'error': str(e)}), 500
-    
-@app.route('/api/verify-table/<table_name>')
-@admin_required
-def verify_table(table_name):
-    try:
-        # Verificar si la tabla existe
-        from sqlalchemy import inspect
-        inspector = inspect(db.engine)
-        tables = inspector.get_table_names()
-        
-        if table_name not in tables:
-            return jsonify({
-                "status": "error",
-                "message": f"La tabla '{table_name}' no existe en la base de datos"
-            }), 404
-            
-        # Obtener columnas
-        columns = inspector.get_columns(table_name)
-        column_names = [column['name'] for column in columns]
-        
-        return jsonify({
-            "status": "success",
-            "message": f"La tabla '{table_name}' existe",
-            "columns": column_names
-        })
-        
-    except Exception as e:
-        import traceback
-        error_traceback = traceback.format_exc()
-        return jsonify({
-            "status": "error",
-            "message": f"Error al verificar tabla: {str(e)}",
-            "traceback": error_traceback
-        }), 500    
 
 if __name__ == '__main__':
     # Este bloque solo se ejecuta en desarrollo local

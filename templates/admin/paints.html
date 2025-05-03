@@ -223,38 +223,6 @@
             border-radius: 10px;
             margin: 20px 0;
         }
-        .hidden {
-            display: none;
-        }
-        .url-container {
-            font-family: monospace;
-            background-color: #f8f8f8;
-            padding: 10px;
-            border: 1px solid #eee;
-            border-radius: 3px;
-            display: block;
-            margin-top: 10px;
-            word-break: break-all;
-        }
-        .image-info {
-            margin-top: 15px;
-            padding: 10px;
-            background-color: #f9f9f9;
-            border-radius: 4px;
-            border-left: 3px solid #4CAF50;
-        }
-        .info-row {
-            display: flex;
-            margin: 5px 0;
-        }
-        .info-label {
-            font-weight: bold;
-            width: 100px;
-            flex-shrink: 0;
-        }
-        .info-value {
-            flex-grow: 1;
-        }
         .color-family-tag {
             display: inline-block;
             padding: 2px 8px;
@@ -267,22 +235,6 @@
         .brand-logo {
             height: 30px;
             margin-right: 10px;
-        }
-        .filter-chip {
-            display: inline-block;
-            background-color: #f8f9fa;
-            color: #495057;
-            padding: 4px 10px;
-            border-radius: 20px;
-            margin-right: 5px;
-            margin-bottom: 5px;
-            font-size: 0.9rem;
-            border: 1px solid #dee2e6;
-        }
-        .filter-chip .close {
-            margin-left: 5px;
-            cursor: pointer;
-            font-weight: bold;
         }
         @media (max-width: 768px) {
             .sidebar {
@@ -619,6 +571,12 @@
                                                         <input type="color" id="color_preview" class="form-control">
                                                     </div>
                                                 </div>
+                                                <!-- Añadir botón de búsqueda de imágenes aquí -->
+                                                <div class="mb-3">
+                                                    <button type="button" class="btn btn-outline-primary w-100" id="searchImagesBtn">
+                                                        <i class="bi bi-search me-2"></i> Buscar imágenes en internet
+                                                    </button>
+                                                </div>
                                             </div>
                                         </div>
                                     </div>
@@ -711,6 +669,43 @@
                         </div>
                     </div>
                 </div>
+                <!-- Modal para seleccionar imágenes -->
+                <div class="modal fade" id="imageSearchModal" tabindex="-1" aria-labelledby="imageSearchModalLabel" aria-hidden="true">
+                    <div class="modal-dialog modal-xl modal-dialog-scrollable">
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <h5 class="modal-title" id="imageSearchModalLabel">Seleccionar imagen</h5>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                            </div>
+                            <div class="modal-body">
+                                <div id="searchQuery" class="alert alert-info mb-3">
+                                    Buscando imágenes para: <strong id="searchTermDisplay"></strong>
+                                </div>
+                                
+                                <!-- Indicador de carga -->
+                                <div id="imageSearchLoading" class="text-center py-5">
+                                    <div class="spinner-border text-primary" role="status">
+                                        <span class="visually-hidden">Buscando imágenes...</span>
+                                    </div>
+                                    <p class="mt-3">Buscando imágenes. Esto puede tardar unos segundos...</p>
+                                </div>
+                                
+                                <!-- Resultados de la búsqueda -->
+                                <div id="imageSearchResults" class="row" style="display: none;">
+                                    <!-- Aquí se mostrarán los resultados de la búsqueda -->
+                                </div>
+                                
+                                <!-- Mensaje de error -->
+                                <div id="imageSearchError" class="alert alert-danger" style="display: none;">
+                                    Error al buscar imágenes. Por favor, inténtalo de nuevo.
+                                </div>
+                            </div>
+                            <div class="modal-footer">
+                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </main>
         </div>
     </div>
@@ -741,25 +736,7 @@
                 savePaint();
             });
             
-            // Configurar botón de eliminación de pintura
-            document.getElementById('confirmDeleteBtn').addEventListener('click', () => {
-                if (paintToDelete) {
-                    deletePaint(paintToDelete);
-                    confirmDeleteModal.hide();
-                }
-            });
-            
-            // Configurar botón de edición en el modal de detalles
-            document.getElementById('editPaintBtn').addEventListener('click', () => {
-                const paintId = document.getElementById('editPaintBtn').getAttribute('data-id');
-                viewPaintModal.hide();
-                if (paintId) {
-                    editPaint(paintId);
-                }
-            });
-            
-            // Configurar vista previa en tiempo real
-            setupLivePreview();
+            // ... (otros event listeners)
             
             // Inicializar filtros
             initializeFilters();
@@ -772,10 +749,11 @@
                 console.error("Error al cargar pinturas iniciales:", error);
             });
         });
-        
+        // Función para inicializar los filtros
+        // Función para inicializar los filtros
         // Función para inicializar los filtros
         function initializeFilters() {
-            // Obtener todos los checkboxes de stock
+            // Obtener todos los checkboxes de stock (estos se mantienen igual)
             const stockCheckboxes = document.querySelectorAll('#stockFilters input[type="checkbox"]');
             filteredStockStatus = Array.from(stockCheckboxes)
                 .filter(cb => cb.checked)
@@ -797,7 +775,6 @@
                 });
             });
         }
-        
         // Función para configurar la vista previa en tiempo real
         function setupLivePreview() {
             const updatePreview = () => {
@@ -809,7 +786,6 @@
                 const stock = document.getElementById('stock').value || 0;
                 const price = document.getElementById('price').value || 0;
                 const colorPreview = document.getElementById('color_preview').value;
-                const imageUrl = document.getElementById('image_url').value;
                 
                 // Actualizar la vista previa
                 const previewContainer = document.getElementById('imagePreview');
@@ -836,23 +812,6 @@
                 // Actualizar precio
                 const priceTag = previewContainer.querySelector('.price-tag');
                 priceTag.textContent = price ? `${price}€` : 'Precio no disponible';
-                
-                // Si hay una imagen, añadirla a la vista previa
-                if (imageUrl) {
-                    // Verificar si ya existe una imagen en la vista previa
-                    let imgElement = previewContainer.querySelector('.paint-image');
-                    if (!imgElement) {
-                        // Crear elemento de imagen y añadirlo antes del color-preview
-                        imgElement = document.createElement('img');
-                        imgElement.className = 'paint-image';
-                        const colorPreviewElement = previewContainer.querySelector('.paint-color-preview');
-                        previewContainer.insertBefore(imgElement, colorPreviewElement);
-                    }
-                    
-                    // Actualizar URL de la imagen
-                    imgElement.src = imageUrl;
-                    imgElement.alt = name;
-                }
             };
             
             // Añadir eventos de input a todos los campos
@@ -864,13 +823,12 @@
             document.getElementById('stock').addEventListener('input', updatePreview);
             document.getElementById('price').addEventListener('input', updatePreview);
             document.getElementById('color_preview').addEventListener('input', updatePreview);
-            document.getElementById('image_url').addEventListener('input', updatePreview);
             
             // Actualizar la vista previa inicialmente
             updatePreview();
         }
         
-        // Función mejorada para obtener todas las pinturas
+        // Función para obtener todas las pinturas
         async function fetchPaints() {
             const container = document.getElementById('paints-container');
             container.innerHTML = `
@@ -883,27 +841,14 @@
             `;
             
             try {
-                console.log("Iniciando solicitud de pinturas");
                 const response = await fetch('/api/paints');
-                console.log("Respuesta recibida:", response);
                 
                 if (!response.ok) {
-                    throw new Error(`Error HTTP: ${response.status} - ${response.statusText}`);
+                    throw new Error(`Error HTTP: ${response.status}`);
                 }
                 
-                const contentType = response.headers.get("content-type");
-                if (!contentType || !contentType.includes("application/json")) {
-                    throw new Error("La respuesta no es JSON válido");
-                }
-                
-                console.log("Procesando datos JSON...");
                 const paints = await response.json();
-                console.log(`Pinturas cargadas: ${paints.length}`, paints);
-                
-                // Verificar si paints es un array
-                if (!Array.isArray(paints)) {
-                    throw new Error("La respuesta no es un array de pinturas");
-                }
+                console.log(`Pinturas cargadas: ${paints.length}`);
                 
                 // Actualizar la variable global
                 allPaints = paints;
@@ -915,7 +860,7 @@
                 filterAndDisplayPaints();
                 
             } catch (error) {
-                console.error('Error detallado al cargar pinturas:', error);
+                console.error('Error al cargar pinturas:', error);
                 container.innerHTML = `
                     <div class="empty-message">
                         <div class="alert alert-danger">
@@ -949,6 +894,7 @@
             filterAndDisplayPaints();
         }
         
+        // Función para filtrar y mostrar las pinturas
         // Función para filtrar y mostrar las pinturas
         function filterAndDisplayPaints() {
             let filteredPaints = [...allPaints];
@@ -1029,6 +975,7 @@
             }
         }
         
+        // Función para mostrar pinturas en formato de cuadrícula
         function displayPaintsAsGrid(paints, container) {
             paints.forEach(paint => {
                 const paintCard = document.createElement('div');
@@ -1047,17 +994,7 @@
                     stockText = 'Sin stock';
                 }
                 
-                // Verificar si la URL de la imagen es absoluta o relativa
-                let imageUrl = paint.image_url;
-                if (imageUrl && !imageUrl.startsWith('http') && !imageUrl.startsWith('/')) {
-                    // Si es relativa, asegurarse de que comience con /
-                    imageUrl = '/' + imageUrl;
-                }
-                
-                // Si no hay imagen, usar un placeholder
-                if (!imageUrl) {
-                    imageUrl = 'https://via.placeholder.com/150?text=No+Image';
-                }
+                const imageUrl = paint.image_url || 'https://via.placeholder.com/150?text=No+Image';
                 
                 paintCard.innerHTML = `
                     <div class="stock-badge ${stockClass}">${stockText}</div>
@@ -1066,7 +1003,7 @@
                         <i class="bi bi-pencil action-icon" onclick="editPaint(${paint.id})" title="Editar"></i>
                         <i class="bi bi-trash action-icon" onclick="confirmDelete(${paint.id})" title="Eliminar"></i>
                     </div>
-                    <img src="${imageUrl}" alt="${paint.name}" class="paint-image" onerror="this.onerror=null; this.src='https://via.placeholder.com/150?text=No+Image';">
+                    <img src="${imageUrl}" alt="${paint.name}" class="paint-image">
                     <div class="paint-color-preview" style="background-color: ${paint.color_preview || '#cccccc'}"></div>
                     <div class="paint-title">${paint.name}</div>
                     <div class="paint-code">${paint.color_code || ''}</div>
@@ -1114,25 +1051,13 @@
                     stockText = 'Sin stock';
                 }
                 
-                // Verificar si la URL de la imagen es absoluta o relativa
-                let imageUrl = paint.image_url;
-                if (imageUrl && !imageUrl.startsWith('http') && !imageUrl.startsWith('/')) {
-                    // Si es relativa, asegurarse de que comience con /
-                    imageUrl = '/' + imageUrl;
-                }
-                
-                // Si no hay imagen, usar un placeholder
-                if (!imageUrl) {
-                    imageUrl = 'https://via.placeholder.com/150?text=No+Image';
-                }
+                const imageUrl = paint.image_url || 'https://via.placeholder.com/150?text=No+Image';
                 
                 const row = document.createElement('tr');
                 row.innerHTML = `
                     <td>
-                        <div style="position: relative; width: 50px; height: 50px; overflow: hidden; display: flex; align-items: center; justify-content: center;">
-                            <img src="${imageUrl}" alt="${paint.name}" style="max-width: 100%; max-height: 100%; object-fit: contain;" onerror="this.onerror=null; this.src='https://via.placeholder.com/50?text=No+Image';">
-                        </div>
-                        <div style="width: 25px; height: 25px; background-color: ${paint.color_preview || '#cccccc'}; display: inline-block; border-radius: 50%; border: 1px solid #ddd; vertical-align: middle; margin-top: 5px;"></div>
+                        <img src="${imageUrl}" alt="${paint.name}" style="width: 50px; height: 50px; object-fit: contain;">
+                        <div style="width: 25px; height: 25px; background-color: ${paint.color_preview || '#cccccc'}; display: inline-block; border-radius: 50%; border: 1px solid #ddd; vertical-align: middle;"></div>
                     </td>
                     <td>
                         <strong>${paint.name}</strong>
@@ -1182,23 +1107,29 @@
             currentSearchTerm = '';
             document.getElementById('searchInput').value = '';
             
-            // Reestablecer filtros de marca
-            filteredBrands = [];
-            document.getElementById('activeBrandFilters').innerHTML = '';
+            // Activar todos los checkboxes de marca
+            document.querySelectorAll('#brandFilters input[type="checkbox"]').forEach(cb => {
+                cb.checked = true;
+            });
+            filteredBrands = Array.from(document.querySelectorAll('#brandFilters input[type="checkbox"]')).map(cb => cb.value);
             
-            // Reestablecer filtros de tipo
-            filteredTypes = [];
-            document.getElementById('activeTypeFilters').innerHTML = '';
-            
-            // Reestablecer filtros de familia de color
-            filteredColorFamilies = [];
-            document.getElementById('activeColorFamilyFilters').innerHTML = '';
+            // Activar todos los checkboxes de tipo
+            document.querySelectorAll('#typeFilters input[type="checkbox"]').forEach(cb => {
+                cb.checked = true;
+            });
+            filteredTypes = Array.from(document.querySelectorAll('#typeFilters input[type="checkbox"]')).map(cb => cb.value);
             
             // Activar todos los checkboxes de stock
             document.querySelectorAll('#stockFilters input[type="checkbox"]').forEach(cb => {
                 cb.checked = true;
             });
-            filteredStockStatus = ['in', 'low', 'out'];
+            filteredStockStatus = Array.from(document.querySelectorAll('#stockFilters input[type="checkbox"]')).map(cb => cb.value);
+            
+            // Activar todos los checkboxes de familia de color
+            document.querySelectorAll('#colorFamilyFilters input[type="checkbox"]').forEach(cb => {
+                cb.checked = true;
+            });
+            filteredColorFamilies = Array.from(document.querySelectorAll('#colorFamilyFilters input[type="checkbox"]')).map(cb => cb.value);
             
             // Actualizar la visualización
             filterAndDisplayPaints();
@@ -1206,7 +1137,7 @@
         
         // Función para aplicar los filtros
         function applyFilters() {
-            // Los filtros ya se actualizan con los eventos de cambio
+            // Los filtros ya se actualizan con los eventos de cambio de los checkboxes
             // Solo necesitamos actualizar la visualización
             filterAndDisplayPaints();
             
@@ -1238,25 +1169,9 @@
                 document.getElementById('detailPrice').textContent = paint.price ? `${paint.price}€` : 'No disponible';
                 document.getElementById('detailDescription').textContent = paint.description || 'Sin descripción';
                 
-                // Verificar si la URL de la imagen es absoluta o relativa
-                let imageUrl = paint.image_url;
-                if (imageUrl && !imageUrl.startsWith('http') && !imageUrl.startsWith('/')) {
-                    // Si es relativa, asegurarse de que comience con /
-                    imageUrl = '/' + imageUrl;
-                }
-                
-                // Si no hay imagen, usar un placeholder
-                if (!imageUrl) {
-                    imageUrl = 'https://via.placeholder.com/300?text=No+Image';
-                }
-                
                 // Imagen
-                const detailImage = document.getElementById('detailImage');
-                detailImage.src = imageUrl;
-                detailImage.onerror = function() {
-                    this.onerror = null;
-                    this.src = 'https://via.placeholder.com/300?text=No+Image';
-                };
+                const imageUrl = paint.image_url || 'https://via.placeholder.com/300?text=No+Image';
+                document.getElementById('detailImage').src = imageUrl;
                 
                 // Color preview
                 document.getElementById('detailColorPreview').style.backgroundColor = paint.color_preview || '#cccccc';
@@ -1298,7 +1213,6 @@
                 document.getElementById('price').value = paint.price || '';
                 document.getElementById('description').value = paint.description || '';
                 document.getElementById('image_url').value = paint.image_url || '';
-                document.getElementById('color_preview').value
                 document.getElementById('color_preview').value = paint.color_preview || '#cccccc';
                 
                 // Cambiar texto del formulario
@@ -1335,21 +1249,7 @@
                 fetchPaints();
                 
                 // Mostrar mensaje de éxito
-                const alertContainer = document.createElement('div');
-                alertContainer.className = 'alert alert-success alert-dismissible fade show';
-                alertContainer.innerHTML = `
-                    <i class="bi bi-check-circle me-2"></i> Pintura eliminada correctamente
-                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-                `;
-                
-                // Insertar el mensaje al principio del contenedor principal
-                const mainContent = document.querySelector('main.content');
-                mainContent.insertBefore(alertContainer, mainContent.firstChild);
-                
-                // Quitar el mensaje después de 3 segundos
-                setTimeout(() => {
-                    alertContainer.remove();
-                }, 3000);
+                alert('Pintura eliminada correctamente');
                 
             } catch (error) {
                 console.error('Error:', error);
@@ -1407,25 +1307,7 @@
                 fetchPaints();
                 
                 // Mostrar mensaje de éxito
-                const alertContainer = document.createElement('div');
-                alertContainer.className = 'alert alert-success alert-
-                // Código que continúa desde la función savePaint()
-                // Mostrar mensaje de éxito
-                const alertContainer = document.createElement('div');
-                alertContainer.className = 'alert alert-success alert-dismissible fade show';
-                alertContainer.innerHTML = `
-                    <i class="bi bi-check-circle me-2"></i> ${isEdit ? 'Pintura actualizada correctamente' : 'Pintura guardada correctamente'}
-                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-                `;
-                
-                // Insertar el mensaje al principio del contenedor principal
-                const mainContent = document.querySelector('main.content');
-                mainContent.insertBefore(alertContainer, mainContent.firstChild);
-                
-                // Quitar el mensaje después de 3 segundos
-                setTimeout(() => {
-                    alertContainer.remove();
-                }, 3000);
+                alert(isEdit ? 'Pintura actualizada correctamente' : 'Pintura guardada correctamente');
                 
             } catch (error) {
                 console.error('Error:', error);
@@ -1461,8 +1343,7 @@
             // Llenar los selectores
             fillSelectOptions('brandFilterSelect', brands);
             fillSelectOptions('typeFilterSelect', types);
-            fillSelectOptions('colorFamilyFilterSelect', colorFamilies);
-            
+            fillSelectOptions('colorFamilyFilterSelect', colorFamilies);            
             // Configurar eventos para los selectores
             setupFilterSelect('brandFilterSelect', 'activeBrandFilters', 'brand');
             setupFilterSelect('typeFilterSelect', 'activeTypeFilters', 'color_type');
@@ -1549,6 +1430,7 @@
         }
 
         // Función para actualizar filtros activos
+        // Función para actualizar filtros activos
         function updateFilters() {
             // Recopilar todos los filtros activos
             filteredBrands = getActiveFilterValues('activeBrandFilters');
@@ -1557,9 +1439,6 @@
             
             // Actualizar filtros activos
             updateActiveFilters();
-            
-            // Aplicar filtros
-            filterAndDisplayPaints();
         }
 
         // Función para actualizar la visualización de filtros activos
@@ -1583,37 +1462,7 @@
                 activeFiltersContainer.appendChild(filterGroup);
             }
             
-            // Mostrar filtros de tipo
-            if (filteredTypes && filteredTypes.length > 0) {
-                const filterGroup = document.createElement('div');
-                filterGroup.className = 'mb-2';
-                filterGroup.innerHTML = '<strong>Tipos:</strong> ';
-                
-                filteredTypes.forEach(type => {
-                    const chip = document.createElement('span');
-                    chip.className = 'badge bg-secondary me-1';
-                    chip.textContent = type;
-                    filterGroup.appendChild(chip);
-                });
-                
-                activeFiltersContainer.appendChild(filterGroup);
-            }
-            
-            // Mostrar filtros de familia de color
-            if (filteredColorFamilies && filteredColorFamilies.length > 0) {
-                const filterGroup = document.createElement('div');
-                filterGroup.className = 'mb-2';
-                filterGroup.innerHTML = '<strong>Familias de color:</strong> ';
-                
-                filteredColorFamilies.forEach(family => {
-                    const chip = document.createElement('span');
-                    chip.className = 'badge bg-secondary me-1';
-                    chip.textContent = family;
-                    filterGroup.appendChild(chip);
-                });
-                
-                activeFiltersContainer.appendChild(filterGroup);
-            }
+            // Código adicional para otros filtros...
         }
 
         // Función para obtener valores de filtros activos
@@ -1642,6 +1491,7 @@
             });
         }
 
+        // Función para verificar y eliminar una opción
         // Función para verificar y eliminar una opción
         async function verifyAndDeleteOption(value, propertyName, select) {
             // Contar pinturas que usan este valor
@@ -1672,10 +1522,157 @@
                 alert(`"${value}" eliminado correctamente de las opciones de filtro.`);
                 select.value = '';
                 
+                // Nota: Para implementar una eliminación real en la base de datos
+                // necesitarías agregar aquí una llamada a un endpoint específico:
+                /*
+                const response = await fetch(`/api/options/${propertyName}/${encodeURIComponent(value)}`, {
+                    method: 'DELETE'
+                });
+                
+                if (!response.ok) {
+                    throw new Error('Error al eliminar la opción del servidor');
+                }
+                */
             } catch (error) {
                 console.error('Error al eliminar la opción:', error);
                 alert(`Error al eliminar "${value}": ${error.message}`);
             }
+        }      
+
+        // Variables para la búsqueda de imágenes
+        let imageSearchModal;
+
+        // Inicializar el modal de búsqueda de imágenes
+        document.addEventListener('DOMContentLoaded', () => {
+            // Código existente...
+            
+            // Inicializar el modal de búsqueda de imágenes
+            imageSearchModal = new bootstrap.Modal(document.getElementById('imageSearchModal'));
+            
+            // Añadir evento al botón de búsqueda de imágenes
+            document.getElementById('searchImagesBtn').addEventListener('click', () => {
+                const paintName = document.getElementById('name').value.trim();
+                const paintBrand = document.getElementById('brand').value.trim();
+                
+                if (!paintName) {
+                    alert('Por favor, introduce un nombre para la pintura antes de buscar imágenes.');
+                    return;
+                }
+                
+                // Mostrar el modal
+                document.getElementById('searchTermDisplay').textContent = `${paintBrand} ${paintName}`;
+                document.getElementById('imageSearchLoading').style.display = 'block';
+                document.getElementById('imageSearchResults').style.display = 'none';
+                document.getElementById('imageSearchError').style.display = 'none';
+                
+                imageSearchModal.show();
+                
+                // Iniciar búsqueda de imágenes
+                searchImages(paintBrand, paintName);
+            });
+        });
+
+        // Función para buscar imágenes
+        async function searchImages(brand, name) {
+            try {
+                // Construir la consulta de búsqueda
+                const searchQuery = encodeURIComponent(`${brand} ${name} paint`);
+                
+                // Realizar la petición al servidor
+                const response = await fetch(`/api/search-images?query=${searchQuery}`);
+                
+                if (!response.ok) {
+                    throw new Error(`Error en la búsqueda: ${response.status}`);
+                }
+                
+                const data = await response.json();
+                
+                if (!data.images || data.images.length === 0) {
+                    document.getElementById('imageSearchResults').innerHTML = `
+                        <div class="col-12 text-center">
+                            <div class="alert alert-warning">
+                                No se encontraron imágenes para "${brand} ${name}".
+                                Intenta con términos de búsqueda diferentes.
+                            </div>
+                        </div>
+                    `;
+                } else {
+                    // Mostrar las imágenes encontradas
+                    displayImageResults(data.images);
+                }
+                
+                // Ocultar carga y mostrar resultados
+                document.getElementById('imageSearchLoading').style.display = 'none';
+                document.getElementById('imageSearchResults').style.display = 'flex';
+                
+            } catch (error) {
+                console.error('Error en búsqueda de imágenes:', error);
+                document.getElementById('imageSearchLoading').style.display = 'none';
+                document.getElementById('imageSearchError').style.display = 'block';
+                document.getElementById('imageSearchError').textContent = `Error: ${error.message}`;
+            }
+        }
+
+        // Función para mostrar los resultados de la búsqueda
+        function displayImageResults(images) {
+            const resultsContainer = document.getElementById('imageSearchResults');
+            resultsContainer.innerHTML = '';
+            
+            images.forEach((image, index) => {
+                const imageCard = document.createElement('div');
+                imageCard.className = 'col-md-4 col-lg-3 mb-4';
+                
+                imageCard.innerHTML = `
+                    <div class="card h-100">
+                        <div style="height: 200px; background-color: #f8f9fa; display: flex; align-items: center; justify-content: center;">
+                            <img src="${image.url}" alt="Resultado de búsqueda ${index + 1}" 
+                                class="card-img-top" style="max-height: 180px; max-width: 90%; object-fit: contain;">
+                        </div>
+                        <div class="card-body">
+                            <p class="card-text small text-truncate">${image.url}</p>
+                            <button class="btn btn-sm btn-primary w-100 select-image-btn" 
+                                    data-url="${image.url}">
+                                <i class="bi bi-check-circle me-1"></i> Seleccionar
+                            </button>
+                        </div>
+                    </div>
+                `;
+                
+                resultsContainer.appendChild(imageCard);
+            });
+            
+            // Añadir eventos a los botones de selección
+            document.querySelectorAll('.select-image-btn').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const imageUrl = btn.getAttribute('data-url');
+                    selectImage(imageUrl);
+                });
+            });
+        }
+
+        // Función para seleccionar una imagen
+        function selectImage(url) {
+            // Actualizar el campo de URL de la imagen
+            document.getElementById('image_url').value = url;
+            
+            // Actualizar la vista previa
+            const imagePreview = document.getElementById('imagePreview');
+            if (imagePreview) {
+                const previewContainer = imagePreview.querySelector('.paint-container');
+                if (previewContainer) {
+                    // Actualizar la URL de la vista previa si existe
+                    const imgElement = previewContainer.querySelector('img');
+                    if (imgElement) {
+                        imgElement.src = url;
+                    }
+                }
+            }
+            
+            // Cerrar el modal
+            imageSearchModal.hide();
+            
+            // Mostrar mensaje de confirmación
+            alert('¡Imagen seleccionada con éxito!');
         }
     </script>
 </body>
