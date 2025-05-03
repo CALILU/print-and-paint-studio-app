@@ -1029,7 +1029,6 @@
             }
         }
         
-        // Función para mostrar pinturas en formato de cuadrícula
         function displayPaintsAsGrid(paints, container) {
             paints.forEach(paint => {
                 const paintCard = document.createElement('div');
@@ -1048,7 +1047,17 @@
                     stockText = 'Sin stock';
                 }
                 
-                const imageUrl = paint.image_url || 'https://via.placeholder.com/150?text=No+Image';
+                // Verificar si la URL de la imagen es absoluta o relativa
+                let imageUrl = paint.image_url;
+                if (imageUrl && !imageUrl.startsWith('http') && !imageUrl.startsWith('/')) {
+                    // Si es relativa, asegurarse de que comience con /
+                    imageUrl = '/' + imageUrl;
+                }
+                
+                // Si no hay imagen, usar un placeholder
+                if (!imageUrl) {
+                    imageUrl = 'https://via.placeholder.com/150?text=No+Image';
+                }
                 
                 paintCard.innerHTML = `
                     <div class="stock-badge ${stockClass}">${stockText}</div>
@@ -1105,7 +1114,17 @@
                     stockText = 'Sin stock';
                 }
                 
-                const imageUrl = paint.image_url || 'https://via.placeholder.com/150?text=No+Image';
+                // Verificar si la URL de la imagen es absoluta o relativa
+                let imageUrl = paint.image_url;
+                if (imageUrl && !imageUrl.startsWith('http') && !imageUrl.startsWith('/')) {
+                    // Si es relativa, asegurarse de que comience con /
+                    imageUrl = '/' + imageUrl;
+                }
+                
+                // Si no hay imagen, usar un placeholder
+                if (!imageUrl) {
+                    imageUrl = 'https://via.placeholder.com/150?text=No+Image';
+                }
                 
                 const row = document.createElement('tr');
                 row.innerHTML = `
@@ -1219,8 +1238,19 @@
                 document.getElementById('detailPrice').textContent = paint.price ? `${paint.price}€` : 'No disponible';
                 document.getElementById('detailDescription').textContent = paint.description || 'Sin descripción';
                 
+                // Verificar si la URL de la imagen es absoluta o relativa
+                let imageUrl = paint.image_url;
+                if (imageUrl && !imageUrl.startsWith('http') && !imageUrl.startsWith('/')) {
+                    // Si es relativa, asegurarse de que comience con /
+                    imageUrl = '/' + imageUrl;
+                }
+                
+                // Si no hay imagen, usar un placeholder
+                if (!imageUrl) {
+                    imageUrl = 'https://via.placeholder.com/300?text=No+Image';
+                }
+                
                 // Imagen
-                const imageUrl = paint.image_url || 'https://via.placeholder.com/300?text=No+Image';
                 const detailImage = document.getElementById('detailImage');
                 detailImage.src = imageUrl;
                 detailImage.onerror = function() {
