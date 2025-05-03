@@ -775,28 +775,30 @@
             setupLivePreview();
             
             // Añadir evento al botón de búsqueda de imágenes
+            // Añadir evento al botón de búsqueda de imágenes
             document.getElementById('searchImagesBtn').addEventListener('click', () => {
                 const paintName = document.getElementById('name').value.trim();
                 const paintBrand = document.getElementById('brand').value.trim();
                 const colorCode = document.getElementById('color_code').value.trim();
                 
-                if (!paintName && !paintBrand) {
-                    alert('Por favor, introduce al menos un nombre o marca para la pintura antes de buscar imágenes.');
+                // Priorizar marca y código como en boton_imagen1.py
+                if (!paintBrand && !colorCode) {
+                    alert('Por favor, introduce al menos la marca o el código para buscar imágenes.');
                     return;
                 }
                 
                 // Mostrar el modal
-                document.getElementById('searchTermDisplay').textContent = `${paintBrand} ${paintName} ${colorCode}`.trim();
+                document.getElementById('searchTermDisplay').textContent = `${paintBrand} ${colorCode}`.trim();
                 document.getElementById('imageSearchLoading').style.display = 'block';
                 document.getElementById('imageSearchResults').style.display = 'none';
                 document.getElementById('imageSearchError').style.display = 'none';
                 
                 imageSearchModal.show();
                 
-                // Iniciar búsqueda de imágenes
+                // Iniciar búsqueda de imágenes priorizando marca y código
                 searchImages(paintBrand, paintName, colorCode);
             });
-            
+                        
             // Inicializar filtros
             initializeFilters();
             
@@ -1626,67 +1628,62 @@
         // Función para buscar imágenes
         // Función para buscar imágenes
         // Función para buscar imágenes
+        // Función para buscar imágenes - versión mejorada basada en boton_imagen1.py
         async function searchImages(brand, name, colorCode) {
             try {
-                // Componer una consulta más efectiva
-                let baseTerms = [];
-                if (brand) baseTerms.push(brand);
-                if (name) baseTerms.push(name);
-                if (colorCode) baseTerms.push(colorCode);
-                
-                // Si no hay términos, mostrar error
-                if (baseTerms.length === 0) {
-                    throw new Error("Por favor, proporciona al menos un término de búsqueda");
+                // Verificar que tengamos al menos marca o código
+                if (!brand && !colorCode) {
+                    alert("Por favor, ingresa al menos la marca y el código para realizar una búsqueda efectiva.");
+                    return;
                 }
                 
-                // Construir consulta completa con términos adicionales
-                const baseQuery = baseTerms.join(' ');
+                // Construir consulta específica similar a boton_imagen1.py
+                let consulta = "";
+                if (brand && colorCode) {
+                    // Formato prioritario: Marca + Código (como en el ejemplo)
+                    consulta = `${brand} ${colorCode}`;
+                } else if (brand && name) {
+                    // Alternativa: Marca + Nombre
+                    consulta = `${brand} ${name}`;
+                } else {
+                    // Usar lo que tengamos
+                    consulta = `${brand || ""} ${colorCode || ""} ${name || ""}`.trim();
+                }
                 
-                // Consulta más simple para evitar problemas
-                const consulta = baseQuery; // Simplificamos la consulta
+                // Agregar términos para mejorar resultados para pinturas
+                if (consulta.indexOf("paint") === -1 && consulta.indexOf("color") === -1) {
+                    consulta += " paint color miniature";
+                }
                 
                 // Actualizar visualización
-                document.getElementById('searchTermDisplay').textContent = baseQuery;
-                document.getElementById('imageSearchLoading').innerHTML = `
-                    <div class="spinner-border text-primary" role="status">
-                        <span class="visually-hidden">Buscando imágenes...</span>
-                    </div>
-                    <p class="mt-3">Buscando imágenes para: "${baseQuery}"</p>
-                    <small class="text-muted">Por favor espere, esto puede tardar unos segundos...</small>
-                `;
-                
+                document.getElementById('searchTermDisplay').textContent = consulta;
                 document.getElementById('imageSearchLoading').style.display = 'block';
                 document.getElementById('imageSearchResults').style.display = 'none';
                 document.getElementById('imageSearchError').style.display = 'none';
                 
-                // Consulta al servidor utilizando el endpoint existente pero con la consulta mejorada
+                // Consulta al servidor
                 const searchQuery = encodeURIComponent(consulta);
                 console.log('Iniciando búsqueda de imágenes con consulta:', consulta);
                 
-                // Hacer la solicitud sin timeout para simplificar
+                // Realizar la consulta
                 const response = await fetch(`/api/search-images?query=${searchQuery}`);
                 const data = await response.json();
                 
                 console.log('Respuesta recibida:', data);
                 
-                // Comprobar si hay error en la respuesta
-                if (data.error) {
-                    throw new Error(data.error);
-                }
-                
-                // Comprobar si tenemos imágenes
+                // Comprobar resultados
                 if (!data.images || data.images.length === 0) {
                     document.getElementById('imageSearchResults').innerHTML = `
                         <div class="col-12 text-center">
                             <div class="alert alert-warning">
                                 <i class="bi bi-exclamation-triangle me-2"></i>
-                                No se encontraron imágenes para "${baseQuery}".
+                                No se encontraron imágenes para "${consulta}".
                                 <br>
-                                <small>Prueba con estos consejos:
+                                <small>Intenta con estas alternativas:
                                     <ul class="text-start mt-2">
-                                        <li>Utiliza términos más generales (ej: "${brand}" o "${name}")</li>
-                                        <li>Verifica que no haya errores de escritura</li>
-                                        <li>Prueba con otra marca o código similar</li>
+                                        <li>Verifica que el código sea correcto</li>
+                                        <li>Intenta solo con la marca (ej: "${brand}")</li>
+                                        <li>Agrega algún detalle específico al color</li>
                                     </ul>
                                 </small>
                             </div>
@@ -1698,7 +1695,7 @@
                     displayImageResults(data.images);
                 }
                 
-                // Ocultar carga
+                // Ocultar mensaje de carga
                 document.getElementById('imageSearchLoading').style.display = 'none';
                 
             } catch (error) {
@@ -1710,11 +1707,11 @@
                         <i class="bi bi-exclamation-triangle me-2"></i>
                         <strong>Error al buscar imágenes:</strong> ${error.message}
                         <br>
-                        <small>Es posible que el servicio de búsqueda no esté disponible en este momento. Puedes:</small>
+                        <small>Intenta con estas opciones:</small>
                         <ul class="mt-2">
-                            <li>Intentar con términos de búsqueda más sencillos</li>
-                            <li>Introducir manualmente la URL de la imagen si la conoces</li>
-                            <li>Probar más tarde cuando el servicio esté disponible</li>
+                            <li>Verifica que el código y la marca sean correctos</li>
+                            <li>Intenta con una combinación diferente de marca y código</li>
+                            <li>Introduce la URL de la imagen manualmente si la conoces</li>
                         </ul>
                         <div class="d-flex justify-content-end mt-3">
                             <button class="btn btn-sm btn-outline-secondary" onclick="imageSearchModal.hide()">
