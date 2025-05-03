@@ -838,7 +838,8 @@
             });
             
             // Configurar el botón de refrescar búsqueda
-            document.getElementById('refreshSearchBtn').addEventListener('click', () => {
+            // Añadir este código al evento del botón Buscar de nuevo
+            document.getElementById('refreshSearchBtn').addEventListener('click', function() {
                 const brand = document.getElementById('brand').value.trim();
                 const name = document.getElementById('name').value.trim();
                 const colorCode = document.getElementById('color_code').value.trim();
@@ -1739,6 +1740,8 @@
         // Buscar y reemplazar la función searchImages por esta versión corregida
 
         // Función para buscar imágenes
+        // Función para buscar imágenes modificada
+        // Función para buscar imágenes modificada
         async function searchImages(brand, name, colorCode) {
             try {
                 // Verificar que tengamos al menos marca o código
@@ -1747,8 +1750,21 @@
                     return;
                 }
                 
-                // Crear la consulta
-                const query = `${brand || ''} ${colorCode || ''}`.trim();
+                // Crear la consulta optimizada
+                let query = '';
+                if (brand && colorCode) {
+                    query = `${brand} ${colorCode}`;
+                } else if (brand) {
+                    query = brand;
+                } else {
+                    query = colorCode;
+                }
+                
+                // Añadir el nombre si está disponible
+                if (name && name.toLowerCase() !== brand.toLowerCase() && 
+                    name.toLowerCase() !== colorCode.toLowerCase()) {
+                    query += ` ${name}`;
+                }
                 
                 // Mostrar el modal y estado de carga
                 document.getElementById('searchTermDisplay').textContent = query;
@@ -1757,13 +1773,16 @@
                 document.getElementById('imageSearchError').style.display = 'none';
                 document.getElementById('refreshSearchBtn').style.display = 'none';
                 
+                imageSearchModal.show();
+                
                 // Deshabilitar botones durante la búsqueda
                 const searchImagesBtn = document.getElementById('searchImagesBtn');
                 if (searchImagesBtn) searchImagesBtn.disabled = true;
                 
                 try {
-                    // Realizar búsqueda usando la API
-                    const response = await fetch(`/api/search-images?query=${encodeURIComponent(query)}`);
+                    // Realizar búsqueda usando la API con timestamp para evitar caché
+                    const timestamp = new Date().getTime();
+                    const response = await fetch(`/api/search-images?query=${encodeURIComponent(query)}&t=${timestamp}`);
                     
                     if (!response.ok) {
                         throw new Error(`Error HTTP: ${response.status}`);
@@ -1778,17 +1797,26 @@
                         let htmlContent = '<div class="row">';
                         
                         data.images.forEach(image => {
+                            // Escapar comillas simples en la URL para evitar problemas en el onclick
+                            const escapedUrl = image.url.replace(/'/g, "\\'");
+                            
                             htmlContent += `
                                 <div class="col-md-4 mb-3">
-                                    <div class="card">
-                                        <img src="${image.url}" class="card-img-top" alt="${image.title}"
-                                            onerror="this.onerror=null; this.src='https://via.placeholder.com/150?text=Error';">
-                                        <div class="card-body">
-                                            <h6 class="card-title text-truncate">${image.title || 'Sin título'}</h6>
-                                            <button class="btn btn-sm btn-primary select-image" 
-                                                onclick="selectImage('${image.url}')">
-                                                Seleccionar
-                                            </button>
+                                    <div class="card h-100">
+                                        <div style="height: 200px; display: flex; align-items: center; justify-content: center; overflow: hidden;">
+                                            <img src="${image.url}" class="card-img-top" 
+                                                style="max-height: 190px; width: auto; object-fit: contain;"
+                                                alt="${image.title}"
+                                                onerror="this.onerror=null; this.src='https://via.placeholder.com/150?text=Error';">
+                                        </div>
+                                        <div class="card-body d-flex flex-column">
+                                            <h6 class="card-title text-truncate" title="${image.title || 'Sin título'}">${image.title || 'Sin título'}</h6>
+                                            <div class="mt-auto">
+                                                <button class="btn btn-sm btn-primary w-100" 
+                                                    onclick="selectImage('${escapedUrl}')">
+                                                    Seleccionar
+                                                </button>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
@@ -1804,6 +1832,14 @@
                             <div class="alert alert-warning">
                                 <i class="bi bi-exclamation-triangle me-2"></i>
                                 No se encontraron imágenes para "${query}".
+                            </div>
+                            <div class="text-center">
+                                <img src="https://via.placeholder.com/400x300/2196F3/FFFFFF?text=${encodeURIComponent(query.replace(' ', '+'))}" 
+                                    alt="No se encontraron imágenes" class="img-fluid mb-3">
+                                <button class="btn btn-primary" 
+                                    onclick="selectImage('https://via.placeholder.com/400x300/2196F3/FFFFFF?text=${encodeURIComponent(query.replace(' ', '+'))}')">
+                                    Usar esta imagen de placeholder
+                                </button>
                             </div>
                         `;
                         resultsContainer.style.display = 'block';
@@ -1863,16 +1899,25 @@
 
         // Función para seleccionar una imagen
         // Añadir/verificar que esta función esté en paints.html
+        // Función mejorada para seleccionar una imagen
         function selectImage(url) {
             if (!url) {
                 alert("URL de imagen no válida.");
                 return;
             }
             
+            // Verificar que es una URL válida
+            try {
+                new URL(url); // Esto lanzará un error si la URL no es válida
+            } catch (e) {
+                alert("La URL proporcionada no es válida: " + e.message);
+                return;
+            }
+            
             // Actualizar el campo del formulario
             document.getElementById('image_url').value = url;
             
-            // Cerrar modal
+            // Cerrar modal usando Bootstrap 5
             const modalElement = document.getElementById('imageSearchModal');
             const modalInstance = bootstrap.Modal.getInstance(modalElement);
             if (modalInstance) {
@@ -1893,11 +1938,32 @@
             
             // Quitar el mensaje después de 3 segundos
             setTimeout(() => {
-                alertContainer.remove();
+                if (alertContainer.parentNode) {
+                    alertContainer.remove();
+                }
             }, 3000);
             
             // Actualizar la vista previa
             document.getElementById('image_url').dispatchEvent(new Event('input'));
+        }
+
+        // Añadir la función para usar una imagen ingresada manualmente
+        function useManualImage() {
+            const manualUrl = document.getElementById('manualImageUrl').value.trim();
+            
+            if (!manualUrl) {
+                alert("Por favor, introduce una URL válida.");
+                return;
+            }
+            
+            // Validar URL básica
+            if (!manualUrl.startsWith('http')) {
+                alert("Por favor, introduce una URL válida que comience con http:// o https://");
+                return;
+            }
+            
+            // Seleccionar la imagen
+            selectImage(manualUrl);
         }
     </script>
 </body>

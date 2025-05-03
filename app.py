@@ -85,15 +85,17 @@ def api_search_images():
         images = []
         
         # Mejorar la consulta para resultados más relevantes
-        search_query = query
-        if not any(term in query.lower() for term in ['paint', 'color', 'bottle', 'model']):
-            search_query = f"{query} model paint color"
-            
+        # Añadir términos para especificar mejor el tipo de imágenes que buscamos
+        search_query = f"{query} miniature model paint bottle"
         print(f"Consulta final: {search_query}")
         
         try:
             with DDGS() as ddgs:
-                resultados = list(ddgs.images(search_query, safesearch='Moderate', max_results=12))
+                resultados = list(ddgs.images(
+                    search_query, 
+                    safesearch='Off',  # Cambiado a Off para ampliar resultados
+                    max_results=20     # Aumentado para tener más opciones
+                ))
                 print(f"Resultados obtenidos: {len(resultados)}")
             
             # Procesar y validar las URL de las imágenes
@@ -103,18 +105,49 @@ def api_search_images():
                 if not url_imagen:
                     continue
                 
-                try:
-                    # Verificar validez de la URL
-                    resp = requests.head(url_imagen, timeout=3)
-                    if resp.status_code == 200:
+                # No verificamos la URL para evitar timeouts y errores
+                # Solo filtramos URLs obviamente inválidas
+                if not url_imagen.startswith('http'):
+                    continue
+                    
+                images.append({
+                    'url': url_imagen,
+                    'title': r.get('title', ''),
+                    'source': r.get('url', '')
+                })
+                # Limitamos a 9 imágenes para mantener el rendimiento
+                if len(images) >= 9:
+                    break
+            
+            # Si no hay suficientes imágenes, intentar con una consulta alternativa
+            if len(images) < 3:
+                print("Pocas imágenes encontradas, intentando búsqueda alternativa...")
+                alt_query = f"{query} paint color"
+                
+                with DDGS() as ddgs:
+                    alt_resultados = list(ddgs.images(
+                        alt_query,
+                        safesearch='Off',
+                        max_results=20
+                    ))
+                    
+                    for r in alt_resultados:
+                        url_imagen = r.get('image')
+                        if not url_imagen or not url_imagen.startswith('http'):
+                            continue
+                        
+                        # Verificar que la imagen no esté ya en la lista
+                        if any(img['url'] == url_imagen for img in images):
+                            continue
+                            
                         images.append({
                             'url': url_imagen,
                             'title': r.get('title', ''),
                             'source': r.get('url', '')
                         })
-                except Exception as e:
-                    print(f"Error verificando URL {url_imagen}: {str(e)}")
-                    continue
+                        
+                        if len(images) >= 9:
+                            break
             
         except Exception as e:
             print(f"Error en búsqueda principal: {str(e)}")
@@ -147,7 +180,7 @@ def api_search_images():
             }],
             "error": str(e),
             "message": "Error al buscar imágenes: " + str(e)
-        }), 500
+        }), 200  # Cambiado a 200 para evitar errores en el cliente
       
 # Configuración de la base de datos
 db_url = os.environ.get('DATABASE_URL')
