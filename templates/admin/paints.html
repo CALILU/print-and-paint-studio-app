@@ -1732,6 +1732,7 @@
 
         // Función mejorada para buscar imágenes
         // Función modificada para buscar imágenes
+        // Función corregida para buscar imágenes
         async function searchImages(brand, name, colorCode) {
             try {
                 // Verificar que tengamos al menos marca o código
@@ -1749,57 +1750,59 @@
                 
                 imageSearchModal.show();
                 
-                // Realizar la solicitud al endpoint correcto que funciona
-                const response = await fetch('/api/buscar_imagen', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({
-                        marca: brand,
-                        codigo: colorCode,
-                        timestamp: Date.now() // Para evitar el caché
-                    }),
-                });
-                
-                if (!response.ok) {
-                    const errorData = await response.json();
-                    throw new Error(errorData.error || 'Error al buscar la imagen');
-                }
-                
-                const data = await response.json();
-                
-                // Procesar la respuesta
-                if (data.success && data.imagen_base64) {
-                    // Crear un solo resultado con la imagen encontrada
-                    const images = [{
-                        url: data.url_original,
-                        title: data.nombre_sugerido || `${brand} ${colorCode}`,
-                        source: '#',
-                        image_base64: data.imagen_base64
-                    }];
+                try {
+                    // Realizar búsqueda usando el mismo método exacto que index.html
+                    const response = await fetch('/api/buscar_imagen', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                            marca: brand,
+                            codigo: colorCode,
+                            timestamp: Date.now()
+                        }),
+                    });
                     
-                    // Mostrar el resultado
-                    displayImageResults(images);
-                    document.getElementById('imageSearchResults').style.display = 'block';
-                } else {
-                    // No se encontraron imágenes
-                    document.getElementById('imageSearchResults').innerHTML = `
-                        <div class="col-12 text-center">
-                            <div class="alert alert-warning">
-                                <i class="bi bi-exclamation-triangle me-2"></i>
-                                No se encontraron imágenes para "${brand} ${colorCode}".
+                    if (!response.ok) {
+                        const errorData = await response.json();
+                        throw new Error(errorData.error || 'Error al buscar la imagen');
+                    }
+                    
+                    const resultado = await response.json();
+                    
+                    if (resultado.success && resultado.imagen_base64) {
+                        // Mostrar el resultado como en index.html
+                        const images = [{
+                            url: resultado.url_original || '',
+                            image_url: resultado.url_original || '',
+                            title: resultado.nombre_sugerido || `${brand} ${colorCode}`,
+                            source: '#',
+                            imagen_base64: resultado.imagen_base64
+                        }];
+                        
+                        displayImageResults(images);
+                        document.getElementById('imageSearchResults').style.display = 'block';
+                    } else {
+                        // No se encontraron imágenes
+                        document.getElementById('imageSearchResults').innerHTML = `
+                            <div class="col-12 text-center">
+                                <div class="alert alert-warning">
+                                    <i class="bi bi-exclamation-triangle me-2"></i>
+                                    No se encontraron imágenes para "${brand} ${colorCode}".
+                                </div>
                             </div>
-                        </div>
-                    `;
-                    document.getElementById('imageSearchResults').style.display = 'block';
+                        `;
+                        document.getElementById('imageSearchResults').style.display = 'block';
+                    }
+                } catch (error) {
+                    throw error;
+                } finally {
+                    // Ocultar carga
+                    document.getElementById('imageSearchLoading').style.display = 'none';
+                    // Mostrar el botón de refrescar búsqueda
+                    document.getElementById('refreshSearchBtn').style.display = 'block';
                 }
-                
-                // Mostrar el botón de refrescar búsqueda
-                document.getElementById('refreshSearchBtn').style.display = 'block';
-                
-                // Ocultar carga
-                document.getElementById('imageSearchLoading').style.display = 'none';
                 
             } catch (error) {
                 console.error('Error en búsqueda de imágenes:', error);
@@ -1848,23 +1851,23 @@
             for (let i = 0; i < images.length; i++) {
                 const image = images[i];
                 
-                // Verificar que la imagen tenga una URL válida
-                if (!image || !image.url) {
+                // Verificar que la imagen tenga una URL o imagen base64 válida
+                if (!image) {
                     continue;
                 }
                 
                 // Crear un elemento para la imagen
                 const imageCol = document.createElement('div');
-                imageCol.className = 'col-md-4 col-sm-6 mb-4';
+                imageCol.className = 'col-12 mb-4'; // Usar toda la anchura para una sola imagen
                 
                 // Contenido del elemento con manejo de errores de carga
                 const title = image.title || 'Sin título';
                 const source = image.source || '#';
-                const imageUrl = image.image_base64 || image.url;
+                const imageUrl = image.imagen_base64 || image.url;
                 
                 imageCol.innerHTML = `
                     <div class="card h-100">
-                        <div class="card-img-container" style="height: 200px; position: relative; overflow: hidden; display: flex; align-items: center; justify-content: center; background-color: #f8f9fa;">
+                        <div class="card-img-container text-center" style="height: 300px; position: relative; overflow: hidden; display: flex; align-items: center; justify-content: center; background-color: #f8f9fa;">
                             <img src="${imageUrl}" class="card-img-top" alt="${title}" 
                                 style="max-width: 100%; max-height: 100%; object-fit: contain;"
                                 onerror="this.onerror=null; this.src='https://via.placeholder.com/400x300/cccccc/666666?text=Imagen+no+disponible'; this.parentNode.classList.add('img-error');">
@@ -1874,9 +1877,9 @@
                                 </div>
                             </div>
                         </div>
-                        <div class="card-body">
-                            <h6 class="card-title text-truncate" title="${title}">${title}</h6>
-                            <button class="btn btn-sm btn-primary w-100 mt-2" onclick="selectImage('${image.url}')">
+                        <div class="card-body text-center">
+                            <h5 class="card-title">${title}</h5>
+                            <button class="btn btn-primary mt-2" onclick="selectImage('${image.url || image.image_url}')">
                                 <i class="bi bi-check-lg"></i> Seleccionar esta imagen
                             </button>
                         </div>
@@ -1896,8 +1899,13 @@
             resultsContainer.appendChild(row);
         }
 
-        // Función mejorada para seleccionar una imagen
+        // Función para seleccionar una imagen
         function selectImage(url) {
+            if (!url) {
+                alert("No se pudo obtener la URL de la imagen. Por favor, intenta otra búsqueda.");
+                return;
+            }
+            
             // Actualizar el campo de URL de la imagen
             document.getElementById('image_url').value = url;
             
