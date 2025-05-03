@@ -77,62 +77,71 @@ def api_search_images():
     print(f"Iniciando búsqueda de imágenes para: {query}")
     
     try:
-        # Usar la biblioteca duckduckgo_search con manejo de diferentes versiones
+        # Usar DDGS para buscar imágenes
         images = []
         try:
-            # Verificar cuál versión de DDGS estamos usando
-            if hasattr(DDGS, '__call__'):
-                # Es una clase que necesitamos instanciar (versiones más nuevas)
-                print("Usando DDGS como clase")
-                try:
-                    # Intento con la versión que usa with statement
-                    with DDGS() as ddgs:
-                        resultados = list(ddgs.images(query, safesearch='Moderate', max_results=10))
-                        print(f"Resultados obtenidos con DDGS: {len(resultados)}")
-                except Exception as with_error:
-                    print(f"Error usando DDGS con 'with': {str(with_error)}")
-                    # Intento alternativo sin with statement
-                    ddgs = DDGS()
-                    resultados = list(ddgs.images(query, max_results=10))
-                    print(f"Resultados obtenidos con DDGS (sin 'with'): {len(resultados)}")
-            else:
-                # Es una función (versiones más antiguas o nuestro wrapper)
-                print("Usando DDGS como función wrapper")
-                resultados = DDGS().images(query, max_results=10)
-                print(f"Resultados obtenidos con wrapper: {len(resultados)}")
+            with DDGS() as ddgs:
+                # Usar la consulta tal como viene, pero limitarnos a 15 resultados
+                resultados = list(ddgs.images(query, safesearch='Moderate', max_results=15))
+                print(f"Resultados obtenidos con DDGS: {len(resultados)}")
             
-            # Procesar resultados
+            # Procesar resultados de DDGS
             for r in resultados:
-                # La estructura puede variar según la versión
-                if isinstance(r, dict):
-                    url_imagen = r.get('image') or r.get('thumbnail') or r.get('url')
-                    title = r.get('title', '')
-                    source = r.get('source') or r.get('url', '')
-                else:
-                    # Fallback para otras versiones donde r podría ser una tupla o un objeto diferente
-                    url_imagen = r[0] if isinstance(r, (list, tuple)) and len(r) > 0 else str(r)
-                    title = "Imagen encontrada"
-                    source = "Fuente desconocida"
-                
+                url_imagen = r.get('image')
                 if url_imagen and url_imagen not in [img.get('url') for img in images]:
                     images.append({
                         'url': url_imagen,
-                        'title': title,
-                        'source': source
+                        'title': r.get('title', ''),
+                        'source': r.get('url', '')
                     })
+                    
+            print(f"Imágenes procesadas desde DDGS: {len(images)}")
+        except Exception as ddgs_error:
+            # Capturar error de DDGS
+            print(f"Error con DDGS: {str(ddgs_error)}")
+        
+        # Si no se encontraron imágenes o hubo un error, usar placeholders
+        if not images:
+            print("No se encontraron imágenes, generando placeholders")
+            # Generar URLs de placeholder basadas en términos de búsqueda
+            terms = query.split()
+            colors = ['5D8AA8', '7FFFD4', 'D2691E', 'DC143C', '008000', 'FFD700']
             
-            print(f"Imágenes procesadas: {len(images)}")
-            
-        except Exception as search_error:
-            print(f"Error en búsqueda de imágenes: {str(search_error)}")
-            
-            # Crear una URL de fallback usando placeholders
-            fallback_text = query.replace(' ', '+')
-            images = [{
-                'url': f'https://via.placeholder.com/400x300/f1f1f1/333333?text={fallback_text}',
-                'title': f'No se pudieron cargar imágenes para: {query}',
-                'source': 'Generado localmente'
-            }]
+            for i in range(min(6, max(1, len(terms)))):
+                color = colors[i % len(colors)]
+                term = terms[i] if i < len(terms) else query.replace(' ', '+')
+                
+                images.append({
+                    'url': f'https://via.placeholder.com/400x300/{color}/FFFFFF?text={term}',
+                    'title': f'Placeholder para {term}',
+                    'source': 'Generado automáticamente'
+                })
+                
+            # Añadir siempre al menos un placeholder con toda la consulta
+            if not images:
+                images.append({
+                    'url': f'https://via.placeholder.com/400x300/2196F3/FFFFFF?text={query.replace(" ", "+")}',
+                    'title': f'Visualización para {query}',
+                    'source': 'Generado automáticamente'
+                })
+        
+        return jsonify({"images": images})
+    
+    except Exception as e:
+        import traceback
+        print(f"Error en búsqueda de imágenes: {str(e)}")
+        traceback.print_exc()
+        
+        # Generar al menos una imagen de fallback
+        return jsonify({
+            "images": [{
+                'url': f'https://via.placeholder.com/400x300/F44336/FFFFFF?text=Error+de+búsqueda',
+                'title': f'Error: No se pudo completar la búsqueda',
+                'source': 'Error generado'
+            }],
+            "error": str(e),
+            "message": "Error al buscar imágenes: " + str(e)
+        }), 200
         
         # Devolver las imágenes encontradas
         return jsonify({"images": images})
