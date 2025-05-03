@@ -3,7 +3,29 @@ from models import db, User, Video, Favorite, Technique, Category, Paint
 from functools import wraps
 import os
 from datetime import datetime
-from duckduckgo_search import DDGS
+# Manejo flexible de la importación de duckduckgo_search
+try:
+    # Intento 1: Importar DDGS directamente (versiones más nuevas)
+    from duckduckgo_search import DDGS
+    print("Importación exitosa de DDGS desde duckduckgo_search")
+except ImportError:
+    try:
+        # Intento 2: Importar DDGS desde el módulo 'api' (versiones intermedias)
+        from duckduckgo_search.api import DDGS
+        print("Importación exitosa de DDGS desde duckduckgo_search.api")
+    except ImportError:
+        # Intento 3: Usar el cliente de API más básico (versiones más antiguas)
+        from duckduckgo_search import ddg_images
+        print("Usando ddg_images como alternativa a DDGS")
+        
+        # Crear una clase de wrapper simple para mantener la compatibilidad
+        class DDGSWrapper:
+            def images(self, query, **kwargs):
+                max_results = kwargs.get('max_results', 100)
+                return ddg_images(query, max_results=max_results)
+        
+        # Reemplazar DDGS con nuestro wrapper
+        DDGS = DDGSWrapper
 import random
 
 app = Flask(__name__)
@@ -55,80 +77,80 @@ def api_search_images():
     print(f"Iniciando búsqueda de imágenes para: {query}")
     
     try:
-        # Usar DDGS para buscar imágenes
+        # Usar la biblioteca duckduckgo_search con manejo de diferentes versiones
         images = []
         try:
-            # Modificamos la forma de instanciar DDGS para evitar el error de 'proxies'
-            with DDGS() as ddgs:
-                # Usar una consulta más específica para mejorar resultados
-                consulta_efectiva = f"{query} paint miniature model color"
-                print(f"Consulta efectiva: {consulta_efectiva}")
-                
-                resultados = list(ddgs.images(
-                    consulta_efectiva, 
-                    safesearch='Moderate', 
-                    max_results=15
-                ))
-                print(f"Resultados obtenidos con DDGS: {len(resultados)}")
+            # Verificar cuál versión de DDGS estamos usando
+            if hasattr(DDGS, '__call__'):
+                # Es una clase que necesitamos instanciar (versiones más nuevas)
+                print("Usando DDGS como clase")
+                try:
+                    # Intento con la versión que usa with statement
+                    with DDGS() as ddgs:
+                        resultados = list(ddgs.images(query, safesearch='Moderate', max_results=10))
+                        print(f"Resultados obtenidos con DDGS: {len(resultados)}")
+                except Exception as with_error:
+                    print(f"Error usando DDGS con 'with': {str(with_error)}")
+                    # Intento alternativo sin with statement
+                    ddgs = DDGS()
+                    resultados = list(ddgs.images(query, max_results=10))
+                    print(f"Resultados obtenidos con DDGS (sin 'with'): {len(resultados)}")
+            else:
+                # Es una función (versiones más antiguas o nuestro wrapper)
+                print("Usando DDGS como función wrapper")
+                resultados = DDGS().images(query, max_results=10)
+                print(f"Resultados obtenidos con wrapper: {len(resultados)}")
             
-            # Procesar resultados de DDGS
+            # Procesar resultados
             for r in resultados:
-                url_imagen = r.get('image')
+                # La estructura puede variar según la versión
+                if isinstance(r, dict):
+                    url_imagen = r.get('image') or r.get('thumbnail') or r.get('url')
+                    title = r.get('title', '')
+                    source = r.get('source') or r.get('url', '')
+                else:
+                    # Fallback para otras versiones donde r podría ser una tupla o un objeto diferente
+                    url_imagen = r[0] if isinstance(r, (list, tuple)) and len(r) > 0 else str(r)
+                    title = "Imagen encontrada"
+                    source = "Fuente desconocida"
+                
                 if url_imagen and url_imagen not in [img.get('url') for img in images]:
                     images.append({
                         'url': url_imagen,
-                        'title': r.get('title', ''),
-                        'source': r.get('url', '')
+                        'title': title,
+                        'source': source
                     })
-                    
-            print(f"Imágenes procesadas desde DDGS: {len(images)}")
-        except TypeError as type_error:
-            # Capturar específicamente el error de 'proxies'
-            if "unexpected keyword argument 'proxies'" in str(type_error):
-                print(f"Error con parámetro 'proxies' en DDGS: {str(type_error)}")
-                # Intento alternativo sin proxies (versión anterior de DDGS)
-                try:
-                    ddgs = DDGS()
-                    resultados = list(ddgs.images(query, max_results=15))
-                    
-                    for r in resultados:
-                        url_imagen = r.get('image')
-                        if url_imagen and url_imagen not in [img.get('url') for img in images]:
-                            images.append({
-                                'url': url_imagen,
-                                'title': r.get('title', ''),
-                                'source': r.get('url', '')
-                            })
-                            
-                    print(f"Imágenes procesadas con versión alternativa: {len(images)}")
-                except Exception as alt_error:
-                    print(f"Error con método alternativo: {str(alt_error)}")
-            else:
-                raise  # Re-lanzar el error si no es el esperado
-        except Exception as ddgs_error:
-            # Capturar cualquier otro error de DDGS
-            print(f"Error con DDGS: {str(ddgs_error)}")
+            
+            print(f"Imágenes procesadas: {len(images)}")
+            
+        except Exception as search_error:
+            print(f"Error en búsqueda de imágenes: {str(search_error)}")
+            
+            # Crear una URL de fallback usando placeholders
+            fallback_text = query.replace(' ', '+')
+            images = [{
+                'url': f'https://via.placeholder.com/400x300/f1f1f1/333333?text={fallback_text}',
+                'title': f'No se pudieron cargar imágenes para: {query}',
+                'source': 'Generado localmente'
+            }]
         
-        # Si no se encontraron imágenes
-        if not images:
-            print("No se encontraron imágenes para la consulta")
-            return jsonify({
-                "images": [], 
-                "message": "No se encontraron imágenes para esta búsqueda."
-            })
-        
+        # Devolver las imágenes encontradas
         return jsonify({"images": images})
     
     except Exception as e:
         import traceback
-        print(f"Error en búsqueda de imágenes: {str(e)}")
+        print(f"Error general: {str(e)}")
         traceback.print_exc()
         
         # Devolver código 200 con mensaje de error
         return jsonify({
-            "images": [],
+            "images": [{
+                'url': f'https://via.placeholder.com/400x300/f1f1f1/333333?text=Error',
+                'title': f'Error: {str(e)}',
+                'source': 'Error generado'
+            }],
             "error": str(e),
-            "message": "Error al buscar imágenes: " + str(e)
+            "message": "Ocurrió un error durante la búsqueda. Por favor, inténtalo más tarde."
         }), 200
       
 # Configuración de la base de datos
