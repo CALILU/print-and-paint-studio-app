@@ -57,70 +57,64 @@ def api_search_images():
     try:
         # Usar DDGS para buscar imágenes
         images = []
-        try:
-            with DDGS() as ddgs:
-                resultados = list(ddgs.images(query, safesearch='Moderate', max_results=10))
-                print(f"Resultados obtenidos con DDGS: {len(resultados)}")
-            
-            # Procesar resultados de DDGS
-            for r in resultados:
-                url_imagen = r.get('image')
-                if url_imagen and url_imagen not in [img.get('url') for img in images]:
-                    images.append({
-                        'url': url_imagen,
-                        'title': r.get('title', ''),
-                        'source': r.get('url', '')
-                    })
+        max_intentos = 3  # Intentar hasta 3 veces
+        
+        for intento in range(max_intentos):
+            try:
+                print(f"Intento {intento+1} de búsqueda con DDGS")
+                with DDGS() as ddgs:
+                    # Modificar la consulta para hacerla más específica
+                    consulta_efectiva = f"{query} paint miniature model"
+                    print(f"Consulta efectiva: {consulta_efectiva}")
                     
-            print(f"Imágenes procesadas desde DDGS: {len(images)}")
-        except Exception as ddgs_error:
-            # Capturar error de DDGS
-            print(f"Error con DDGS: {str(ddgs_error)}")
-            
-            # Si falló DDGS, usar respaldo con placeholders
-            if not images:
-                # Generar URLs de placeholder basadas en la consulta
-                brand_part = query.split()[0] if query.split() else ""
-                color_part = query.split()[-1] if query.split() else ""
+                    resultados = list(ddgs.images(
+                        consulta_efectiva, 
+                        safesearch='Moderate', 
+                        max_results=20  # Aumentar el número de resultados
+                    ))
+                    
+                    print(f"Resultados obtenidos con DDGS: {len(resultados)}")
                 
-                placeholder_images = [
-                    {
-                        'url': f'https://via.placeholder.com/400x300/f8f9fa/333333?text={brand_part}',
-                        'title': f'Placeholder para {query}',
-                        'source': 'Placeholder generado'
-                    },
-                    {
-                        'url': f'https://via.placeholder.com/400x300/{color_part.replace("#", "")}/ffffff?text=Color+Muestra',
-                        'title': f'Muestra de color {color_part}',
-                        'source': 'Muestra de color generada'
-                    }
-                ]
-                
-                images.extend(placeholder_images)
-                print(f"Usando imágenes de respaldo: {len(images)}")
+                # Si tenemos resultados, salir del bucle
+                if resultados:
+                    break
+                    
+            except Exception as e:
+                print(f"Error en intento {intento+1}: {str(e)}")
+                # Esperar brevemente antes del siguiente intento
+                import time
+                time.sleep(1)
         
-        # Si no se encontraron imágenes
+        # Procesar resultados de DDGS
+        for r in resultados:
+            url_imagen = r.get('image')
+            if url_imagen and url_imagen not in [img.get('url') for img in images]:
+                # Verificar que la URL sea válida intentando acceder a ella
+                try:
+                    # Hacer una solicitud HEAD para verificar la imagen sin descargarla completamente
+                    import requests
+                    response = requests.head(url_imagen, timeout=2)
+                    
+                    # Solo agregar si la respuesta es exitosa
+                    if response.status_code == 200:
+                        images.append({
+                            'url': url_imagen,
+                            'title': r.get('title', ''),
+                            'source': r.get('url', '')
+                        })
+                except Exception as img_error:
+                    print(f"Error verificando imagen {url_imagen}: {str(img_error)}")
+                    continue
+                    
+        print(f"Imágenes procesadas desde DDGS: {len(images)}")
+        
+        # Solo usar placeholders si realmente no se encontraron imágenes
         if not images:
-            print("No se encontraron imágenes para la consulta")
+            print("No se encontraron imágenes válidas, generando mensaje de error")
             return jsonify({
-                "images": [], 
-                "message": "No se encontraron imágenes para esta búsqueda."
+                "images": [],
+                "error": "No se pudieron encontrar imágenes para esta búsqueda. Intente con términos más generales."
             })
-        
-        return jsonify({"images": images})
-    
-    except Exception as e:
-        import traceback
-        print(f"Error en búsqueda de imágenes: {str(e)}")
-        traceback.print_exc()
-        
-        # Devolver código 200 con mensaje de error
-        return jsonify({
-            "images": [],
-            "error": str(e),
-            "message": "Error al buscar imágenes: " + str(e)
-        }), 200
-
       
 # Configuración de la base de datos
 db_url = os.environ.get('DATABASE_URL')
