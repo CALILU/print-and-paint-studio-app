@@ -77,63 +77,84 @@ def api_search_images():
     print(f"Iniciando búsqueda de imágenes para: {query}")
     
     try:
-        # Usar DDGS para buscar imágenes
+        # Usar DDGS para buscar imágenes - implementando lógica similar a boton_imagen1.py
         images = []
+        
+        # Extraer marca y código de la consulta (si existen)
+        terms = query.split()
+        search_query = query
+        
         try:
-            # Modificar la consulta para obtener mejores resultados para pinturas de modelismo
-            optimized_query = f"{query} miniature paint bottle"
-            print(f"Consulta optimizada: {optimized_query}")
-            
+            # Usar exactamente la misma técnica de boton_imagen1.py
             with DDGS() as ddgs:
-                # Buscar imágenes con la consulta optimizada
-                resultados = list(ddgs.images(
-                    optimized_query, 
-                    safesearch='Moderate', 
-                    max_results=20  # Aumentar el número de resultados
-                ))
-                print(f"Resultados obtenidos con DDGS: {len(resultados)}")
+                # Añadir términos específicos para mejorar resultados de pinturas
+                if not any(term in query.lower() for term in ['paint', 'color', 'bottle', 'model']):
+                    search_query = f"{query} model paint color"
+                
+                print(f"Consulta final: {search_query}")
+                resultados = list(ddgs.images(search_query, safesearch='Moderate', max_results=20))
+                print(f"Resultados obtenidos: {len(resultados)}")
             
-            # Procesar resultados de DDGS
+            # Procesar resultados igual que en boton_imagen1.py
+            url_valida = None
+            imagen_descargada = None
+            
+            # Iterar sobre los resultados hasta encontrar una imagen válida
             for r in resultados:
                 url_imagen = r.get('image')
-                if url_imagen and url_imagen not in [img.get('url') for img in images]:
-                    images.append({
-                        'url': url_imagen,
-                        'title': r.get('title', ''),
-                        'source': r.get('url', '')
-                    })
-                    
-            print(f"Imágenes procesadas desde DDGS: {len(images)}")
-        except Exception as ddgs_error:
-            print(f"Error con DDGS: {str(ddgs_error)}")
-        
-        # Si no se encontraron imágenes, intentar con una consulta más genérica
-        if not images:
-            print("Intento con consulta alternativa...")
-            try:
-                # Extraer la marca y el código de la consulta original
-                terms = query.split()
-                brand = terms[0] if terms else ""
+                if not url_imagen:
+                    continue
                 
-                # Usar una consulta más genérica con solo la marca
+                try:
+                    # Verificar validez de la URL sin descargar completamente
+                    import requests
+                    resp = requests.head(url_imagen, timeout=3)
+                    if resp.status_code == 200:
+                        # Guardar la URL y salir del bucle
+                        url_valida = url_imagen
+                        print(f"Imagen encontrada: {url_valida}")
+                        images.append({
+                            'url': url_imagen,
+                            'title': r.get('title', ''),
+                            'source': r.get('url', '')
+                        })
+                except Exception as e:
+                    print(f"Error verificando URL {url_imagen}: {str(e)}")
+                    continue
+            
+            # Si no encontramos ninguna URL válida, intentamos con una búsqueda alternativa
+            if not images:
+                print("No se encontraron imágenes válidas, intentando búsqueda alternativa...")
+                alt_query = terms[0] if terms else query  # Usar solo el primer término
                 with DDGS() as ddgs:
-                    fallback_query = f"{brand} paints miniature"
-                    resultados = list(ddgs.images(fallback_query, safesearch='Moderate', max_results=10))
+                    alt_resultados = list(ddgs.images(f"{alt_query} miniature paint", safesearch='Moderate', max_results=20))
                     
-                    for r in resultados:
+                    for r in alt_resultados:
                         url_imagen = r.get('image')
-                        if url_imagen and url_imagen not in [img.get('url') for img in images]:
-                            images.append({
-                                'url': url_imagen,
-                                'title': r.get('title', ''),
-                                'source': r.get('url', '')
-                            })
-            except Exception as alt_error:
-                print(f"Error con consulta alternativa: {str(alt_error)}")
+                        if not url_imagen:
+                            continue
+                        
+                        try:
+                            # Verificar validez 
+                            resp = requests.head(url_imagen, timeout=3)
+                            if resp.status_code == 200:
+                                images.append({
+                                    'url': url_imagen,
+                                    'title': r.get('title', ''),
+                                    'source': r.get('url', '')
+                                })
+                                # Solo necesitamos una imagen válida
+                                if len(images) >= 3:
+                                    break
+                        except Exception:
+                            continue
         
-        # Solo usar placeholders si realmente no se encontraron imágenes
+        except Exception as e:
+            print(f"Error en búsqueda principal: {str(e)}")
+        
+        # Si después de todo no encontramos imágenes, generamos un placeholder
         if not images:
-            print("No se encontraron imágenes, generando placeholders...")
+            print("No se encontraron imágenes válidas, generando placeholder...")
             terms = query.split()
             brand = terms[0] if terms else "Paint"
             code = terms[1] if len(terms) > 1 else "Color"
@@ -160,25 +181,6 @@ def api_search_images():
             }],
             "error": str(e),
             "message": "Error al buscar imágenes: " + str(e)
-        }), 200
-        
-        # Devolver las imágenes encontradas
-        return jsonify({"images": images})
-    
-    except Exception as e:
-        import traceback
-        print(f"Error general: {str(e)}")
-        traceback.print_exc()
-        
-        # Devolver código 200 con mensaje de error
-        return jsonify({
-            "images": [{
-                'url': f'https://via.placeholder.com/400x300/f1f1f1/333333?text=Error',
-                'title': f'Error: {str(e)}',
-                'source': 'Error generado'
-            }],
-            "error": str(e),
-            "message": "Ocurrió un error durante la búsqueda. Por favor, inténtalo más tarde."
         }), 200
       
 # Configuración de la base de datos

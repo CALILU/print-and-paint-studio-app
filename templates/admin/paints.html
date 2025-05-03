@@ -1632,6 +1632,7 @@
         // Función para buscar imágenes - versión mejorada basada en boton_imagen1.py
         // Función para buscar imágenes
         // Función para buscar imágenes
+        // Función para buscar imágenes - versión final adaptada de boton_imagen1.py
         async function searchImages(brand, name, colorCode) {
             try {
                 // Verificar que tengamos al menos marca o código
@@ -1640,24 +1641,19 @@
                     return;
                 }
                 
-                // Construir consulta específica dando prioridad a marca y código
+                // Construir consulta específica siguiendo el patrón de boton_imagen1.py
                 let consulta = "";
                 
                 if (brand && colorCode) {
-                    // Formato prioritario: Marca + Código (como en boton_imagen1.py)
+                    // Formato exacto de boton_imagen1.py: Marca + Código
                     consulta = `${brand} ${colorCode}`;
                 } else if (brand) {
-                    // Solo marca
                     consulta = brand;
-                    if (name && name !== brand) {
-                        consulta += ` ${name}`;
-                    }
-                } else if (colorCode) {
-                    // Solo código
+                    if (colorCode) consulta += ` ${colorCode}`;
+                    if (name && name !== brand) consulta += ` ${name}`;
+                } else {
                     consulta = colorCode;
-                    if (name) {
-                        consulta += ` ${name}`;
-                    }
+                    if (name) consulta += ` ${name}`;
                 }
                 
                 // Actualizar visualización
@@ -1678,27 +1674,42 @@
                 const searchQuery = encodeURIComponent(consulta);
                 console.log('Iniciando búsqueda con consulta:', consulta);
                 
-                const response = await fetch(`/api/search-images?query=${searchQuery}`);
-                const data = await response.json();
+                // Iniciar solicitud con un timeout de 15 segundos
+                let controller = new AbortController();
+                let timeoutId = setTimeout(() => controller.abort(), 15000);
                 
-                console.log('Respuesta recibida:', data);
-                
-                // Verificar si tenemos imágenes
-                if (data.images && data.images.length > 0) {
-                    // Mostrar las imágenes
-                    displayImageResults(data.images);
-                    document.getElementById('imageSearchResults').style.display = 'block';
-                } else {
-                    // No se encontraron imágenes
-                    document.getElementById('imageSearchResults').innerHTML = `
-                        <div class="col-12 text-center">
-                            <div class="alert alert-warning">
-                                <i class="bi bi-exclamation-triangle me-2"></i>
-                                No se encontraron imágenes para "${consulta}".
+                try {
+                    const response = await fetch(`/api/search-images?query=${searchQuery}`, {
+                        signal: controller.signal
+                    });
+                    clearTimeout(timeoutId);
+                    
+                    const data = await response.json();
+                    console.log('Respuesta recibida:', data);
+                    
+                    // Verificar si tenemos imágenes
+                    if (data.images && data.images.length > 0) {
+                        // Mostrar las imágenes
+                        displayImageResults(data.images);
+                        document.getElementById('imageSearchResults').style.display = 'block';
+                    } else {
+                        // No se encontraron imágenes
+                        document.getElementById('imageSearchResults').innerHTML = `
+                            <div class="col-12 text-center">
+                                <div class="alert alert-warning">
+                                    <i class="bi bi-exclamation-triangle me-2"></i>
+                                    No se encontraron imágenes para "${consulta}".
+                                </div>
                             </div>
-                        </div>
-                    `;
-                    document.getElementById('imageSearchResults').style.display = 'block';
+                        `;
+                        document.getElementById('imageSearchResults').style.display = 'block';
+                    }
+                } catch (fetchError) {
+                    if (fetchError.name === 'AbortError') {
+                        throw new Error('La búsqueda ha excedido el tiempo límite (15 segundos)');
+                    } else {
+                        throw fetchError;
+                    }
                 }
                 
                 // Ocultar carga
@@ -1735,6 +1746,7 @@
         // Función para mostrar los resultados de la búsqueda
         // Función para mostrar los resultados de la búsqueda
         // Función para mostrar los resultados de la búsqueda
+        // Función para mostrar los resultados de la búsqueda
         function displayImageResults(images) {
             const resultsContainer = document.getElementById('imageSearchResults');
             resultsContainer.innerHTML = '';
@@ -1753,8 +1765,10 @@
                 return;
             }
 
-            // Limitar a un máximo de 9 imágenes para no sobrecargar la interfaz
+            // Limitar a un máximo de 9 imágenes 
             const maxImages = Math.min(images.length, 9);
+            let row = document.createElement('div');
+            row.className = 'row';
             
             for (let i = 0; i < maxImages; i++) {
                 const image = images[i];
@@ -1769,22 +1783,29 @@
                 const imageCol = document.createElement('div');
                 imageCol.className = 'col-md-4 col-sm-6 mb-4';
                 
-                // Contenido del elemento con manejo de posibles valores nulos
+                // Contenido del elemento con manejo de errores de carga
                 const title = image.title || 'Sin título';
                 const source = image.source || '#';
                 
                 imageCol.innerHTML = `
                     <div class="card h-100">
-                        <div class="position-relative" style="height: 200px;">
+                        <div class="card-img-container" style="height: 200px; position: relative; overflow: hidden; display: flex; align-items: center; justify-content: center;">
                             <img src="${image.url}" class="card-img-top" alt="${title}" 
-                                style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: contain; padding: 10px;"
-                                onerror="this.onerror=null; this.src='https://via.placeholder.com/400x300/cccccc/666666?text=Imagen+no+disponible';">
+                                style="max-width: 100%; max-height: 100%; object-fit: contain;"
+                                onerror="this.onerror=null; this.src='https://via.placeholder.com/400x300/cccccc/666666?text=Imagen+no+disponible'; this.parentNode.classList.add('img-error');">
+                            <div class="img-loading-spinner" style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);">
+                                <div class="spinner-border text-primary" role="status" style="width: 1.5rem; height: 1.5rem;">
+                                    <span class="visually-hidden">Cargando...</span>
+                                </div>
+                            </div>
                         </div>
                         <div class="card-body">
                             <h6 class="card-title text-truncate" title="${title}">${title}</h6>
-                            <a href="${source}" class="btn btn-sm btn-outline-secondary mb-2" target="_blank">
-                                <i class="bi bi-link-45deg"></i> Ver fuente
-                            </a>
+                            <div class="d-flex justify-content-between mb-2">
+                                <a href="${source}" class="btn btn-sm btn-outline-secondary" target="_blank">
+                                    <i class="bi bi-link-45deg"></i> Ver fuente
+                                </a>
+                            </div>
                             <button class="btn btn-sm btn-primary w-100" onclick="selectImage('${image.url}')">
                                 <i class="bi bi-check-lg"></i> Seleccionar esta imagen
                             </button>
@@ -1792,8 +1813,17 @@
                     </div>
                 `;
                 
-                resultsContainer.appendChild(imageCol);
+                // Añadir evento para ocultar el spinner cuando la imagen se carga
+                const imgElement = imageCol.querySelector('img');
+                imgElement.onload = function() {
+                    const spinner = this.parentNode.querySelector('.img-loading-spinner');
+                    if (spinner) spinner.style.display = 'none';
+                };
+                
+                row.appendChild(imageCol);
             }
+            
+            resultsContainer.appendChild(row);
         }
         
         // Función para seleccionar una imagen
