@@ -17,7 +17,7 @@ def debug_template_paths():
     if hasattr(app.jinja_loader, 'searchpath'):
         print(f"Rutas de búsqueda de plantillas: {app.jinja_loader.searchpath}")
     for rule in app.url_map.iter_rules():
-        print(f"Ruta: {rule}")
+        print(f"Ruta: {rule}") 
 
 # Añadir esta ruta cerca de las otras rutas de API
 @app.route('/api/search-images', methods=['GET'])
