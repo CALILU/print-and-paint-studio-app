@@ -557,30 +557,6 @@ def get_video_techniques(video_id):
             'end_time': technique.end_time
         })
     return jsonify(result)
-
-@app.route('/api/search-images', methods=['GET'])
-@admin_required
-def api_search_images():
-    query = request.args.get('query', '')
-    if not query:
-        return jsonify({"error": "Consulta de búsqueda vacía"}), 400
-    
-    try:
-        # Usar DuckDuckGo para buscar imágenes
-        with DDGS() as ddgs:
-            results = list(ddgs.images(query, safesearch='Moderate', max_results=12))
-        
-        # Preparar resultados
-        images = []
-        for result in results:
-            if 'image' in result and result['image']:
-                images.append({
-                    'url': result['image'],
-                    'title': result.get('title', ''),
-                    'source': result.get('url', '')
-                })
-        
-        return jsonify({"images": images})
     
     except Exception as e:
         import traceback
