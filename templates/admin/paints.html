@@ -807,6 +807,7 @@
         }
         
         // Función para obtener todas las pinturas
+        // Función para obtener todas las pinturas
         async function fetchPaints() {
             const container = document.getElementById('paints-container');
             container.innerHTML = `
@@ -837,6 +838,8 @@
                 // Mostrar pinturas
                 filterAndDisplayPaints();
                 
+                return paints;
+                
             } catch (error) {
                 console.error('Error al cargar pinturas:', error);
                 container.innerHTML = `
@@ -849,6 +852,7 @@
                         </button>
                     </div>
                 `;
+                throw error;
             }
         }
         
@@ -1361,6 +1365,7 @@
         }
 
         // Función para configurar eventos del selector
+        // Función para configurar eventos del selector
         function setupFilterSelect(selectId, filtersContainerId, filterType) {
             const select = document.getElementById(selectId);
             const container = document.getElementById(filtersContainerId);
@@ -1368,6 +1373,66 @@
             select.addEventListener('change', function() {
                 const value = this.value;
                 if (!value) return;
+                
+                // Añadir el valor al array de filtros correspondiente
+                switch(filterType) {
+                    case 'brand':
+                        if (!filteredBrands.includes(value)) {
+                            filteredBrands.push(value);
+                        }
+                        break;
+                    case 'color_type':
+                        if (!filteredTypes.includes(value)) {
+                            filteredTypes.push(value);
+                        }
+                        break;
+                    case 'color_family':
+                        if (!filteredColorFamilies.includes(value)) {
+                            filteredColorFamilies.push(value);
+                        }
+                        break;
+                }
+                
+                // Crear un nuevo elemento para mostrar el filtro
+                const filterChip = document.createElement('span');
+                filterChip.className = 'badge bg-primary me-2 mb-2';
+                filterChip.innerHTML = `
+                    ${value} 
+                    <button type="button" class="btn-close btn-close-white ms-2" 
+                            aria-label="Remove" style="font-size: 0.5rem;" 
+                            onclick="removeFilter('${filterType}', '${value}', this)"></button>
+                `;
+                container.appendChild(filterChip);
+                
+                // Reiniciar el selector
+                this.value = '';
+                
+                // Aplicar filtros
+                filterAndDisplayPaints();
+            });
+        }
+
+        // Función para eliminar un filtro
+        function removeFilter(filterType, value, element) {
+            // Eliminar el valor del array correspondiente
+            switch(filterType) {
+                case 'brand':
+                    filteredBrands = filteredBrands.filter(b => b !== value);
+                    break;
+                case 'color_type':
+                    filteredTypes = filteredTypes.filter(t => t !== value);
+                    break;
+                case 'color_family':
+                    filteredColorFamilies = filteredColorFamilies.filter(f => f !== value);
+                    break;
+            }
+            
+            // Eliminar el elemento de la UI
+            element.parentNode.remove();
+            
+            // Aplicar filtros
+            filterAndDisplayPaints();
+        }
         // Función para añadir un chip de filtro
         function addFilterChip(container, value, filterType) {
             // Comprobar si ya existe
