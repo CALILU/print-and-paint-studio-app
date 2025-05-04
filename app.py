@@ -557,12 +557,6 @@ def get_video_techniques(video_id):
             'end_time': technique.end_time
         })
     return jsonify(result)
-    
-    except Exception as e:
-        import traceback
-        print(f"Error en búsqueda de imágenes: {str(e)}")
-        traceback.print_exc()
-        return jsonify({"error": str(e)}), 500
 
 @app.route('/api/videos/<int:video_id>/techniques', methods=['POST'])
 @admin_required
