@@ -571,12 +571,7 @@
                                                         <input type="color" id="color_preview" class="form-control">
                                                     </div>
                                                 </div>
-                                                <!-- Añadir botón de búsqueda de imágenes aquí -->
-                                                <div class="mb-3">
-                                                    <button type="button" class="btn btn-outline-primary w-100" id="searchImagesBtn">
-                                                        <i class="bi bi-search me-2"></i> Buscar imágenes en internet
-                                                    </button>
-                                                </div>
+                                                <!-- Botón de búsqueda de imágenes eliminado -->
                                             </div>
                                         </div>
                                     </div>
@@ -669,43 +664,7 @@
                         </div>
                     </div>
                 </div>
-                <!-- Modal para seleccionar imágenes -->
-                <div class="modal fade" id="imageSearchModal" tabindex="-1" aria-labelledby="imageSearchModalLabel" aria-hidden="true">
-                    <div class="modal-dialog modal-xl modal-dialog-scrollable">
-                        <div class="modal-content">
-                            <div class="modal-header">
-                                <h5 class="modal-title" id="imageSearchModalLabel">Seleccionar imagen</h5>
-                                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                            </div>
-                            <div class="modal-body">
-                                <div id="searchQuery" class="alert alert-info mb-3">
-                                    Buscando imágenes para: <strong id="searchTermDisplay"></strong>
-                                </div>
-                                
-                                <!-- Indicador de carga -->
-                                <div id="imageSearchLoading" class="text-center py-5">
-                                    <div class="spinner-border text-primary" role="status">
-                                        <span class="visually-hidden">Buscando imágenes...</span>
-                                    </div>
-                                    <p class="mt-3">Buscando imágenes. Esto puede tardar unos segundos...</p>
-                                </div>
-                                
-                                <!-- Resultados de la búsqueda -->
-                                <div id="imageSearchResults" class="row" style="display: none;">
-                                    <!-- Aquí se mostrarán los resultados de la búsqueda -->
-                                </div>
-                                
-                                <!-- Mensaje de error -->
-                                <div id="imageSearchError" class="alert alert-danger" style="display: none;">
-                                    Error al buscar imágenes. Por favor, inténtalo de nuevo.
-                                </div>
-                            </div>
-                            <div class="modal-footer">
-                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
+                <!-- Modal para seleccionar imágenes eliminado -->
             </main>
         </div>
     </div>
@@ -736,7 +695,23 @@
                 savePaint();
             });
             
-            // ... (otros event listeners)
+            // Añadir controlador de eventos para el botón de confirmación de eliminación
+            document.getElementById('confirmDeleteBtn').addEventListener('click', function() {
+                if (paintToDelete) {
+                    deletePaint(paintToDelete);
+                    confirmDeleteModal.hide();
+                    paintToDelete = null;
+                }
+            });
+            
+            // Añadir controlador de eventos para el botón de edición en el modal de vista
+            document.getElementById('editPaintBtn').addEventListener('click', function() {
+                const paintId = this.getAttribute('data-id');
+                if (paintId) {
+                    viewPaintModal.hide();
+                    editPaint(paintId);
+                }
+            });
             
             // Inicializar filtros
             initializeFilters();
@@ -748,9 +723,11 @@
             }).catch(error => {
                 console.error("Error al cargar pinturas iniciales:", error);
             });
+            
+            // Configurar vista previa en tiempo real
+            setupLivePreview();
         });
-        // Función para inicializar los filtros
-        // Función para inicializar los filtros
+        
         // Función para inicializar los filtros
         function initializeFilters() {
             // Obtener todos los checkboxes de stock (estos se mantienen igual)
@@ -775,6 +752,7 @@
                 });
             });
         }
+        
         // Función para configurar la vista previa en tiempo real
         function setupLivePreview() {
             const updatePreview = () => {
@@ -894,7 +872,6 @@
             filterAndDisplayPaints();
         }
         
-        // Función para filtrar y mostrar las pinturas
         // Función para filtrar y mostrar las pinturas
         function filterAndDisplayPaints() {
             let filteredPaints = [...allPaints];
@@ -1344,6 +1321,7 @@
             fillSelectOptions('brandFilterSelect', brands);
             fillSelectOptions('typeFilterSelect', types);
             fillSelectOptions('colorFamilyFilterSelect', colorFamilies);            
+            
             // Configurar eventos para los selectores
             setupFilterSelect('brandFilterSelect', 'activeBrandFilters', 'brand');
             setupFilterSelect('typeFilterSelect', 'activeTypeFilters', 'color_type');
@@ -1390,18 +1368,6 @@
             select.addEventListener('change', function() {
                 const value = this.value;
                 if (!value) return;
-                
-                // Añadir filtro
-                addFilterChip(container, value, filterType);
-                
-                // Resetear selector
-                this.value = '';
-                
-                // Actualizar filtros
-                updateFilters();
-            });
-        }
-
         // Función para añadir un chip de filtro
         function addFilterChip(container, value, filterType) {
             // Comprobar si ya existe
@@ -1430,7 +1396,6 @@
         }
 
         // Función para actualizar filtros activos
-        // Función para actualizar filtros activos
         function updateFilters() {
             // Recopilar todos los filtros activos
             filteredBrands = getActiveFilterValues('activeBrandFilters');
@@ -1439,6 +1404,9 @@
             
             // Actualizar filtros activos
             updateActiveFilters();
+            
+            // Aplicar filtros a la vista
+            filterAndDisplayPaints();
         }
 
         // Función para actualizar la visualización de filtros activos
@@ -1462,7 +1430,37 @@
                 activeFiltersContainer.appendChild(filterGroup);
             }
             
-            // Código adicional para otros filtros...
+            // Mostrar filtros de tipo
+            if (filteredTypes && filteredTypes.length > 0) {
+                const filterGroup = document.createElement('div');
+                filterGroup.className = 'mb-2';
+                filterGroup.innerHTML = '<strong>Tipos:</strong> ';
+                
+                filteredTypes.forEach(type => {
+                    const chip = document.createElement('span');
+                    chip.className = 'badge bg-secondary me-1';
+                    chip.textContent = type;
+                    filterGroup.appendChild(chip);
+                });
+                
+                activeFiltersContainer.appendChild(filterGroup);
+            }
+            
+            // Mostrar filtros de familia de color
+            if (filteredColorFamilies && filteredColorFamilies.length > 0) {
+                const filterGroup = document.createElement('div');
+                filterGroup.className = 'mb-2';
+                filterGroup.innerHTML = '<strong>Familias de color:</strong> ';
+                
+                filteredColorFamilies.forEach(family => {
+                    const chip = document.createElement('span');
+                    chip.className = 'badge bg-secondary me-1';
+                    chip.textContent = family;
+                    filterGroup.appendChild(chip);
+                });
+                
+                activeFiltersContainer.appendChild(filterGroup);
+            }
         }
 
         // Función para obtener valores de filtros activos
@@ -1491,7 +1489,6 @@
             });
         }
 
-        // Función para verificar y eliminar una opción
         // Función para verificar y eliminar una opción
         async function verifyAndDeleteOption(value, propertyName, select) {
             // Contar pinturas que usan este valor
@@ -1537,142 +1534,6 @@
                 console.error('Error al eliminar la opción:', error);
                 alert(`Error al eliminar "${value}": ${error.message}`);
             }
-        }      
-
-        // Variables para la búsqueda de imágenes
-        let imageSearchModal;
-
-        // Inicializar el modal de búsqueda de imágenes
-        document.addEventListener('DOMContentLoaded', () => {
-            // Código existente...
-            
-            // Inicializar el modal de búsqueda de imágenes
-            imageSearchModal = new bootstrap.Modal(document.getElementById('imageSearchModal'));
-            
-            // Añadir evento al botón de búsqueda de imágenes
-            document.getElementById('searchImagesBtn').addEventListener('click', () => {
-                const paintName = document.getElementById('name').value.trim();
-                const paintBrand = document.getElementById('brand').value.trim();
-                
-                if (!paintName) {
-                    alert('Por favor, introduce un nombre para la pintura antes de buscar imágenes.');
-                    return;
-                }
-                
-                // Mostrar el modal
-                document.getElementById('searchTermDisplay').textContent = `${paintBrand} ${paintName}`;
-                document.getElementById('imageSearchLoading').style.display = 'block';
-                document.getElementById('imageSearchResults').style.display = 'none';
-                document.getElementById('imageSearchError').style.display = 'none';
-                
-                imageSearchModal.show();
-                
-                // Iniciar búsqueda de imágenes
-                searchImages(paintBrand, paintName);
-            });
-        });
-
-        // Función para buscar imágenes
-        async function searchImages(brand, name) {
-            try {
-                // Construir la consulta de búsqueda
-                const searchQuery = encodeURIComponent(`${brand} ${name} paint`);
-                
-                // Realizar la petición al servidor
-                const response = await fetch(`/api/search-images?query=${searchQuery}`);
-                
-                if (!response.ok) {
-                    throw new Error(`Error en la búsqueda: ${response.status}`);
-                }
-                
-                const data = await response.json();
-                
-                if (!data.images || data.images.length === 0) {
-                    document.getElementById('imageSearchResults').innerHTML = `
-                        <div class="col-12 text-center">
-                            <div class="alert alert-warning">
-                                No se encontraron imágenes para "${brand} ${name}".
-                                Intenta con términos de búsqueda diferentes.
-                            </div>
-                        </div>
-                    `;
-                } else {
-                    // Mostrar las imágenes encontradas
-                    displayImageResults(data.images);
-                }
-                
-                // Ocultar carga y mostrar resultados
-                document.getElementById('imageSearchLoading').style.display = 'none';
-                document.getElementById('imageSearchResults').style.display = 'flex';
-                
-            } catch (error) {
-                console.error('Error en búsqueda de imágenes:', error);
-                document.getElementById('imageSearchLoading').style.display = 'none';
-                document.getElementById('imageSearchError').style.display = 'block';
-                document.getElementById('imageSearchError').textContent = `Error: ${error.message}`;
-            }
-        }
-
-        // Función para mostrar los resultados de la búsqueda
-        function displayImageResults(images) {
-            const resultsContainer = document.getElementById('imageSearchResults');
-            resultsContainer.innerHTML = '';
-            
-            images.forEach((image, index) => {
-                const imageCard = document.createElement('div');
-                imageCard.className = 'col-md-4 col-lg-3 mb-4';
-                
-                imageCard.innerHTML = `
-                    <div class="card h-100">
-                        <div style="height: 200px; background-color: #f8f9fa; display: flex; align-items: center; justify-content: center;">
-                            <img src="${image.url}" alt="Resultado de búsqueda ${index + 1}" 
-                                class="card-img-top" style="max-height: 180px; max-width: 90%; object-fit: contain;">
-                        </div>
-                        <div class="card-body">
-                            <p class="card-text small text-truncate">${image.url}</p>
-                            <button class="btn btn-sm btn-primary w-100 select-image-btn" 
-                                    data-url="${image.url}">
-                                <i class="bi bi-check-circle me-1"></i> Seleccionar
-                            </button>
-                        </div>
-                    </div>
-                `;
-                
-                resultsContainer.appendChild(imageCard);
-            });
-            
-            // Añadir eventos a los botones de selección
-            document.querySelectorAll('.select-image-btn').forEach(btn => {
-                btn.addEventListener('click', () => {
-                    const imageUrl = btn.getAttribute('data-url');
-                    selectImage(imageUrl);
-                });
-            });
-        }
-
-        // Función para seleccionar una imagen
-        function selectImage(url) {
-            // Actualizar el campo de URL de la imagen
-            document.getElementById('image_url').value = url;
-            
-            // Actualizar la vista previa
-            const imagePreview = document.getElementById('imagePreview');
-            if (imagePreview) {
-                const previewContainer = imagePreview.querySelector('.paint-container');
-                if (previewContainer) {
-                    // Actualizar la URL de la vista previa si existe
-                    const imgElement = previewContainer.querySelector('img');
-                    if (imgElement) {
-                        imgElement.src = url;
-                    }
-                }
-            }
-            
-            // Cerrar el modal
-            imageSearchModal.hide();
-            
-            // Mostrar mensaje de confirmación
-            alert('¡Imagen seleccionada con éxito!');
         }
     </script>
 </body>
