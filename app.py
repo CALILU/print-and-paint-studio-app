@@ -3,7 +3,6 @@ from models import db, User, Video, Favorite, Technique, Category, Paint
 from functools import wraps
 import os
 from datetime import datetime
-from duckduckgo_search import DDGS
 import random
 
 app = Flask(__name__)
