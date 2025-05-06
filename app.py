@@ -1265,6 +1265,40 @@ def reset_db():
         return jsonify({'message': 'Base de datos reiniciada correctamente'})
     except Exception as e:
         return jsonify({'error': str(e)}), 500
+    
+@app.route('/buscador-imagenes')
+@admin_required
+def buscador_imagenes():
+    """Página para buscar imágenes de pinturas"""
+    return render_template('admin/buscador_imagenes.html')
+
+@app.route('/admin/paints/<int:paint_id>/update-color', methods=['POST'])
+@admin_required
+def update_paint_color(paint_id):
+    """Actualizar el color y URL de imagen en la base de datos"""
+    try:
+        data = request.json
+        paint = Paint.query.get_or_404(paint_id)
+        
+        # Actualizar campos
+        if 'color_preview' in data:
+            paint.color_preview = data['color_preview']
+        
+        if 'image_url' in data:
+            paint.image_url = data['image_url']
+        
+        db.session.commit()
+        
+        return jsonify({
+            "success": True,
+            "message": "Color y URL actualizados correctamente"
+        })
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({
+            "success": False,
+            "error": str(e)
+        }), 500
 
 if __name__ == '__main__':
     # Este bloque solo se ejecuta en desarrollo local

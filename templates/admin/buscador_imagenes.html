@@ -1,0 +1,450 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Buscador de Imágenes de Pinturas</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .container {
+            background-color: #f5f5f5;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        input[type="text"] {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+        button {
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-right: 5px;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        button:disabled {
+            background-color: #cccccc;
+            cursor: not-allowed;
+        }
+        .status {
+            margin-top: 15px;
+            padding: 10px;
+            border-radius: 4px;
+        }
+        .status.success {
+            background-color: #d4edda;
+            color: #155724;
+        }
+        .status.error {
+            background-color: #f8d7da;
+            color: #721c24;
+        }
+        .status.info {
+            background-color: #d1ecf1;
+            color: #0c5460;
+        }
+        .status.warning {
+            background-color: #fff3cd;
+            color: #856404;
+        }
+        .image-container {
+            margin-top: 20px;
+            text-align: center;
+        }
+        img {
+            max-width: 100%;
+            max-height: 400px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            padding: 5px;
+        }
+        .loading {
+            display: none;
+            text-align: center;
+            margin-top: 10px;
+        }
+        .spinner {
+            border: 4px solid rgba(0, 0, 0, 0.1);
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            border-left-color: #09f;
+            animation: spin 1s linear infinite;
+            display: inline-block;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .color-info {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin-top: 15px;
+        }
+        .color-sample {
+            width: 80px;
+            height: 80px;
+            border: 1px solid #ddd;
+            margin-right: 15px;
+        }
+        .color-values {
+            text-align: left;
+        }
+        .btn-volver {
+            background-color: #dc3545;
+            margin-top: 15px;
+            width: 100%;
+        }
+        .btn-aplicar {
+            background-color: #007bff;
+            margin-top: 15px;
+            width: 100%;
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Buscador de Imágenes de Pinturas</h1>
+        
+        <div class="form-group">
+            <label for="brand">Marca:</label>
+            <input type="text" id="brand" name="brand" placeholder="Ej: Vallejo, Tamiya, Citadel...">
+        </div>
+        
+        <div class="form-group">
+            <label for="color_code">Código del Color:</label>
+            <input type="text" id="color_code" name="color_code" placeholder="Ej: 70.951, XF-1, etc...">
+        </div>
+        
+        <input type="hidden" id="paint_id" value="">
+        
+        <button id="searchButton">Buscar Imagen</button>
+        <button id="resetButton" style="background-color: #dc3545;">Limpiar Historial</button>
+        <button id="volverButton" class="btn-volver">Volver al Formulario</button>
+        
+        <div id="status" class="status" style="display: none;"></div>
+        
+        <div class="loading" id="loading">
+            <div class="spinner"></div>
+            <p>Buscando imagen... esto puede tardar unos segundos</p>
+        </div>
+        
+        <div class="image-container" id="imageContainer" style="display: none;">
+            <h3>Imagen encontrada:</h3>
+            <img id="resultImage" src="" alt="Imagen de pintura">
+            <p id="imageUrl"></p>
+            
+            <div class="color-info" id="colorInfo" style="display: none;">
+                <div class="color-sample" id="colorSample"></div>
+                <div class="color-values">
+                    <p>Valor hexadecimal: <span id="hexValue">-</span></p>
+                    <p>Valor RGB: <span id="rgbValue">-</span></p>
+                    <p id="copyStatus" style="font-style: italic; font-size: 0.9em;">Valor copiado al portapapeles</p>
+                </div>
+            </div>
+            
+            <button id="aplicarButton" class="btn-aplicar">Aplicar color y URL al formulario</button>
+        </div>
+    </div>
+
+    <script>
+        // Variables globales
+        let usedImageUrls = new Set();
+        let searchCount = 0;
+        let startTime = 0;
+        let paintId = '';
+        let currentImageUrl = '';
+        
+        // Referencias a elementos DOM
+        const searchButton = document.getElementById('searchButton');
+        const resetButton = document.getElementById('resetButton');
+        const volverButton = document.getElementById('volverButton');
+        const aplicarButton = document.getElementById('aplicarButton');
+        const statusElement = document.getElementById('status');
+        const loadingElement = document.getElementById('loading');
+        const imageContainer = document.getElementById('imageContainer');
+        const copyStatus = document.getElementById('copyStatus');
+        
+        // Función para obtener parámetros de la URL
+        function getUrlParams() {
+            const params = new URLSearchParams(window.location.search);
+            return {
+                brand: params.get('brand') || '',
+                colorCode: params.get('color_code') || '',
+                paintId: params.get('paint_id') || ''
+            };
+        }
+        
+        // Inicializar con parámetros de URL
+        document.addEventListener('DOMContentLoaded', function() {
+            const params = getUrlParams();
+            document.getElementById('brand').value = params.brand;
+            document.getElementById('color_code').value = params.colorCode;
+            paintId = params.paintId;
+            document.getElementById('paint_id').value = paintId;
+            
+            // Si tenemos marca y código, iniciar búsqueda automáticamente
+            if (params.brand && params.colorCode) {
+                setTimeout(() => searchButton.click(), 500);
+            }
+        });
+        
+        // Función para actualizar el estado
+        function updateStatus(message, type = 'info') {
+            statusElement.textContent = message;
+            statusElement.className = `status ${type}`;
+            statusElement.style.display = 'block';
+        }
+        
+        // Volver al formulario
+        volverButton.addEventListener('click', function() {
+            window.close();
+        });
+        
+        // Aplicar color y URL al formulario
+        aplicarButton.addEventListener('click', function() {
+            const hexColor = document.getElementById('hexValue').textContent;
+            
+            // Enviar mensaje a la ventana principal
+            if (window.opener && !window.opener.closed) {
+                window.opener.postMessage({
+                    type: 'colorExtraido',
+                    hexColor: hexColor,
+                    imageUrl: currentImageUrl,
+                    paintId: paintId
+                }, '*');
+                
+                updateStatus("Color y URL aplicados al formulario", "success");
+                
+                // Actualizar también en la base de datos si hay un ID
+                if (paintId) {
+                    updateColorInDatabase(paintId, hexColor, currentImageUrl);
+                }
+                
+                setTimeout(() => {
+                    window.close();
+                }, 1500);
+            } else {
+                updateStatus("No se pudo comunicar con el formulario principal", "error");
+            }
+        });
+        
+        // Resetear historial de URLs
+        resetButton.addEventListener('click', function() {
+            usedImageUrls.clear();
+            updateStatus("Historial de URLs limpiado. Puedes buscar imágenes nuevamente.", "success");
+        });
+        
+        // Actualizar color en la base de datos
+        async function updateColorInDatabase(paintId, hexColor, imageUrl) {
+            try {
+                const response = await fetch(`/admin/paints/${paintId}/update-color`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        color_preview: hexColor,
+                        image_url: imageUrl
+                    }),
+                });
+                
+                const data = await response.json();
+                
+                if (!data.success) {
+                    console.error("Error al actualizar en la base de datos:", data.error);
+                }
+            } catch (error) {
+                console.error("Error al actualizar en la base de datos:", error);
+            }
+        }
+        
+        // Función para extraer y copiar color automáticamente
+        async function extractAndCopyColor(imageUrl) {
+            if (!imageUrl) {
+                updateStatus("No hay imagen para analizar.", "error");
+                return;
+            }
+            
+            updateStatus("Extrayendo color de la imagen...", "info");
+            
+            try {
+                const response = await fetch('/extract-color', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        image_url: imageUrl
+                    }),
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    // Mostrar información del color
+                    document.getElementById('colorSample').style.backgroundColor = data.hex;
+                    document.getElementById('hexValue').textContent = data.hex;
+                    
+                    // Mostrar valor RGB
+                    const rgb = data.rgb;
+                    document.getElementById('rgbValue').textContent = `RGB(${rgb[0]}, ${rgb[1]}, ${rgb[2]})`;
+                    
+                    // Mostrar contenedor de color y botón para aplicar
+                    document.getElementById('colorInfo').style.display = "flex";
+                    aplicarButton.style.display = "block";
+                    
+                    // Copiar al portapapeles automáticamente
+                    try {
+                        await navigator.clipboard.writeText(data.hex);
+                        copyStatus.style.display = "block";
+                        setTimeout(() => {
+                            copyStatus.style.display = "none";
+                        }, 3000);
+                    } catch (err) {
+                        console.error("Error al copiar al portapapeles:", err);
+                        copyStatus.style.display = "none";
+                    }
+                    
+                    updateStatus(`Color extraído correctamente: ${data.hex}`, "success");
+                } else {
+                    updateStatus(`Error al extraer color: ${data.error}`, "error");
+                }
+            } catch (error) {
+                updateStatus(`Error al extraer color: ${error.message}`, "error");
+            }
+        }
+        
+        // Función principal de búsqueda
+        searchButton.addEventListener('click', async function() {
+            const brand = document.getElementById('brand').value.trim();
+            const colorCode = document.getElementById('color_code').value.trim();
+            
+            // Validar que ambos campos tengan valores
+            if (!brand || !colorCode) {
+                updateStatus("Por favor, ingresa la marca y el código del color.", "error");
+                return;
+            }
+            
+            // Incrementar contador de búsquedas
+            searchCount++;
+            
+            // Actualizar UI para búsqueda
+            updateStatus(`Iniciando búsqueda para: ${brand} ${colorCode}...`, "info");
+            
+            imageContainer.style.display = "none";
+            document.getElementById('colorInfo').style.display = "none";
+            aplicarButton.style.display = "none";
+            loadingElement.style.display = "block";
+            searchButton.disabled = true;
+            resetButton.disabled = true;
+            
+            try {
+                // Registrar tiempo de inicio
+                startTime = performance.now();
+                
+                // Preparar objeto de solicitud
+                const requestData = {
+                    brand: brand,
+                    color_code: colorCode,
+                    used_urls: Array.from(usedImageUrls)
+                };
+                
+                // Llamar al backend para buscar la imagen
+                const response = await fetch('/search', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(requestData),
+                });
+                
+                // Calcular tiempo de respuesta
+                const timeMs = Math.round(performance.now() - startTime);
+                
+                const data = await response.json();
+                
+                // Ocultar indicador de carga
+                loadingElement.style.display = "none";
+                searchButton.disabled = false;
+                resetButton.disabled = false;
+                
+                if (data.error) {
+                    // Mostrar error
+                    updateStatus(data.error, "error");
+                } else if (data.image_url) {
+                    // Mostrar la imagen encontrada
+                    usedImageUrls.add(data.image_url); // Añadir URL a las ya usadas
+                    currentImageUrl = data.image_url;
+                    
+                    document.getElementById('resultImage').src = data.image_url;
+                    document.getElementById('imageUrl').textContent = "URL: " + data.image_url;
+                    imageContainer.style.display = "block";
+                    
+                    updateStatus("Imagen encontrada exitosamente!", "success");
+                    
+                    // Guardar en la base de datos
+                    saveToDatabase(brand, colorCode, data.image_url);
+                    
+                    // Extraer y copiar color automáticamente
+                    await extractAndCopyColor(data.image_url);
+                }
+            } catch (error) {
+                loadingElement.style.display = "none";
+                searchButton.disabled = false;
+                resetButton.disabled = false;
+                
+                updateStatus("Error al conectar con el servidor: " + error.message, "error");
+            }
+        });
+        
+        async function saveToDatabase(brand, colorCode, imageUrl) {
+            try {
+                const response = await fetch('/save-to-db', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        brand: brand,
+                        color_code: colorCode,
+                        image_url: imageUrl
+                    }),
+                });
+                
+                const data = await response.json();
+                
+                if (!data.success) {
+                    updateStatus("Error al guardar en la base de datos: " + data.error, "warning");
+                }
+            } catch (error) {
+                console.error("Error al guardar en la base de datos:", error);
+            }
+        }
+    </script>
+</body>
+</html>
