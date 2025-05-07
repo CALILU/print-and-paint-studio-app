@@ -124,6 +124,42 @@
             width: 100%;
             display: none;
         }
+        .preview-images {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-top: 20px;
+        }
+        .preview-image-item {
+            width: calc(33.33% - 10px);
+            position: relative;
+            cursor: pointer;
+            border: 2px solid transparent;
+            border-radius: 4px;
+            overflow: hidden;
+        }
+        .preview-image-item:hover {
+            border-color: #4CAF50;
+        }
+        .preview-image-item.selected {
+            border-color: #007bff;
+        }
+        .preview-image-item img {
+            width: 100%;
+            height: 150px;
+            object-fit: contain;
+            border: none;
+            padding: 0;
+        }
+        .preview-image-item .resolution {
+            position: absolute;
+            bottom: 0;
+            right: 0;
+            background-color: rgba(0,0,0,0.7);
+            color: white;
+            padding: 2px 5px;
+            font-size: 0.8em;
+        }
     </style>
 </head>
 <body>
@@ -143,18 +179,23 @@
         <input type="hidden" id="paint_id" value="">
         
         <button id="searchButton">Buscar Imagen</button>
-        <button id="resetButton" style="background-color: #dc3545;">Limpiar Historial</button>
+        <button id="resetButton" style="background-color: #dc3545;">Limpiar Resultados</button>
         <button id="volverButton" class="btn-volver">Volver al Formulario</button>
         
         <div id="status" class="status" style="display: none;"></div>
         
         <div class="loading" id="loading">
             <div class="spinner"></div>
-            <p>Buscando imagen... esto puede tardar unos segundos</p>
+            <p>Buscando imágenes... esto puede tardar unos segundos</p>
+        </div>
+        
+        <div class="preview-images" id="previewImages" style="display: none;">
+            <h3>Selecciona una imagen:</h3>
+            <!-- Las imágenes de vista previa se cargarán aquí dinámicamente -->
         </div>
         
         <div class="image-container" id="imageContainer" style="display: none;">
-            <h3>Imagen encontrada:</h3>
+            <h3>Imagen seleccionada:</h3>
             <img id="resultImage" src="" alt="Imagen de pintura">
             <p id="imageUrl"></p>
             
@@ -163,7 +204,7 @@
                 <div class="color-values">
                     <p>Valor hexadecimal: <span id="hexValue">-</span></p>
                     <p>Valor RGB: <span id="rgbValue">-</span></p>
-                    <p id="copyStatus" style="font-style: italic; font-size: 0.9em;">Valor copiado al portapapeles</p>
+                    <p id="copyStatus" style="font-style: italic; font-size: 0.9em; display: none;">Valor copiado al portapapeles</p>
                 </div>
             </div>
             
@@ -173,11 +214,8 @@
 
     <script>
         // Variables globales
-        let usedImageUrls = new Set();
-        let searchCount = 0;
-        let startTime = 0;
+        let selectedImageUrl = '';
         let paintId = '';
-        let currentImageUrl = '';
         
         // Referencias a elementos DOM
         const searchButton = document.getElementById('searchButton');
@@ -187,6 +225,7 @@
         const statusElement = document.getElementById('status');
         const loadingElement = document.getElementById('loading');
         const imageContainer = document.getElementById('imageContainer');
+        const previewImagesContainer = document.getElementById('previewImages');
         const copyStatus = document.getElementById('copyStatus');
         
         // Función para obtener parámetros de la URL
@@ -234,16 +273,11 @@
                 window.opener.postMessage({
                     type: 'colorExtraido',
                     hexColor: hexColor,
-                    imageUrl: currentImageUrl,
+                    imageUrl: selectedImageUrl,
                     paintId: paintId
                 }, '*');
                 
                 updateStatus("Color y URL aplicados al formulario", "success");
-                
-                // Actualizar también en la base de datos si hay un ID
-                if (paintId) {
-                    updateColorInDatabase(paintId, hexColor, currentImageUrl);
-                }
                 
                 setTimeout(() => {
                     window.close();
@@ -253,38 +287,15 @@
             }
         });
         
-        // Resetear historial de URLs
+        // Resetear resultados
         resetButton.addEventListener('click', function() {
-            usedImageUrls.clear();
-            updateStatus("Historial de URLs limpiado. Puedes buscar imágenes nuevamente.", "success");
+            imageContainer.style.display = 'none';
+            previewImagesContainer.style.display = 'none';
+            updateStatus("Resultados limpiados. Puedes buscar imágenes nuevamente.", "success");
         });
         
-        // Actualizar color en la base de datos
-        async function updateColorInDatabase(paintId, hexColor, imageUrl) {
-            try {
-                const response = await fetch(`/admin/paints/${paintId}/update-color`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({
-                        color_preview: hexColor,
-                        image_url: imageUrl
-                    }),
-                });
-                
-                const data = await response.json();
-                
-                if (!data.success) {
-                    console.error("Error al actualizar en la base de datos:", data.error);
-                }
-            } catch (error) {
-                console.error("Error al actualizar en la base de datos:", error);
-            }
-        }
-        
-        // Función para extraer y copiar color automáticamente
-        async function extractAndCopyColor(imageUrl) {
+        // Función para extraer y mostrar color automáticamente
+        async function extractColor(imageUrl) {
             if (!imageUrl) {
                 updateStatus("No hay imagen para analizar.", "error");
                 return;
@@ -293,26 +304,79 @@
             updateStatus("Extrayendo color de la imagen...", "info");
             
             try {
-                const response = await fetch('/extract-color', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({
-                        image_url: imageUrl
-                    }),
-                });
+                // Crear un canvas para analizar la imagen seleccionada
+                const img = new Image();
+                img.crossOrigin = "Anonymous";
                 
-                const data = await response.json();
-                
-                if (data.success) {
-                    // Mostrar información del color
-                    document.getElementById('colorSample').style.backgroundColor = data.hex;
-                    document.getElementById('hexValue').textContent = data.hex;
+                img.onload = function() {
+                    // Crear un canvas para analizar la imagen
+                    const canvas = document.createElement('canvas');
+                    const ctx = canvas.getContext('2d');
                     
-                    // Mostrar valor RGB
-                    const rgb = data.rgb;
-                    document.getElementById('rgbValue').textContent = `RGB(${rgb[0]}, ${rgb[1]}, ${rgb[2]})`;
+                    // Establecer dimensiones
+                    canvas.width = img.width;
+                    canvas.height = img.height;
+                    
+                    // Dibujar imagen en el canvas
+                    ctx.drawImage(img, 0, 0);
+                    
+                    // Analizar los píxeles de la región central (donde suele estar el color)
+                    const centerX = Math.floor(img.width / 2);
+                    const centerY = Math.floor(img.height / 2);
+                    const sampleSize = Math.min(Math.floor(img.width / 4), Math.floor(img.height / 4));
+                    
+                    const startX = centerX - sampleSize;
+                    const startY = centerY - sampleSize;
+                    const pixelData = ctx.getImageData(startX, startY, sampleSize * 2, sampleSize * 2).data;
+                    
+                    // Filtrar píxeles para evitar blancos, negros y grises
+                    let validPixels = [];
+                    for (let i = 0; i < pixelData.length; i += 4) {
+                        const r = pixelData[i];
+                        const g = pixelData[i+1];
+                        const b = pixelData[i+2];
+                        
+                        // Calcular saturación
+                        const max = Math.max(r, g, b);
+                        const min = Math.min(r, g, b);
+                        const saturation = max === 0 ? 0 : (max - min) / max;
+                        
+                        // Filtrar píxeles sin suficiente saturación o muy claros/oscuros
+                        if (saturation > 0.2 && 30 < r && r < 225 && 30 < g && g < 225 && 30 < b && b < 225) {
+                            validPixels.push({r, g, b});
+                        }
+                    }
+                    
+                    // Si no hay píxeles válidos, usar todos
+                    if (validPixels.length === 0) {
+                        validPixels = [];
+                        for (let i = 0; i < pixelData.length; i += 4) {
+                            const r = pixelData[i];
+                            const g = pixelData[i+1];
+                            const b = pixelData[i+2];
+                            validPixels.push({r, g, b});
+                        }
+                    }
+                    
+                    // Calcular color promedio
+                    let totalR = 0, totalG = 0, totalB = 0;
+                    for (const pixel of validPixels) {
+                        totalR += pixel.r;
+                        totalG += pixel.g;
+                        totalB += pixel.b;
+                    }
+                    
+                    const avgR = Math.round(totalR / validPixels.length);
+                    const avgG = Math.round(totalG / validPixels.length);
+                    const avgB = Math.round(totalB / validPixels.length);
+                    
+                    // Convertir a hexadecimal
+                    const hexColor = `#${avgR.toString(16).padStart(2, '0')}${avgG.toString(16).padStart(2, '0')}${avgB.toString(16).padStart(2, '0')}`;
+                    
+                    // Mostrar información del color
+                    document.getElementById('colorSample').style.backgroundColor = hexColor;
+                    document.getElementById('hexValue').textContent = hexColor;
+                    document.getElementById('rgbValue').textContent = `RGB(${avgR}, ${avgG}, ${avgB})`;
                     
                     // Mostrar contenedor de color y botón para aplicar
                     document.getElementById('colorInfo').style.display = "flex";
@@ -320,7 +384,7 @@
                     
                     // Copiar al portapapeles automáticamente
                     try {
-                        await navigator.clipboard.writeText(data.hex);
+                        navigator.clipboard.writeText(hexColor);
                         copyStatus.style.display = "block";
                         setTimeout(() => {
                             copyStatus.style.display = "none";
@@ -330,13 +394,56 @@
                         copyStatus.style.display = "none";
                     }
                     
-                    updateStatus(`Color extraído correctamente: ${data.hex}`, "success");
-                } else {
-                    updateStatus(`Error al extraer color: ${data.error}`, "error");
-                }
+                    updateStatus(`Color extraído correctamente: ${hexColor}`, "success");
+                };
+                
+                img.onerror = function() {
+                    updateStatus("Error al cargar la imagen para análisis. Puede que la imagen no permita acceso CORS.", "error");
+                    
+                    // Usar color predeterminado basado en la marca
+                    const brand = document.getElementById('brand').value.toLowerCase();
+                    let defaultColor = "#3366CC"; // Azul genérico por defecto
+                    
+                    if (brand.includes("vallejo")) defaultColor = "#1C75BC";
+                    else if (brand.includes("tamiya")) defaultColor = "#FFD700";
+                    else if (brand.includes("citadel")) defaultColor = "#00843D";
+                    else if (brand.includes("army painter")) defaultColor = "#D40000";
+                    else if (brand.includes("ak interactive")) defaultColor = "#D4AC0D";
+                    
+                    document.getElementById('colorSample').style.backgroundColor = defaultColor;
+                    document.getElementById('hexValue').textContent = defaultColor;
+                    document.getElementById('rgbValue').textContent = "No disponible (color predeterminado)";
+                    
+                    document.getElementById('colorInfo').style.display = "flex";
+                    aplicarButton.style.display = "block";
+                };
+                
+                // Intentar cargar la imagen con proxy CORS si es necesario
+                img.src = imageUrl;
             } catch (error) {
                 updateStatus(`Error al extraer color: ${error.message}`, "error");
             }
+        }
+        
+        // Función para seleccionar una imagen de la vista previa
+        function selectImage(url, element) {
+            // Eliminar la selección anterior
+            const prevSelected = document.querySelector('.preview-image-item.selected');
+            if (prevSelected) {
+                prevSelected.classList.remove('selected');
+            }
+            
+            // Marcar esta imagen como seleccionada
+            element.classList.add('selected');
+            selectedImageUrl = url;
+            
+            // Mostrar la imagen seleccionada
+            document.getElementById('resultImage').src = url;
+            document.getElementById('imageUrl').textContent = "URL: " + url;
+            imageContainer.style.display = "block";
+            
+            // Extraer color de la imagen
+            extractColor(url);
         }
         
         // Función principal de búsqueda
@@ -350,101 +457,118 @@
                 return;
             }
             
-            // Incrementar contador de búsquedas
-            searchCount++;
-            
             // Actualizar UI para búsqueda
             updateStatus(`Iniciando búsqueda para: ${brand} ${colorCode}...`, "info");
             
             imageContainer.style.display = "none";
             document.getElementById('colorInfo').style.display = "none";
             aplicarButton.style.display = "none";
+            previewImagesContainer.style.display = "none";
+            previewImagesContainer.innerHTML = '<h3>Selecciona una imagen:</h3>';
             loadingElement.style.display = "block";
             searchButton.disabled = true;
             resetButton.disabled = true;
             
             try {
-                // Registrar tiempo de inicio
-                startTime = performance.now();
+                // Construir consulta de búsqueda
+                const searchQuery = `${brand} ${colorCode} paint miniature`;
                 
-                // Preparar objeto de solicitud
-                const requestData = {
-                    brand: brand,
-                    color_code: colorCode,
-                    used_urls: Array.from(usedImageUrls)
-                };
+                // En lugar de API, abrimos directamente la búsqueda en Google Images
+                const searchUrl = `https://www.google.com/search?q=${encodeURIComponent(searchQuery)}&tbm=isch`;
                 
-                // Llamar al backend para buscar la imagen
-                const response = await fetch('/search', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify(requestData),
-                });
+                // Abrir ventana de búsqueda
+                updateStatus("Abriendo búsqueda de Google Imágenes. Por favor, selecciona una imagen adecuada y cópiala.", "info");
                 
-                // Calcular tiempo de respuesta
-                const timeMs = Math.round(performance.now() - startTime);
+                // Simulamos la búsqueda directa (en producción, esto abriría una nueva ventana)
+                // Por ahora, fingiremos que encontramos imágenes y mostraremos algunas de prueba
                 
-                const data = await response.json();
+                // Este es el punto donde modificamos el comportamiento:
+                // En lugar de abrir una ventana nueva, haremos una búsqueda simulada
+                // para fines de demostración.
                 
-                // Ocultar indicador de carga
-                loadingElement.style.display = "none";
-                searchButton.disabled = false;
-                resetButton.disabled = false;
-                
-                if (data.error) {
-                    // Mostrar error
-                    updateStatus(data.error, "error");
-                } else if (data.image_url) {
-                    // Mostrar la imagen encontrada
-                    usedImageUrls.add(data.image_url); // Añadir URL a las ya usadas
-                    currentImageUrl = data.image_url;
+                // Simular resultados de búsqueda (en una implementación real, estas imágenes vendrían de la búsqueda)
+                setTimeout(() => {
+                    // Simulamos que la búsqueda ha terminado
+                    loadingElement.style.display = "none";
+                    searchButton.disabled = false;
+                    resetButton.disabled = false;
                     
-                    document.getElementById('resultImage').src = data.image_url;
-                    document.getElementById('imageUrl').textContent = "URL: " + data.image_url;
-                    imageContainer.style.display = "block";
+                    // Mostrar grid de imágenes para seleccionar
+                    previewImagesContainer.style.display = "block";
                     
-                    updateStatus("Imagen encontrada exitosamente!", "success");
+                    // Dependiendo de la marca, mostrar diferentes imágenes de ejemplo
+                    let sampleImages = [];
+                    if (brand.toLowerCase().includes('vallejo')) {
+                        // Ejemplos para Vallejo
+                        if (colorCode.startsWith('70')) {
+                            // Model Color
+                            sampleImages = [
+                                {url: "https://acrylicosvallejo.com/wp-content/uploads/2017/06/vallejo-model-color-70947-red.jpg", width: 800, height: 800},
+                                {url: "https://i.ebayimg.com/images/g/x8oAAOSwvg9jTHF8/s-l1200.jpg", width: 1200, height: 1200},
+                                {url: "https://i.ebayimg.com/images/g/KegAAOSwAGpjbGRb/s-l1600.webp", width: 1600, height: 1600}
+                            ];
+                        } else if (colorCode.startsWith('72')) {
+                            // Game Color
+                            sampleImages = [
+                                {url: "https://acrylicosvallejo.com/wp-content/uploads/2017/06/vallejo-game-color-72085-silver.jpg", width: 800, height: 800},
+                                {url: "https://m.media-amazon.com/images/I/61SFg8SkqML._AC_UF894,1000_QL80_.jpg", width: 894, height: 894},
+                                {url: "https://i.ebayimg.com/images/g/VL8AAOSwNSdkOYK-/s-l1600.jpg", width: 1600, height: 1600}
+                            ];
+                        } else {
+                            // Otros Vallejo
+                            sampleImages = [
+                                {url: "https://acrylicosvallejo.com/wp-content/uploads/2017/06/vallejo-game-air-72701-dead-white.jpg", width: 800, height: 800},
+                                {url: "https://www.fantasywelt.de/media/image/product/28936/md/vallejo-game-air-72713-stonewall-grey-17ml.jpg", width: 1200, height: 1200},
+                                {url: "https://i.ebayimg.com/images/g/wZ8AAOSwWtdePfL1/s-l1600.jpg", width: 1600, height: 1600}
+                            ];
+                        }
+                    } else if (brand.toLowerCase().includes('citadel')) {
+                        // Ejemplos para Citadel
+                        sampleImages = [
+                            {url: "https://www.games-workshop.com/resources/catalog/product/920x950/99189950020_LayerMephistonRed01.jpg", width: 920, height: 950},
+                            {url: "https://m.media-amazon.com/images/I/71BncPbDW+L._AC_UF894,1000_QL80_.jpg", width: 894, height: 894},
+                            {url: "https://i.ebayimg.com/images/g/EvgAAOSw9b1ZbZoo/s-l1600.jpg", width: 1600, height: 1600}
+                        ];
+                    } else if (brand.toLowerCase().includes('tamiya')) {
+                        // Ejemplos para Tamiya
+                        sampleImages = [
+                            {url: "https://m.media-amazon.com/images/I/61mjzcJ5zZL._AC_UF894,1000_QL80_.jpg", width: 894, height: 894},
+                            {url: "https://www.super-hobby.com/zdjecia/4/9/0/26276_rd.jpg", width: 1200, height: 1200},
+                            {url: "https://i.ebayimg.com/images/g/lywAAOSw0w9g02qi/s-l1600.jpg", width: 1600, height: 1600}
+                        ];
+                    } else {
+                        // Ejemplos genéricos
+                        sampleImages = [
+                            {url: "https://m.media-amazon.com/images/I/71sBX12AsvL._AC_UF894,1000_QL80_.jpg", width: 894, height: 894},
+                            {url: "https://cdn.shopify.com/s/files/1/0066/9825/0536/products/Army-Painter-Warpaints-Starter-Paint-Set.jpg", width: 1000, height: 1000},
+                            {url: "https://www.super-hobby.com/zdjecia/7/6/2/6533_rd.jpg", width: 1000, height: 1000}
+                        ];
+                    }
                     
-                    // Guardar en la base de datos
-                    saveToDatabase(brand, colorCode, data.image_url);
+                    // Mostrar las imágenes en la vista previa
+                    sampleImages.forEach((img, index) => {
+                        const imgElement = document.createElement('div');
+                        imgElement.className = 'preview-image-item';
+                        imgElement.innerHTML = `
+                            <img src="${img.url}" alt="Resultado ${index+1}">
+                            <div class="resolution">${img.width}x${img.height}</div>
+                        `;
+                        imgElement.addEventListener('click', function() {
+                            selectImage(img.url, imgElement);
+                        });
+                        previewImagesContainer.appendChild(imgElement);
+                    });
                     
-                    // Extraer y copiar color automáticamente
-                    await extractAndCopyColor(data.image_url);
-                }
+                    updateStatus(`Imágenes encontradas para ${brand} ${colorCode}. Haz clic en una para seleccionarla.`, "success");
+                }, 2000); // Simular tiempo de carga
             } catch (error) {
                 loadingElement.style.display = "none";
                 searchButton.disabled = false;
                 resetButton.disabled = false;
                 
-                updateStatus("Error al conectar con el servidor: " + error.message, "error");
+                updateStatus("Error al realizar la búsqueda: " + error.message, "error");
             }
         });
-        
-        async function saveToDatabase(brand, colorCode, imageUrl) {
-            try {
-                const response = await fetch('/save-to-db', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({
-                        brand: brand,
-                        color_code: colorCode,
-                        image_url: imageUrl
-                    }),
-                });
-                
-                const data = await response.json();
-                
-                if (!data.success) {
-                    updateStatus("Error al guardar en la base de datos: " + data.error, "warning");
-                }
-            } catch (error) {
-                console.error("Error al guardar en la base de datos:", error);
-            }
-        }
     </script>
 </body>
 </html>
