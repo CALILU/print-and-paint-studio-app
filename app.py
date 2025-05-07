@@ -4,6 +4,10 @@ from functools import wraps
 import os
 from datetime import datetime
 import random
+import requests
+from PIL import Image
+from io import BytesIO
+import numpy as np
 
 app = Flask(__name__)
 app.config['DEBUG'] = True
@@ -1299,6 +1303,127 @@ def update_paint_color(paint_id):
             "success": False,
             "error": str(e)
         }), 500
+    
+@app.route('/search', methods=['POST'])
+@admin_required
+def search_images():
+    """Buscar imágenes de pinturas online"""
+    data = request.json
+    brand = data.get('brand', '').strip()
+    color_code = data.get('color_code', '').strip()
+    used_urls = data.get('used_urls', [])
+    
+    if not brand or not color_code:
+        return jsonify({"error": "Se requiere marca y código de color"})
+    
+    # Buscar imágenes online
+    search_term = f"{brand} {color_code} paint miniature"
+    
+    try:
+        # Simulación de resultado de búsqueda para propósitos de demostración
+        # En un entorno de producción, usarías un servicio real de búsqueda de imágenes
+        sample_urls = [
+            f"https://acrylicosvallejo.com/wp-content/uploads/2017/06/model-color-vallejo-{color_code.replace('.', '-').lower()}-35ml.png",
+            f"https://acrylicosvallejo.com/wp-content/uploads/2017/07/game-color-vallejo-{color_code.replace('.', '-').lower()}-17ml.png",
+            f"https://cdn.shopify.com/s/files/1/0276/9565/products/vallejo-{color_code.lower()}_1024x1024.jpg"
+        ]
+        
+        # Filtrar URLs ya usadas
+        available_urls = [url for url in sample_urls if url not in used_urls]
+        
+        if not available_urls:
+            return jsonify({"error": "No se encontraron imágenes nuevas. Intenta con otros términos."})
+        
+        selected_url = available_urls[0]
+        
+        return jsonify({"image_url": selected_url})
+        
+    except Exception as e:
+        return jsonify({"error": f"Error al buscar imágenes: {str(e)}"})
+
+@app.route('/extract-color', methods=['POST'])
+@admin_required
+def extract_color():
+    """Extraer el color dominante de una imagen"""
+    try:
+        data = request.json
+        image_url = data.get('image_url')
+        
+        if not image_url:
+            return jsonify({"success": False, "error": "URL de imagen no proporcionada"})
+        
+        # Descargar la imagen
+        response = requests.get(image_url)
+        img = Image.open(BytesIO(response.content))
+        
+        # Redimensionar para procesar más rápido
+        img = img.resize((100, 100))
+        
+        # Convertir a matriz NumPy
+        img_array = np.array(img)
+        
+        # Filtrar los píxeles blancos y negros (pueden afectar el resultado)
+        pixels = img_array.reshape(-1, 3)
+        mask = np.ones(len(pixels), dtype=bool)
+        
+        # Filtrar píxeles casi blancos
+        white_mask = np.all(pixels > 200, axis=1)
+        mask = np.logical_and(mask, ~white_mask)
+        
+        # Filtrar píxeles casi negros
+        black_mask = np.all(pixels < 50, axis=1)
+        mask = np.logical_and(mask, ~black_mask)
+        
+        # Si todos los píxeles fueron filtrados, no aplicar filtro
+        if not np.any(mask):
+            filtered_pixels = pixels
+        else:
+            filtered_pixels = pixels[mask]
+        
+        # Calcular el color promedio
+        avg_color = np.mean(filtered_pixels, axis=0).astype(int)
+        
+        # Convertir a hexadecimal
+        hex_color = "#{:02x}{:02x}{:02x}".format(*avg_color)
+        
+        return jsonify({
+            "success": True,
+            "hex": hex_color,
+            "rgb": avg_color.tolist()
+        })
+        
+    except Exception as e:
+        return jsonify({"success": False, "error": f"Error al extraer color: {str(e)}"})
+
+@app.route('/save-to-db', methods=['POST'])
+@admin_required
+def save_to_db():
+    """Guardar una URL de imagen en la base de datos local"""
+    try:
+        data = request.json
+        brand = data.get('brand')
+        color_code = data.get('color_code')
+        image_url = data.get('image_url')
+        
+        if not all([brand, color_code, image_url]):
+            return jsonify({"success": False, "error": "Faltan datos requeridos"})
+        
+        # En una implementación real, guardarías esto en una base de datos
+        # Aquí simplemente devolvemos éxito
+        return jsonify({"success": True})
+        
+    except Exception as e:
+        return jsonify({"success": False, "error": f"Error al guardar en la base de datos: {str(e)}"})    
+
+
+
+
+
+
+
+
+
+
 
 if __name__ == '__main__':
     # Este bloque solo se ejecuta en desarrollo local
