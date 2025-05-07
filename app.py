@@ -1307,7 +1307,7 @@ def update_paint_color(paint_id):
 @app.route('/search', methods=['POST'])
 @admin_required
 def search_images():
-    """Buscar imágenes de pinturas online"""
+    """Buscar imágenes de pinturas online con validación de URLs"""
     data = request.json
     brand = data.get('brand', '').strip()
     color_code = data.get('color_code', '').strip()
@@ -1316,46 +1316,68 @@ def search_images():
     if not brand or not color_code:
         return jsonify({"error": "Se requiere marca y código de color"})
     
+    # Normalizar el código de color (eliminar puntos, convertir a minúsculas)
+    normalized_code = color_code.lower().replace('.', '-')
+    simple_code = color_code.lower().replace('.', '')
+    
     try:
-        # Preparar diferentes formatos de URLs según la marca
-        # Estas son URLs alternativas que pueden ser más accesibles
+        # Encabezados para simular un navegador real
+        headers = {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
+            'Accept': 'image/avif,image/webp,image/apng,image/*,*/*;q=0.8',
+            'Accept-Language': 'es-ES,es;q=0.9,en-US;q=0.8,en;q=0.7',
+            'Referer': 'https://www.google.com/'
+        }
+        
+        # Patrones de URL específicos por marca
         image_urls = []
         
         if brand.lower() == 'vallejo':
-            # URLs alternativas para Vallejo
             image_urls = [
-                f"https://www.sceneryworkshop.com/wp-content/uploads/2020/02/vallejo-{color_code.lower().replace('.', '-')}.jpg",
-                f"https://shop.battlefield-berlin.de/media/image/6f/a3/88/vallejo-model-color-{color_code.lower().replace('.', '-')}.jpg",
-                f"https://www.miniaturemarket.com/media/catalog/product/v/a/val-{color_code.lower().replace('.', '')}.jpg",
-                f"https://www.nocturnamodels.com/54405-large_default/vallejo-model-color-{color_code.lower().replace('.', '-')}.jpg"
+                # Model Color
+                f"https://acrylicosvallejo.com/wp-content/uploads/2017/06/model-color-vallejo-{normalized_code}-35ml.png",
+                f"https://acrylicosvallejo.com/wp-content/uploads/2017/06/vallejo-model-color-{normalized_code}-17ml.png",
+                # Game Color
+                f"https://acrylicosvallejo.com/wp-content/uploads/2017/07/game-color-vallejo-{normalized_code}-17ml.png",
+                f"https://acrylicosvallejo.com/wp-content/uploads/2017/07/vallejo-game-color-{normalized_code}-17ml.png",
+                # Game Air
+                f"https://acrylicosvallejo.com/wp-content/uploads/2017/06/game-air-vallejo-{normalized_code}-17ml.png",
+                # Model Air
+                f"https://acrylicosvallejo.com/wp-content/uploads/2017/06/model-air-vallejo-{normalized_code}-17ml.png",
+                # Mecha Color
+                f"https://acrylicosvallejo.com/wp-content/uploads/2018/09/mecha-color-vallejo-{normalized_code}-17ml.png",
+                # Premium Color
+                f"https://acrylicosvallejo.com/wp-content/uploads/2017/06/premium-color-vallejo-{normalized_code}-60ml.png",
+                # URLs alternativas
+                f"https://modelshop.co.uk/shop/images/product/72{simple_code}_vallejo_model_color_1.jpg",
+                f"https://e-minis.net/11851-large_default/vallejo-{normalized_code}.jpg"
             ]
         elif brand.lower() == 'tamiya':
-            # URLs alternativas para Tamiya
             image_urls = [
-                f"https://www.super-hobby.com/zdjecia/4/8/5/22485_rd.jpg",
                 f"https://www.super-hobby.com/zdjecia/4/6/4/22464_rd.jpg",
-                f"https://www.frontline-games.com/13879-large_default/tamiya-color-{color_code.lower()}.jpg",
-                f"https://www.tamiyausa.com/media/catalog/product/{color_code.lower()}.jpg"
+                f"https://www.frontline-games.com/13879-large_default/tamiya-color-{normalized_code}.jpg",
+                f"https://www.tamiyausa.com/media/catalog/product/{normalized_code}.jpg",
+                f"https://static.wixstatic.com/media/12e120_c45e72c1ba5646738ce0f155e5c973ac~mv2.jpg",
+                f"https://www.tamiya.com/english/products/list/acrylic/kit/{simple_code}.jpg"
             ]
         elif brand.lower() == 'citadel':
-            # URLs alternativas para Citadel
             image_urls = [
-                f"https://www.games-workshop.com/resources/catalog/product/600x620/{color_code.lower().replace(' ', '-')}.jpg",
-                f"https://elementgames.co.uk/media/catalog/product/cache/1/image/9df78eab33525d08d6e5fb8d27136e95/c/i/citadel-{color_code.lower().replace(' ', '-')}.jpg",
-                f"https://www.frontline-games.com/36233-large_default/citadel-{color_code.lower().replace(' ', '-')}.jpg"
+                f"https://www.games-workshop.com/resources/catalog/product/600x620/{normalized_code.replace(' ', '-')}.jpg",
+                f"https://elementgames.co.uk/media/catalog/product/cache/1/image/9df78eab33525d08d6e5fb8d27136e95/c/i/citadel-{normalized_code.replace(' ', '-')}.jpg",
+                f"https://www.frontline-games.com/36233-large_default/citadel-{normalized_code.replace(' ', '-')}.jpg"
             ]
         else:
             # URLs generales para otras marcas
             image_urls = [
-                f"https://cdn11.bigcommerce.com/s-91vl4/images/stencil/500x500/products/{color_code.lower()}.jpg",
+                f"https://cdn11.bigcommerce.com/s-91vl4/images/stencil/500x500/products/{simple_code}.jpg",
                 f"https://www.super-hobby.com/zdjecia/1/0/7/38701_rd.jpg",
-                f"https://cdn.shopify.com/s/files/1/0276/9565/products/{brand.lower()}-{color_code.lower()}_1024x1024.jpg"
+                f"https://cdn.shopify.com/s/files/1/0276/9565/products/{brand.lower()}-{normalized_code}_1024x1024.jpg"
             ]
             
         # Añadir URLs más genéricas como respaldo
         image_urls.extend([
-            f"https://miniaturicum.de/media/image/product/9619/md/{brand.lower()}-{color_code.lower()}.jpg",
-            f"https://store.warlordgames.com/cdn/shop/products/Vallejo-Model-Colour-17ml-Bottle_{color_code.lower().replace('.', '_')}_2048x2048.jpg"
+            f"https://miniaturicum.de/media/image/product/9619/md/{brand.lower()}-{normalized_code}.jpg",
+            f"https://shop.battlefield-berlin.de/media/image/6f/a3/88/{brand.lower()}-{normalized_code}.jpg"
         ])
         
         # Filtrar URLs ya usadas
@@ -1364,44 +1386,48 @@ def search_images():
         if not available_urls:
             return jsonify({"error": "No se encontraron imágenes nuevas. Intenta con otros términos."})
         
-        # Intentamos verificar que las URLs sean accesibles
-        headers = {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
-            'Accept': 'image/avif,image/webp,image/apng,image/*,*/*;q=0.8',
-            'Accept-Language': 'es-ES,es;q=0.9,en-US;q=0.8,en;q=0.7',
-            'Referer': 'https://www.google.com/'
-        }
+        # Verificar disponibilidad de URLs (método HEAD es más rápido que GET)
+        working_urls = []
         
-        # Intentamos encontrar una URL accesible
-        selected_url = None
         for url in available_urls:
             try:
-                response = requests.head(url, headers=headers, timeout=3)
-                if response.status_code == 200:
-                    content_type = response.headers.get('Content-Type', '')
-                    if 'image' in content_type:
-                        selected_url = url
-                        break
+                # Intentar con HEAD primero (más rápido)
+                head_response = requests.head(url, headers=headers, timeout=2)
+                
+                if head_response.status_code == 200:
+                    # Verificar con GET si HEAD es exitoso
+                    response = requests.get(url, headers=headers, timeout=5, stream=True)
+                    
+                    if response.status_code == 200 and int(response.headers.get('Content-Length', 0)) > 1000:
+                        # Solo considerar imágenes con un tamaño mínimo
+                        content_type = response.headers.get('Content-Type', '')
+                        if 'image' in content_type.lower():
+                            working_urls.append(url)
+                            # Si encontramos una URL válida, terminamos la búsqueda
+                            if len(working_urls) >= 1:
+                                break
             except Exception:
-                # Si hay error, continuamos con la siguiente URL
+                # Ignorar errores y continuar con la siguiente URL
                 continue
         
-        # Si no encontramos ninguna URL accesible, usamos la primera de la lista
-        if not selected_url and available_urls:
-            selected_url = available_urls[0]
+        # Si no encontramos URLs válidas, usar la primera disponible
+        if not working_urls and available_urls:
+            working_urls = [available_urls[0]]
         
-        if not selected_url:
-            return jsonify({"error": "No se pudo acceder a ninguna imagen. Intenta con otros términos."})
+        if not working_urls:
+            return jsonify({"error": "No se pudo acceder a ninguna imagen válida. Intenta con otros términos."})
         
-        return jsonify({"image_url": selected_url})
+        # Devolver la primera URL válida encontrada
+        return jsonify({"image_url": working_urls[0]})
         
     except Exception as e:
         return jsonify({"error": f"Error al buscar imágenes: {str(e)}"})
     
+    
 @app.route('/extract-color', methods=['POST'])
 @admin_required
 def extract_color():
-    """Extraer el color dominante de una imagen con mejor manejo de errores y encabezados HTTP"""
+    """Extraer el color dominante de una imagen con mejor procesamiento"""
     try:
         data = request.json
         image_url = data.get('image_url')
@@ -1427,7 +1453,7 @@ def extract_color():
             'Referer': 'https://www.google.com/'
         }
         
-        # Descargar la imagen con manejo de errores
+        # Descargar la imagen con mejor manejo de errores
         try:
             response = requests.get(image_url, headers=headers, timeout=10)
             
@@ -1448,18 +1474,10 @@ def extract_color():
                 "note": f"Se usó un color predeterminado debido a un error de conexión: {str(e)}"
             })
         
-        # Verificar que el contenido es una imagen válida
         try:
+            # Verificar que el contenido es una imagen
             img = Image.open(BytesIO(response.content))
-        except Exception as e:
-            return jsonify({
-                "success": True,
-                "hex": default_color,
-                "rgb": [28, 117, 188],
-                "note": f"Se usó un color predeterminado porque el archivo no es una imagen válida: {str(e)}"
-            })
             
-        try:
             # Redimensionar para procesar más rápido
             img = img.resize((100, 100))
             
@@ -1467,38 +1485,41 @@ def extract_color():
             if img.mode != 'RGB':
                 img = img.convert('RGB')
             
-            # Extraer los píxeles
-            pixels = list(img.getdata())
+            # Estrategia: analizar la región central de la imagen
+            # La pintura suele estar en el centro del bote
+            width, height = img.size
             
-            # Verificar que hay píxeles para procesar
-            if not pixels:
-                return jsonify({
-                    "success": True,
-                    "hex": default_color,
-                    "rgb": [28, 117, 188],
-                    "note": "Se usó un color predeterminado porque no se pudieron extraer píxeles"
-                })
+            # Definir región central (aproximadamente un tercio central)
+            x_start = width // 3
+            x_end = (width * 2) // 3
+            y_start = height // 3
+            y_end = (height * 2) // 3
             
-            # Filtrar píxeles blancos y negros
+            # Extraer la región central
+            region = img.crop((x_start, y_start, x_end, y_end))
+            
+            # Obtener píxeles de la región
+            pixels = list(region.getdata())
+            
+            # Filtrar píxeles muy claros, muy oscuros o sin saturación
             filtered_pixels = []
             for r, g, b in pixels:
-                # Filtrar píxeles casi blancos
-                if r > 200 and g > 200 and b > 200:
-                    continue
-                # Filtrar píxeles casi negros
-                if r < 50 and g < 50 and b < 50:
-                    continue
-                filtered_pixels.append((r, g, b))
+                # Detectar si tiene suficiente saturación (no es gris)
+                max_val = max(r, g, b)
+                min_val = min(r, g, b)
+                saturation = (max_val - min_val) / max_val if max_val > 0 else 0
+                
+                # Filtrar píxeles casi blancos o casi negros
+                if (saturation > 0.2 and  # Tiene suficiente saturación
+                    30 < r < 225 and 30 < g < 225 and 30 < b < 225):  # Evita extremos
+                    filtered_pixels.append((r, g, b))
             
-            # Si todos los píxeles fueron filtrados, usar los originales
+            # Si todos los píxeles fueron filtrados, usar píxeles originales
             if not filtered_pixels:
                 filtered_pixels = pixels
             
             # Calcular el color promedio
-            r_total = 0
-            g_total = 0
-            b_total = 0
-            
+            r_total = g_total = b_total = 0
             for r, g, b in filtered_pixels:
                 r_total += r
                 g_total += g
@@ -1519,7 +1540,7 @@ def extract_color():
             })
             
         except Exception as e:
-            # Si hay cualquier error en el procesamiento, devolvemos un color predeterminado
+            # Si hay cualquier error, devolver un color predeterminado
             return jsonify({
                 "success": True,
                 "hex": default_color,
@@ -1528,7 +1549,8 @@ def extract_color():
             })
         
     except Exception as e:
-        return jsonify({"success": False, "error": f"Error al extraer color: {str(e)}"})    
+        return jsonify({"success": False, "error": f"Error al extraer color: {str(e)}"})
+      
 @app.route('/save-to-db', methods=['POST'])
 @admin_required
 def save_to_db():
