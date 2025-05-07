@@ -4,6 +4,7 @@ from functools import wraps
 import os
 from datetime import datetime
 import random
+from duckduckgo_search import DDGS
 import requests
 from PIL import Image
 from io import BytesIO
@@ -1307,7 +1308,7 @@ def update_paint_color(paint_id):
 @app.route('/search', methods=['POST'])
 @admin_required
 def search_images():
-    """Buscar imágenes de pinturas online de forma dinámica usando Google Search"""
+    """Buscar imágenes de pinturas online utilizando DuckDuckGo"""
     data = request.json
     brand = data.get('brand', '').strip()
     color_code = data.get('color_code', '').strip()
@@ -1317,92 +1318,93 @@ def search_images():
         return jsonify({"error": "Se requiere marca y código de color"})
     
     try:
-        # Construir la consulta de búsqueda para Google
-        search_query = f"{brand} {color_code}"
-        encoded_query = requests.utils.quote(search_query)
-        search_url = f"https://www.google.com/search?q={encoded_query}&tbm=isch"
+        # Construir la consulta de búsqueda
+        search_query = f"{brand} {color_code} paint miniature"
         
-        # Encabezados para simular un navegador real
-        headers = {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
-            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
-            'Accept-Language': 'es-ES,es;q=0.9,en-US;q=0.8,en;q=0.7',
-            'Referer': 'https://www.google.com/'
-        }
+        # Buscar imágenes usando DuckDuckGo
+        results = []
+        with DDGS() as ddgs:
+            results = list(ddgs.images(search_query, safesearch='Moderate', max_results=10))
         
-        # Realizar la búsqueda en Google
-        response = requests.get(search_url, headers=headers, timeout=10)
+        if not results:
+            return jsonify({"error": "No se encontraron imágenes para esta búsqueda"})
         
-        if response.status_code != 200:
-            return jsonify({"error": f"Error al buscar imágenes: código {response.status_code}"})
+        # Procesar resultados para obtener detalles
+        processed_images = []
+        valid_image_url = None
         
-        # Extraer URLs de imágenes del HTML usando expresiones regulares
-        import re
-        
-        # Patrones para buscar URLs de imágenes
-        img_patterns = [
-            r'imgurl=([^&]+)&',  # Patrón común en Google Images
-            r'"ou":"([^"]+)"',   # Otro patrón en formato JSON
-            r'src="([^"]+\.(?:jpg|jpeg|png|webp))"'  # Patrón para etiquetas src
-        ]
-        
-        image_urls = []
-        html_content = response.text
-        
-        # Buscar URLs usando los patrones
-        for pattern in img_patterns:
-            matches = re.findall(pattern, html_content)
-            for match in matches:
-                # Decodificar URL si es necesario
-                img_url = requests.utils.unquote(match)
-                # Filtrar URLs de Google y otras que no son imágenes reales
-                if not any(domain in img_url for domain in ['google.com', 'gstatic.com', 'data:']):
-                    if img_url.startswith('//'):
-                        img_url = 'https:' + img_url
-                    elif not img_url.startswith(('http://', 'https://')):
-                        continue  # Omitir URLs relativas
-                    image_urls.append(img_url)
-        
-        # Eliminar duplicados
-        image_urls = list(dict.fromkeys(image_urls))
-        
-        # Filtrar URLs ya usadas
-        available_urls = [url for url in image_urls if url not in used_urls]
-        
-        if not available_urls and image_urls:
-            # Si todas las URLs ya fueron usadas, usar la primera
-            available_urls = [image_urls[0]]
-        
-        if not available_urls:
-            # Si no se encontraron URLs, usar una URL por defecto
-            if brand.lower() == 'vallejo':
-                if color_code.startswith('76'):  # Game Air
-                    default_url = "https://acrylicosvallejo.com/wp-content/uploads/2017/06/vallejo-game-air-76014-purple.jpg"
-                else:
-                    default_url = "https://acrylicosvallejo.com/wp-content/uploads/2017/06/vallejo-model-color-70919-white.jpg"
-            else:
-                default_url = "https://www.modellbauarsenal.de/media/image/product/14000/lg/ak-interactive-ak11201-black-primer-black-base-60ml~2.jpg"
-                
-            return jsonify({"image_url": default_url})
-        
-        # Seleccionar la primera URL disponible
-        selected_url = available_urls[0]
-        
-        return jsonify({"image_url": selected_url})
-        
-    except Exception as e:
-        # Si hay algún error, devolver una URL genérica
-        if brand.lower() == 'vallejo':
-            default_url = "https://acrylicosvallejo.com/wp-content/uploads/2017/06/vallejo-game-air-76014-purple.jpg"
-        else:
-            default_url = "https://www.modellbauarsenal.de/media/image/product/14000/lg/ak-interactive-ak11201-black-primer-black-base-60ml~2.jpg"
+        for result in results:
+            image_url = result.get('image')
+            if not image_url or image_url in used_urls:
+                continue
             
-        return jsonify({"image_url": default_url, "error": f"Error al buscar imágenes: {str(e)}"})
+            # Intentar obtener información de la imagen
+            try:
+                # Revisar si la imagen es accesible
+                response = requests.head(image_url, timeout=3)
+                if response.status_code != 200:
+                    continue
+                
+                # Obtener detalles de las dimensiones si están disponibles
+                width = result.get('width')
+                height = result.get('height')
+                
+                # Intentar convertir a enteros si son strings
+                if width and isinstance(width, str) and width.isdigit():
+                    width = int(width)
+                if height and isinstance(height, str) and height.isdigit():
+                    height = int(height)
+                
+                # Añadir a los resultados procesados
+                processed_images.append({
+                    'url': image_url,
+                    'width': width,
+                    'height': height,
+                    'title': result.get('title', ''),
+                    'source': result.get('source', '')
+                })
+                
+                # Guardar la primera URL válida como respaldo
+                if valid_image_url is None:
+                    valid_image_url = image_url
+            except Exception:
+                # Ignorar problemas con esta imagen y continuar
+                continue
+        
+        # Si tenemos resultados procesados, devolverlos
+        if processed_images:
+            # Ordenar por resolución (mejor calidad primero)
+            processed_images.sort(key=lambda x: (x.get('width', 0) or 0) * (x.get('height', 0) or 0), reverse=True)
+            return jsonify({"images": processed_images})
+        elif valid_image_url:
+            # Si no tenemos imágenes procesadas pero sí una URL válida, usar esa
+            return jsonify({"image_url": valid_image_url})
+        else:
+            # Proporcionar una URL por defecto basada en la marca
+            default_url = None
+            if brand.lower() == 'vallejo':
+                if color_code.startswith('70'):
+                    default_url = "https://acrylicosvallejo.com/wp-content/uploads/2017/06/vallejo-model-color-70947-red.jpg"
+                elif color_code.startswith('72'):
+                    default_url = "https://acrylicosvallejo.com/wp-content/uploads/2017/06/vallejo-game-color-72085-silver.jpg"
+                else:
+                    default_url = "https://acrylicosvallejo.com/wp-content/uploads/2017/06/vallejo-game-air-72701-dead-white.jpg"
+            elif brand.lower() == 'citadel':
+                default_url = "https://www.games-workshop.com/resources/catalog/product/920x950/99189950020_LayerMephistonRed01.jpg"
+            elif brand.lower() == 'tamiya':
+                default_url = "https://www.super-hobby.com/zdjecia/4/9/0/26276_rd.jpg"
+            else:
+                default_url = "https://cdn.shopify.com/s/files/1/0066/9825/0536/products/Army-Painter-Warpaints-Starter-Paint-Set.jpg"
+            
+            return jsonify({"image_url": default_url})
+            
+    except Exception as e:
+        return jsonify({"error": f"Error al buscar imágenes: {str(e)}"})
      
 @app.route('/extract-color', methods=['POST'])
 @admin_required
 def extract_color():
-    """Extraer el color dominante de una imagen con mejor procesamiento basado en AnalizadorColorBotes"""
+    """Extraer el color dominante de una imagen"""
     try:
         data = request.json
         image_url = data.get('image_url')
