@@ -1270,12 +1270,6 @@ def reset_db():
         return jsonify({'message': 'Base de datos reiniciada correctamente'})
     except Exception as e:
         return jsonify({'error': str(e)}), 500
-    
-@app.route('/buscador-imagenes')
-@admin_required
-def buscador_imagenes():
-    """Página para buscar imágenes de pinturas"""
-    return render_template('admin/buscador_imagenes.html')
 
 # Modificar/Añadir estas funciones en app.py
 
