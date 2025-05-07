@@ -1620,6 +1620,15 @@ def save_to_db():
         
     except Exception as e:
         return jsonify({"success": False, "error": f"Error al guardar en la base de datos: {str(e)}"})    
+    
+@app.route('/buscador-imagenes')
+@admin_required
+def buscador_imagenes():
+    brand = request.args.get('brand', '')
+    color_code = request.args.get('color_code', '')
+    paint_id = request.args.get('paint_id', '')
+    
+    return render_template('buscador_imagenes.html', brand=brand, color_code=color_code, paint_id=paint_id)
 
 
 
