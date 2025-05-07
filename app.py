@@ -1622,18 +1622,19 @@ def save_to_db():
         return jsonify({"success": False, "error": f"Error al guardar en la base de datos: {str(e)}"})    
     
 @app.route('/buscador-imagenes')
-@admin_required
 def buscador_imagenes():
+    # Obtener parámetros de la URL
     brand = request.args.get('brand', '')
     color_code = request.args.get('color_code', '')
     paint_id = request.args.get('paint_id', '')
     
-    return render_template('buscador_imagenes.html', brand=brand, color_code=color_code, paint_id=paint_id)
-
-
-
-
-
+    # Renderizar la plantilla con los parámetros
+    try:
+        return render_template('buscador_imagenes.html', brand=brand, color_code=color_code, paint_id=paint_id)
+    except Exception as e:
+        print(f"Error al renderizar buscador de imágenes: {str(e)}")
+        # Devolver una respuesta de error más descriptiva
+        return f"Error al cargar el buscador de imágenes: {str(e)}", 500
 
 
 
