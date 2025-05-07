@@ -1304,10 +1304,10 @@ def update_paint_color(paint_id):
             "error": str(e)
         }), 500
     
-@app.route('/search', methods=['POST'])
+@@app.route('/search', methods=['POST'])
 @admin_required
 def search_images():
-    """Buscar imágenes de pinturas online usando términos de búsqueda más dinámicos"""
+    """Buscar imágenes de pinturas online de forma dinámica usando Google Search"""
     data = request.json
     brand = data.get('brand', '').strip()
     color_code = data.get('color_code', '').strip()
@@ -1317,97 +1317,82 @@ def search_images():
         return jsonify({"error": "Se requiere marca y código de color"})
     
     try:
-        # Construir términos de búsqueda en diferentes formatos
-        search_terms = [
-            f"{brand} {color_code} paint miniature",
-            f"{brand} {color_code} model color",
-            f"{brand} {color_code} bottle",
-            f"{brand} {color_code} paint pot"
-        ]
-        
-        # Elegir un término de búsqueda al azar para diversificar los resultados
-        import random
-        selected_term = random.choice(search_terms)
+        # Construir la consulta de búsqueda para Google
+        search_query = f"{brand} {color_code}"
+        search_url = f"https://www.google.com/search?q={search_query}&tbm=isch"
         
         # Encabezados para simular un navegador real
         headers = {
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
-            'Accept': 'image/avif,image/webp,image/apng,image/*,*/*;q=0.8',
+            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
             'Accept-Language': 'es-ES,es;q=0.9,en-US;q=0.8,en;q=0.7',
             'Referer': 'https://www.google.com/'
         }
         
-        # Para este ejemplo, vamos a simular resultados de búsqueda.
-        # En una implementación real, aquí usarías un servicio de búsqueda de imágenes como:
-        # - Bing Image Search API
-        # - Google Custom Search API
-        # - Algún otro servicio de búsqueda de imágenes
+        # Realizar la búsqueda en Google
+        response = requests.get(search_url, headers=headers, timeout=10)
         
-        # Simulación de resultados de búsqueda
-        # En un entorno de producción, se reemplazaría con llamadas reales a APIs de búsqueda
-        import hashlib
-        import time
+        if response.status_code != 200:
+            return jsonify({"error": f"Error al buscar imágenes: código {response.status_code}"})
         
-        # Usar el término de búsqueda, hora y un valor aleatorio para generar URLs diversas
-        seed = f"{selected_term}_{int(time.time())}"
-        hash_val = hashlib.md5(seed.encode()).hexdigest()
+        # Analizar la respuesta HTML para extraer URLs de imágenes
+        from bs4 import BeautifulSoup
+        soup = BeautifulSoup(response.text, 'html.parser')
         
-        # Usar parte del hash para crear URLs pseudo-aleatorias pero reproducibles para test
-        simulated_results = [
-            f"https://images.example.com/{hash_val[:8]}/{brand.lower()}-{color_code.lower().replace('.', '')}.jpg",
-            f"https://cdn.models-hobby.com/{hash_val[8:16]}/paints/{brand.lower()}/{color_code.lower()}.png",
-            f"https://paintdb.net/images/{hash_val[16:24]}/{brand.lower()}-{color_code.lower()}.webp"
-        ]
+        # Google Images carga las imágenes dinámicamente con JavaScript,
+        # pero podemos extraer las URLs de las imágenes que están precargadas
+        image_urls = []
         
-        # Filtrar URLs ya usadas
-        filtered_results = [url for url in simulated_results if url not in used_urls]
-        
-        if not filtered_results:
-            return jsonify({"error": "No se encontraron imágenes nuevas. Intenta con otros términos."})
-        
-        # Para hacer que el ejemplo funcione, usaremos URLs reales que probablemente existan
-        # Estas son URLs comunes para pinturas de miniatura
-        real_urls = []
-        
-        if brand.lower() == 'vallejo':
-            real_urls = [
-                "https://www.fantasywelt.de/bilder/produkte/gross/Vallejo-Model-Color-70919-Foundation-White-weiss.jpg",
-                "https://cdn.shopify.com/s/files/1/0594/6945/2962/products/Vallejo-Model-Color-70835-Salmon-Rose_7ba80510-2a29-432c-bfa5-30bca35c2786_1946x.jpg",
-                "https://www.sceneryworkshop.nl/contents/media/vallejo-71209-copper-ko%261%29%29.jpg"
-            ]
-        elif brand.lower() == 'tamiya':
-            real_urls = [
-                "https://www.super-hobby.com/zdjecia/4/8/5/22485_rd.jpg",
-                "https://www.frontline-games.com/13879-large_default/tamiya-color-xf1.jpg",
-                "https://static.wixstatic.com/media/12e120_c45e72c1ba5646738ce0f155e5c973ac~mv2.jpg"
-            ]
-        elif brand.lower() == 'citadel':
-            real_urls = [
-                "https://spikeybits.com/wp-content/uploads/2018/05/Citadel-Base-Macragge-Blue-1-1.jpg",
-                "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRaC8sZbzZMwQgCweq-wO9S9oUnFZNVxTZfkA&usqp=CAU",
-                "https://www.games-workshop.com/resources/catalog/product/920x950/99189950033_LayerEvilSunzScarlet01.jpg"
-            ]
-        else:
-            real_urls = [
-                "https://shop.battlefield-berlin.de/media/image/2b/61/00/ak11201_600x600.jpg",
-                "https://www.modellbauarsenal.de/media/image/product/14000/lg/ak-interactive-ak11201-black-primer-black-base-60ml~2.jpg",
-                "https://cdn.shopify.com/s/files/1/0276/9565/products/army-painter-war-paints-matt-white_1024x1024.jpg"
-            ]
+        # Buscar diferentes tipos de etiquetas donde Google puede almacenar URLs de imágenes
+        img_tags = soup.find_all('img')
+        for img in img_tags:
+            if img.has_attr('src') and 'http' in img['src'] and not img['src'].startswith('data:'):
+                image_urls.append(img['src'])
+            if img.has_attr('data-src'):
+                image_urls.append(img['data-src'])
+                
+        # También buscar URLs en los scripts JSON (Google a veces almacena URLs ahí)
+        script_tags = soup.find_all('script')
+        import re
+        for script in script_tags:
+            if script.string:
+                # Buscar URLs de imagen en el script
+                urls = re.findall(r'https?://[^\s"\']+\.(jpg|jpeg|png|gif)', script.string)
+                for url in urls:
+                    full_url = url[0]  # El primer elemento de la tupla es la URL completa
+                    if 'google' not in full_url and 'gstatic' not in full_url:
+                        image_urls.append(full_url)
         
         # Filtrar URLs ya usadas
-        real_urls = [url for url in real_urls if url not in used_urls]
+        available_urls = [url for url in image_urls if url not in used_urls]
         
-        if not real_urls:
-            return jsonify({"error": "No se encontraron imágenes nuevas. Intenta con otros términos."})
+        if not available_urls:
+            # Si no se encuentran URLs, intentar buscar con términos más específicos
+            alt_search_url = f"https://www.google.com/search?q={brand}+{color_code}+paint+bottle&tbm=isch"
+            alt_response = requests.get(alt_search_url, headers=headers, timeout=10)
             
-        # Seleccionar una URL al azar para dar variedad
-        selected_url = random.choice(real_urls)
+            if alt_response.status_code == 200:
+                alt_soup = BeautifulSoup(alt_response.text, 'html.parser')
+                
+                # Repetir el proceso de extracción de URLs
+                for img in alt_soup.find_all('img'):
+                    if img.has_attr('src') and 'http' in img['src'] and not img['src'].startswith('data:'):
+                        if img['src'] not in used_urls:
+                            available_urls.append(img['src'])
+                    if img.has_attr('data-src') and img['data-src'] not in used_urls:
+                        available_urls.append(img['data-src'])
+        
+        if not available_urls:
+            return jsonify({"error": "No se encontraron imágenes nuevas. Intenta con otros términos."})
+        
+        # Seleccionar la primera URL disponible
+        selected_url = available_urls[0]
         
         return jsonify({"image_url": selected_url})
         
     except Exception as e:
-        return jsonify({"error": f"Error al buscar imágenes: {str(e)}"}) 
-    
+        return jsonify({"error": f"Error al buscar imágenes: {str(e)}"})
+        
 @app.route('/extract-color', methods=['POST'])
 @admin_required
 def extract_color():
