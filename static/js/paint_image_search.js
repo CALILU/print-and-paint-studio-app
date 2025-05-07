@@ -338,30 +338,37 @@ class PaintImageSearch {
             return;
         }
         
-        // Aplicar valores al formulario principal
-        document.getElementById('color_preview').value = hexColor;
-        document.getElementById('image_url').value = this.selectedImageUrl;
-        
-        // Disparar evento para actualizar vista previa
-        document.getElementById('color_preview').dispatchEvent(new Event('input'));
-        
-        // Cerrar modal
-        const modal = bootstrap.Modal.getInstance(document.getElementById('imageSearchModal'));
-        modal.hide();
-        
-        // Mostrar notificación
-        alert('Color y URL de imagen actualizados correctamente.');
+        try {
+            console.log("Enviando mensaje a la ventana principal:", {
+                type: 'colorExtraido',
+                hexColor: hexColor,
+                imageUrl: this.selectedImageUrl
+            });
+            
+            // Enviar mensaje a la ventana principal
+            if (window.opener && !window.opener.closed) {
+                window.opener.postMessage({
+                    type: 'colorExtraido',
+                    hexColor: hexColor,
+                    imageUrl: this.selectedImageUrl
+                }, '*');
+                
+                this.showStatusMessage('¡Color y URL aplicados al formulario con éxito!', 'success');
+                
+                // Cerrar ventana después de un breve retraso
+                setTimeout(() => {
+                    window.close();
+                }, 1000);
+            } else {
+                // Si no podemos comunicarnos con la ventana principal
+                // mostrar el mensaje y dejar que el usuario cierre manualmente
+                this.showStatusMessage('No se pudo comunicar con la ventana principal. Pulse "Volver" para regresar al formulario.', 'warning');
+            }
+        } catch (error) {
+            console.error("Error al aplicar color y URL:", error);
+            this.showStatusMessage(`Error al aplicar color: ${error.message}`, 'danger');
+        }
     }
-    
-    resetSearch() {
-        document.getElementById('previewGrid').style.display = 'none';
-        document.getElementById('previewGrid').innerHTML = '';
-        document.getElementById('selectedImageContainer').style.display = 'none';
-        document.getElementById('colorContainer').style.display = 'none';
-        document.getElementById('statusMessage').classList.add('d-none');
-        document.getElementById('searchLoader').classList.add('d-none');
-    }
-}
 
 // Inicializar al cargar el documento
 document.addEventListener('DOMContentLoaded', () => {
