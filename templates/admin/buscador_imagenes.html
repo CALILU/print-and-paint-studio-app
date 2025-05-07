@@ -4,232 +4,227 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Buscador de Imágenes de Pinturas</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
     <style>
         body {
             font-family: Arial, sans-serif;
             max-width: 1000px;
             margin: 0 auto;
             padding: 20px;
+            background-color: #f8f9fa;
         }
         .container {
-            background-color: #f5f5f5;
+            background-color: white;
             border-radius: 8px;
             padding: 20px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-        }
-        .form-group {
-            margin-bottom: 15px;
-        }
-        label {
-            display: block;
-            margin-bottom: 5px;
-            font-weight: bold;
-        }
-        input[type="text"] {
-            width: 100%;
-            padding: 8px;
-            border: 1px solid #ddd;
-            border-radius: 4px;
-            box-sizing: border-box;
-        }
-        button {
-            background-color: #4CAF50;
-            color: white;
-            border: none;
-            padding: 10px 15px;
-            border-radius: 4px;
-            cursor: pointer;
-            margin-right: 5px;
-        }
-        button:hover {
-            background-color: #45a049;
-        }
-        button:disabled {
-            background-color: #cccccc;
-            cursor: not-allowed;
-        }
-        .status {
-            margin-top: 15px;
-            padding: 10px;
-            border-radius: 4px;
-        }
-        .status.success {
-            background-color: #d4edda;
-            color: #155724;
-        }
-        .status.error {
-            background-color: #f8d7da;
-            color: #721c24;
-        }
-        .status.info {
-            background-color: #d1ecf1;
-            color: #0c5460;
-        }
-        .status.warning {
-            background-color: #fff3cd;
-            color: #856404;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
         }
         .image-container {
             margin-top: 20px;
             text-align: center;
+            border: 1px solid #dee2e6;
+            padding: 15px;
+            border-radius: 5px;
+            background-color: white;
         }
-        img {
+        .preview-image {
             max-width: 100%;
-            max-height: 400px;
-            border: 1px solid #ddd;
+            max-height: 300px;
             border-radius: 4px;
+        }
+        .color-sample {
+            width: 100px;
+            height: 100px;
+            border: 1px solid #dee2e6;
+            border-radius: 5px;
+            margin: 10px auto;
+            box-shadow: 0 0 5px rgba(0,0,0,0.1);
+        }
+        .preview-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 15px;
+            margin-top: 20px;
+        }
+        .preview-item {
+            border: 2px solid transparent;
             padding: 5px;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: all 0.2s;
         }
-        .loading {
-            display: none;
-            text-align: center;
-            margin-top: 10px;
+        .preview-item:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            border-color: #0d6efd;
         }
-        .spinner {
-            border: 4px solid rgba(0, 0, 0, 0.1);
-            width: 36px;
-            height: 36px;
+        .preview-item.selected {
+            border-color: #0d6efd;
+            background-color: #f0f7ff;
+        }
+        .preview-item img {
+            width: 100%;
+            height: 150px;
+            object-fit: contain;
+            border-radius: 3px;
+        }
+        .loader {
+            border: 5px solid #f3f3f3;
+            border-top: 5px solid #3498db;
             border-radius: 50%;
-            border-left-color: #09f;
+            width: 50px;
+            height: 50px;
             animation: spin 1s linear infinite;
-            display: inline-block;
+            margin: 20px auto;
+            display: none;
         }
         @keyframes spin {
             0% { transform: rotate(0deg); }
             100% { transform: rotate(360deg); }
         }
-        .color-info {
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            margin-top: 15px;
-        }
-        .color-sample {
-            width: 80px;
-            height: 80px;
-            border: 1px solid #ddd;
-            margin-right: 15px;
-        }
-        .color-values {
-            text-align: left;
-        }
-        .btn-volver {
-            background-color: #dc3545;
-            margin-top: 15px;
-            width: 100%;
-        }
-        .btn-aplicar {
-            background-color: #007bff;
-            margin-top: 15px;
-            width: 100%;
+        #progress-container {
+            height: 25px;
+            background-color: #f3f3f3;
+            border-radius: 5px;
+            margin: 10px 0;
             display: none;
         }
-        .preview-images {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
-            gap: 15px;
-            margin-top: 20px;
-        }
-        .preview-image-item {
-            border: 2px solid transparent;
-            border-radius: 4px;
-            overflow: hidden;
-            cursor: pointer;
-            position: relative;
-            transition: transform 0.2s, border-color 0.2s;
-        }
-        .preview-image-item:hover {
-            transform: translateY(-5px);
-            border-color: #4CAF50;
-        }
-        .preview-image-item.selected {
-            border-color: #007bff;
-        }
-        .preview-image-item img {
-            width: 100%;
-            height: 200px;
-            object-fit: contain;
-            display: block;
-            border: none;
-            padding: 0;
-        }
-        .preview-image-item .resolution {
-            position: absolute;
-            bottom: 0;
-            right: 0;
-            background-color: rgba(0,0,0,0.7);
+        #progress-bar {
+            height: 100%;
+            background-color: #4CAF50;
+            border-radius: 5px;
+            width: 0%;
+            transition: width 0.5s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
             color: white;
-            padding: 2px 5px;
-            font-size: 0.8em;
+            font-weight: bold;
+        }
+        #status-message {
+            padding: 10px 15px;
+            margin: 10px 0;
+            border-radius: 5px;
+            font-weight: bold;
+            display: none;
+        }
+        .status-info {
+            background-color: #cff4fc;
+            color: #055160;
+        }
+        .status-success {
+            background-color: #d1e7dd;
+            color: #0f5132;
+        }
+        .status-warning {
+            background-color: #fff3cd;
+            color: #664d03;
+        }
+        .status-error {
+            background-color: #f8d7da;
+            color: #842029;
+        }
+        .url-info {
+            word-break: break-all;
+            font-size: 0.85rem;
+            margin-top: 10px;
+            color: #6c757d;
         }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>Buscador de Imágenes de Pinturas</h1>
+        <h2 class="mb-4">Buscador de Imágenes de Pinturas</h2>
         
-        <div class="form-group">
-            <label for="brand">Marca:</label>
-            <input type="text" id="brand" name="brand" placeholder="Ej: Vallejo, Tamiya, Citadel...">
-        </div>
-        
-        <div class="form-group">
-            <label for="color_code">Código del Color:</label>
-            <input type="text" id="color_code" name="color_code" placeholder="Ej: 70.951, XF-1, etc...">
-        </div>
-        
-        <input type="hidden" id="paint_id" value="">
-        
-        <button id="searchButton">Buscar Imagen</button>
-        <button id="resetButton" style="background-color: #dc3545;">Limpiar Resultados</button>
-        <button id="volverButton" class="btn-volver">Volver al Formulario</button>
-        
-        <div id="status" class="status" style="display: none;"></div>
-        
-        <div class="loading" id="loading">
-            <div class="spinner"></div>
-            <p>Buscando imágenes... esto puede tardar unos segundos</p>
-        </div>
-        
-        <div class="preview-images" id="previewImages" style="display: none;">
-            <h3>Selecciona una imagen:</h3>
-            <!-- Las imágenes se cargarán aquí dinámicamente -->
-        </div>
-        
-        <div class="image-container" id="imageContainer" style="display: none;">
-            <h3>Imagen seleccionada:</h3>
-            <img id="resultImage" src="" alt="Imagen de pintura">
-            <p id="imageUrl"></p>
-            
-            <div class="color-info" id="colorInfo" style="display: none;">
-                <div class="color-sample" id="colorSample"></div>
-                <div class="color-values">
-                    <p>Valor hexadecimal: <span id="hexValue">-</span></p>
-                    <p>Valor RGB: <span id="rgbValue">-</span></p>
-                    <p id="copyStatus" style="font-style: italic; font-size: 0.9em; display: none;">Valor copiado al portapapeles</p>
-                </div>
+        <div class="row mb-3">
+            <div class="col-md-6">
+                <label for="brand" class="form-label">Marca:</label>
+                <input type="text" class="form-control" id="brand" placeholder="Ej: Vallejo, Citadel, Army Painter...">
             </div>
+            <div class="col-md-6">
+                <label for="color_code" class="form-label">Código del Color:</label>
+                <input type="text" class="form-control" id="color_code" placeholder="Ej: 70.951, Mephiston Red, etc...">
+            </div>
+        </div>
+        
+        <input type="hidden" id="paint_id">
+        
+        <div class="row mb-3">
+            <div class="col-12">
+                <button id="search-button" class="btn btn-primary me-2">
+                    <i class="bi bi-search me-1"></i> Buscar Imágenes
+                </button>
+                <button id="reset-button" class="btn btn-outline-secondary me-2">
+                    <i class="bi bi-x-circle me-1"></i> Limpiar Resultados
+                </button>
+                <button id="close-button" class="btn btn-danger">
+                    <i class="bi bi-arrow-left me-1"></i> Volver
+                </button>
+            </div>
+        </div>
+        
+        <div id="status-message"></div>
+        
+        <div id="progress-container">
+            <div id="progress-bar">0%</div>
+        </div>
+        
+        <div class="loader" id="loader"></div>
+        
+        <div id="preview-grid" class="preview-grid" style="display:none;">
+            <!-- Las imágenes de vista previa se cargarán aquí -->
+        </div>
+        
+        <div id="image-container" class="image-container" style="display:none;">
+            <h5>Imagen Seleccionada</h5>
+            <img id="selected-image" class="preview-image" src="" alt="Imagen de pintura">
+            <p id="url-display" class="url-info"></p>
             
-            <button id="aplicarButton" class="btn-aplicar">Aplicar color y URL al formulario</button>
+            <div id="color-extraction" style="display:none;">
+                <h5>Color Extraído</h5>
+                <div id="color-sample" class="color-sample"></div>
+                <div class="row mt-3">
+                    <div class="col-md-6">
+                        <p><strong>HEX:</strong> <span id="hex-value">-</span></p>
+                    </div>
+                    <div class="col-md-6">
+                        <p><strong>RGB:</strong> <span id="rgb-value">-</span></p>
+                    </div>
+                </div>
+                <button id="apply-button" class="btn btn-success mt-3 w-100">
+                    <i class="bi bi-check-circle me-1"></i> Aplicar Color y URL
+                </button>
+            </div>
         </div>
     </div>
 
     <script>
         // Variables globales
+        const usedImageUrls = new Set();
         let selectedImageUrl = '';
         let paintId = '';
-        let usedUrls = [];
+        let isSearching = false;
         
-        // Referencias a elementos DOM
-        const searchButton = document.getElementById('searchButton');
-        const resetButton = document.getElementById('resetButton');
-        const volverButton = document.getElementById('volverButton');
-        const aplicarButton = document.getElementById('aplicarButton');
-        const statusElement = document.getElementById('status');
-        const loadingElement = document.getElementById('loading');
-        const imageContainer = document.getElementById('imageContainer');
-        const previewImagesContainer = document.getElementById('previewImages');
-        const copyStatus = document.getElementById('copyStatus');
+        // Elementos DOM
+        const brandInput = document.getElementById('brand');
+        const colorCodeInput = document.getElementById('color_code');
+        const paintIdInput = document.getElementById('paint_id');
+        const searchButton = document.getElementById('search-button');
+        const resetButton = document.getElementById('reset-button');
+        const closeButton = document.getElementById('close-button');
+        const applyButton = document.getElementById('apply-button');
+        const statusMessage = document.getElementById('status-message');
+        const progressContainer = document.getElementById('progress-container');
+        const progressBar = document.getElementById('progress-bar');
+        const loader = document.getElementById('loader');
+        const previewGrid = document.getElementById('preview-grid');
+        const imageContainer = document.getElementById('image-container');
+        const selectedImage = document.getElementById('selected-image');
+        const urlDisplay = document.getElementById('url-display');
+        const colorExtraction = document.getElementById('color-extraction');
+        const colorSample = document.getElementById('color-sample');
+        const hexValue = document.getElementById('hex-value');
+        const rgbValue = document.getElementById('rgb-value');
         
         // Función para obtener parámetros de la URL
         function getUrlParams() {
@@ -241,75 +236,156 @@
             };
         }
         
-        // Inicializar con parámetros de URL
-        document.addEventListener('DOMContentLoaded', function() {
-            const params = getUrlParams();
-            document.getElementById('brand').value = params.brand;
-            document.getElementById('color_code').value = params.colorCode;
-            paintId = params.paintId;
-            document.getElementById('paint_id').value = paintId;
-            
-            // Si tenemos marca y código, iniciar búsqueda automáticamente
-            if (params.brand && params.colorCode) {
-                setTimeout(() => searchButton.click(), 500);
-            }
-        });
-        
-        // Función para actualizar el estado
-        function updateStatus(message, type = 'info') {
-            statusElement.textContent = message;
-            statusElement.className = `status ${type}`;
-            statusElement.style.display = 'block';
+        // Función para actualizar la barra de progreso
+        function updateProgress(percent) {
+            progressBar.style.width = `${percent}%`;
+            progressBar.textContent = `${percent}%`;
         }
         
-        // Volver al formulario
-        volverButton.addEventListener('click', function() {
-            window.close();
-        });
-        
-        // Aplicar color y URL al formulario
-        aplicarButton.addEventListener('click', function() {
-            const hexColor = document.getElementById('hexValue').textContent;
-            
-            // Enviar mensaje a la ventana principal
-            if (window.opener && !window.opener.closed) {
-                window.opener.postMessage({
-                    type: 'colorExtraido',
-                    hexColor: hexColor,
-                    imageUrl: selectedImageUrl,
-                    paintId: paintId
-                }, '*');
-                
-                updateStatus("Color y URL aplicados al formulario", "success");
-                
-                setTimeout(() => {
-                    window.close();
-                }, 1500);
-            } else {
-                updateStatus("No se pudo comunicar con el formulario principal", "error");
+        // Función para mostrar/ocultar la barra de progreso
+        function toggleProgressBar(show) {
+            progressContainer.style.display = show ? 'block' : 'none';
+            if (show) {
+                updateProgress(10); // Comenzar con 10%
             }
-        });
+        }
         
-        // Resetear resultados
-        resetButton.addEventListener('click', function() {
-            imageContainer.style.display = 'none';
-            previewImagesContainer.style.display = 'none';
-            document.getElementById('colorInfo').style.display = 'none';
-            aplicarButton.style.display = 'none';
-            updateStatus("Resultados limpiados. Puedes buscar imágenes nuevamente.", "success");
-        });
+        // Función para mostrar mensajes de estado
+        function showStatusMessage(message, type = 'info') {
+            statusMessage.textContent = message;
+            statusMessage.className = '';
+            statusMessage.classList.add(`status-${type}`);
+            statusMessage.style.display = 'block';
+        }
         
-        // Función para extraer color de una imagen
-        async function extractColor(imageUrl) {
-            if (!imageUrl) {
-                updateStatus("No hay imagen para analizar.", "error");
+        // Función para mostrar/ocultar el loader
+        function toggleLoader(show) {
+            loader.style.display = show ? 'block' : 'none';
+        }
+        
+        // Función para buscar imágenes
+        async function searchImages() {
+            if (isSearching) return;
+            
+            const brand = brandInput.value.trim();
+            const colorCode = colorCodeInput.value.trim();
+            
+            if (!brand || !colorCode) {
+                showStatusMessage('Por favor, ingresa la marca y el código del color.', 'warning');
                 return;
             }
             
-            updateStatus("Extrayendo color de la imagen...", "info");
+            isSearching = true;
+            previewGrid.style.display = 'none';
+            imageContainer.style.display = 'none';
+            colorExtraction.style.display = 'none';
+            showStatusMessage(`Buscando imágenes para: ${brand} ${colorCode}...`, 'info');
+            toggleLoader(true);
+            toggleProgressBar(true);
+            searchButton.disabled = true;
             
             try {
-                // Hacer solicitud al backend para extraer el color
+                updateProgress(20);
+                
+                // Enviar solicitud al servidor
+                const response = await fetch('/search', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        brand: brand,
+                        color_code: colorCode,
+                        used_urls: Array.from(usedImageUrls)
+                    }),
+                });
+                
+                updateProgress(70);
+                
+                if (!response.ok) {
+                    throw new Error(`Error en la búsqueda: ${response.status} ${response.statusText}`);
+                }
+                
+                const data = await response.json();
+                updateProgress(90);
+                
+                if (data.error) {
+                    showStatusMessage(data.error, 'error');
+                    return;
+                }
+                
+                // Limpiar grid de previsualizaciones
+                previewGrid.innerHTML = '';
+                
+                if (data.images && data.images.length > 0) {
+                    // Mostrar cuadrícula de vista previa
+                    data.images.forEach((image, index) => {
+                        // Crear elemento de vista previa
+                        const imageUrl = image.url;
+                        const previewItem = document.createElement('div');
+                        previewItem.className = 'preview-item';
+                        previewItem.innerHTML = `<img src="${imageUrl}" alt="Imagen ${index + 1}">`;
+                        
+                        // Agregar evento de clic
+                        previewItem.addEventListener('click', () => {
+                            selectImage(imageUrl, previewItem);
+                        });
+                        
+                        previewGrid.appendChild(previewItem);
+                        usedImageUrls.add(imageUrl);
+                    });
+                    
+                    previewGrid.style.display = 'grid';
+                    showStatusMessage(`Se encontraron ${data.images.length} imágenes. Haz clic en una para seleccionarla.`, 'success');
+                } else {
+                    showStatusMessage('No se encontraron imágenes para esta búsqueda.', 'warning');
+                }
+                
+                updateProgress(100);
+            } catch (error) {
+                console.error('Error en la búsqueda:', error);
+                showStatusMessage(`Error en la búsqueda: ${error.message}`, 'error');
+            } finally {
+                isSearching = false;
+                searchButton.disabled = false;
+                toggleLoader(false);
+                
+                // Ocultar la barra de progreso después de un breve retraso
+                setTimeout(() => {
+                    toggleProgressBar(false);
+                }, 1000);
+            }
+        }
+        
+        // Función para seleccionar una imagen
+        function selectImage(imageUrl, element) {
+            // Eliminar selección anterior
+            const previousSelected = document.querySelector('.preview-item.selected');
+            if (previousSelected) {
+                previousSelected.classList.remove('selected');
+            }
+            
+            // Marcar como seleccionada
+            element.classList.add('selected');
+            selectedImageUrl = imageUrl;
+            
+            // Mostrar imagen seleccionada
+            selectedImage.src = imageUrl;
+            urlDisplay.textContent = `URL: ${imageUrl}`;
+            imageContainer.style.display = 'block';
+            
+            // Extraer color
+            extractColor(imageUrl);
+        }
+        
+        // Función para extraer el color
+        async function extractColor(imageUrl) {
+            colorExtraction.style.display = 'none';
+            showStatusMessage('Extrayendo color de la imagen...', 'info');
+            toggleLoader(true);
+            
+            try {
+                // Solicitar extracción de color al servidor
                 const response = await fetch('/extract-color', {
                     method: 'POST',
                     headers: {
@@ -320,174 +396,93 @@
                     }),
                 });
                 
+                if (!response.ok) {
+                    throw new Error(`Error en la extracción: ${response.status} ${response.statusText}`);
+                }
+                
                 const data = await response.json();
                 
                 if (data.success) {
-                    // Mostrar información del color
-                    document.getElementById('colorSample').style.backgroundColor = data.hex;
-                    document.getElementById('hexValue').textContent = data.hex;
+                    // Mostrar el color extraído
+                    colorSample.style.backgroundColor = data.hex;
+                    hexValue.textContent = data.hex;
+                    rgbValue.textContent = `RGB(${data.rgb.join(', ')})`;
                     
-                    // Mostrar valor RGB
-                    const rgb = data.rgb;
-                    document.getElementById('rgbValue').textContent = `RGB(${rgb[0]}, ${rgb[1]}, ${rgb[2]})`;
-                    
-                    // Mostrar contenedor de color y botón para aplicar
-                    document.getElementById('colorInfo').style.display = "flex";
-                    aplicarButton.style.display = "block";
-                    
-                    // Copiar al portapapeles automáticamente
-                    try {
-                        await navigator.clipboard.writeText(data.hex);
-                        copyStatus.style.display = "block";
-                        setTimeout(() => {
-                            copyStatus.style.display = "none";
-                        }, 3000);
-                    } catch (err) {
-                        console.error("Error al copiar al portapapeles:", err);
-                        copyStatus.style.display = "none";
-                    }
-                    
-                    updateStatus(`Color extraído correctamente: ${data.hex}`, "success");
+                    colorExtraction.style.display = 'block';
+                    showStatusMessage(`Color extraído: ${data.hex}`, 'success');
                 } else {
-                    updateStatus(`Error al extraer color: ${data.error}`, "error");
+                    showStatusMessage(`Error al extraer color: ${data.error}`, 'error');
                 }
             } catch (error) {
-                updateStatus(`Error al extraer color: ${error.message}`, "error");
+                console.error('Error al extraer color:', error);
+                showStatusMessage(`Error al extraer color: ${error.message}`, 'error');
+            } finally {
+                toggleLoader(false);
             }
         }
         
-        // Función para seleccionar una imagen
-        function selectImage(imageUrl, element) {
-            // Desmarcar selección anterior
-            const prevSelected = document.querySelector('.preview-image-item.selected');
-            if (prevSelected) {
-                prevSelected.classList.remove('selected');
-            }
-            
-            // Marcar nueva selección
-            element.classList.add('selected');
-            selectedImageUrl = imageUrl;
-            
-            // Mostrar imagen seleccionada
-            document.getElementById('resultImage').src = imageUrl;
-            document.getElementById('imageUrl').textContent = "URL: " + imageUrl;
-            imageContainer.style.display = "block";
-            
-            // Extraer color de la imagen
-            extractColor(imageUrl);
-        }
-        
-        // Función principal de búsqueda
-        searchButton.addEventListener('click', async function() {
-            const brand = document.getElementById('brand').value.trim();
-            const colorCode = document.getElementById('color_code').value.trim();
-            
-            // Validar que ambos campos tengan valores
-            if (!brand || !colorCode) {
-                updateStatus("Por favor, ingresa la marca y el código del color.", "error");
+        // Función para aplicar el color y la URL a la ventana principal
+        function applyColorAndUrl() {
+            if (!selectedImageUrl || !hexValue.textContent) {
+                showStatusMessage('No hay color o imagen seleccionada para aplicar.', 'error');
                 return;
             }
             
-            // Actualizar UI para búsqueda
-            updateStatus(`Iniciando búsqueda para: ${brand} ${colorCode}...`, "info");
+            if (window.opener && !window.opener.closed) {
+                window.opener.postMessage({
+                    type: 'colorExtraido',
+                    hexColor: hexValue.textContent,
+                    imageUrl: selectedImageUrl,
+                    paintId: paintId
+                }, '*');
+                
+                showStatusMessage('¡Color y URL aplicados al formulario con éxito!', 'success');
+                
+                // Cerrar ventana después de un breve retraso
+                setTimeout(() => {
+                    window.close();
+                }, 1500);
+            } else {
+                showStatusMessage('No se pudo comunicar con la ventana principal.', 'error');
+            }
+        }
+        
+        // Función para resetear la búsqueda
+        function resetSearch() {
+            previewGrid.style.display = 'none';
+            imageContainer.style.display = 'none';
+            colorExtraction.style.display = 'none';
+            statusMessage.style.display = 'none';
+            progressContainer.style.display = 'none';
+            loader.style.display = 'none';
+        }
+        
+        // Inicializar
+        document.addEventListener('DOMContentLoaded', () => {
+            // Configurar parámetros de URL
+            const params = getUrlParams();
+            brandInput.value = params.brand;
+            colorCodeInput.value = params.colorCode;
+            paintId = params.paintId;
+            paintIdInput.value = paintId;
             
-            imageContainer.style.display = "none";
-            document.getElementById('colorInfo').style.display = "none";
-            aplicarButton.style.display = "none";
-            previewImagesContainer.style.display = "none";
-            previewImagesContainer.innerHTML = '<h3>Selecciona una imagen:</h3>';
-            loadingElement.style.display = "block";
-            searchButton.disabled = true;
-            resetButton.disabled = true;
+            // Configurar eventos
+            searchButton.addEventListener('click', searchImages);
+            resetButton.addEventListener('click', resetSearch);
+            closeButton.addEventListener('click', () => window.close());
+            applyButton.addEventListener('click', applyColorAndUrl);
             
-            try {
-                // Llamar al backend para buscar imágenes
-                const requestData = {
-                    brand: brand,
-                    color_code: colorCode,
-                    used_urls: usedUrls
-                };
-                
-                const response = await fetch('/search', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify(requestData),
-                });
-                
-                const data = await response.json();
-                
-                // Ocultar indicador de carga
-                loadingElement.style.display = "none";
-                searchButton.disabled = false;
-                resetButton.disabled = false;
-                
-                if (data.error) {
-                    // Mostrar error
-                    updateStatus(data.error, "error");
-                    return;
-                }
-                
-                if (data.images && data.images.length > 0) {
-                    // Mostrar imágenes encontradas para selección
-                    previewImagesContainer.style.display = "block";
-                    
-                    data.images.forEach((img, index) => {
-                        const imageItem = document.createElement('div');
-                        imageItem.className = 'preview-image-item';
-                        
-                        // Determinar resolución
-                        let resolution = '';
-                        if (img.width && img.height) {
-                            resolution = `${img.width}x${img.height}`;
-                        }
-                        
-                        imageItem.innerHTML = `
-                            <img src="${img.url}" alt="Resultado ${index + 1}">
-                            ${resolution ? `<div class="resolution">${resolution}</div>` : ''}
-                        `;
-                        
-                        imageItem.addEventListener('click', function() {
-                            selectImage(img.url, imageItem);
-                        });
-                        
-                        previewImagesContainer.appendChild(imageItem);
-                    });
-                    
-                    // Actualizar usedUrls para no repetir imágenes
-                    data.images.forEach(img => {
-                        if (!usedUrls.includes(img.url)) {
-                            usedUrls.push(img.url);
-                        }
-                    });
-                    
-                    updateStatus(`Se encontraron ${data.images.length} imágenes. Selecciona una para extraer su color.`, "success");
-                } else if (data.image_url) {
-                    // Si solo se devolvió una URL de imagen
-                    const imageUrl = data.image_url;
-                    usedUrls.push(imageUrl);
-                    selectedImageUrl = imageUrl;
-                    
-                    // Mostrar la imagen
-                    document.getElementById('resultImage').src = imageUrl;
-                    document.getElementById('imageUrl').textContent = "URL: " + imageUrl;
-                    imageContainer.style.display = "block";
-                    
-                    // Extraer el color automáticamente
-                    extractColor(imageUrl);
-                    
-                    updateStatus("Imagen encontrada exitosamente!", "success");
-                } else {
-                    updateStatus("No se encontraron imágenes para esta combinación de marca y código.", "warning");
-                }
-                
-            } catch (error) {
-                loadingElement.style.display = "none";
-                searchButton.disabled = false;
-                resetButton.disabled = false;
-                
-                updateStatus("Error al conectar con el servidor: " + error.message, "error");
+            // Permitir búsqueda con Enter
+            brandInput.addEventListener('keypress', e => {
+                if (e.key === 'Enter') searchImages();
+            });
+            colorCodeInput.addEventListener('keypress', e => {
+                if (e.key === 'Enter') searchImages();
+            });
+            
+            // Iniciar búsqueda automáticamente si se proporcionaron parámetros
+            if (params.brand && params.colorCode) {
+                setTimeout(searchImages, 500);
             }
         });
     </script>

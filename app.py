@@ -1277,6 +1277,8 @@ def buscador_imagenes():
     """Página para buscar imágenes de pinturas"""
     return render_template('admin/buscador_imagenes.html')
 
+# Modificar/Añadir estas funciones en app.py
+
 @app.route('/search', methods=['POST'])
 @admin_required
 def search_images():
@@ -1296,12 +1298,11 @@ def search_images():
         # Lista para almacenar todas las URLs encontradas
         all_image_urls = []
         
-        # 1. Búsqueda directa en sitios oficiales para marcas conocidas
+        # 1. Usar patrones específicos para marcas conocidas (más confiable)
         if brand_lower == "vallejo":
             # Patrones de códigos de Vallejo
             if color_code.startswith("70"):
                 # Model Color
-                # Intentar con URL directa del sitio oficial
                 vallejo_pattern = f"https://acrylicosvallejo.com/wp-content/uploads/2017/06/vallejo-model-color-{color_code}"
                 all_image_urls.append(f"{vallejo_pattern}.jpg")
                 all_image_urls.append(f"{vallejo_pattern}-1.jpg")
@@ -1320,141 +1321,74 @@ def search_images():
                 all_image_urls.append(f"https://acrylicosvallejo.com/wp-content/uploads/2017/06/vallejo-game-air-{color_code}")
                 all_image_urls.append(f"https://www.fantasywelt.de/media/image/product/28940/md/vallejo-game-air-{color_code}")
         
-        # 2. Construir múltiples consultas para búsquedas en motores
-        search_queries = [
-            f"{brand} {color_code} paint miniature",
-            f"{brand} {color_code} acrylic paint",
-            f"{brand} paint {color_code}",
-            f"{color_code} {brand}"
-        ]
-        
-        # 3. Realizar búsquedas en Google para cada consulta
-        for query in search_queries:
-            encoded_query = requests.utils.quote(query)
-            search_url = f"https://www.google.com/search?q={encoded_query}&tbm=isch"
+        # 2. Usar la biblioteca DuckDuckGo Search
+        try:
+            from duckduckgo_search import DDGS
             
-            # Encabezados para simular un navegador real
+            queries = [
+                f"{brand} {color_code} paint",
+                f"{brand} {color_code} miniature paint"
+            ]
+            
+            for query in queries:
+                with DDGS() as ddgs:
+                    results = list(ddgs.images(
+                        query, 
+                        safesearch='Moderate', 
+                        max_results=5
+                    ))
+                    
+                    for result in results:
+                        img_url = result.get('image')
+                        if img_url and img_url not in all_image_urls:
+                            all_image_urls.append(img_url)
+        except Exception as e:
+            print(f"Error en búsqueda DDGS: {str(e)}")
+            # Continuar con otras fuentes si DDGS falla
+        
+        # 3. Buscar usando requests directamente a Bing como fallback
+        if len(all_image_urls) < 5:
+            import re
+            
+            fallback_query = f"{brand} {color_code} paint"
+            encoded_query = requests.utils.quote(fallback_query)
+            search_url = f"https://www.bing.com/images/search?q={encoded_query}&form=HDRSC2&first=1"
+            
             headers = {
                 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/115.0.0.0 Safari/537.36',
                 'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8',
                 'Accept-Language': 'es-ES,es;q=0.9,en;q=0.8',
-                'Referer': 'https://www.google.com/'
+                'Referer': 'https://www.bing.com/'
             }
             
             try:
-                # Realizar la búsqueda con un timeout corto
                 response = requests.get(search_url, headers=headers, timeout=5)
                 
                 if response.status_code == 200:
-                    # Extraer URLs de imágenes usando múltiples patrones regex
                     html_content = response.text
                     
-                    # Patrones más específicos para Google Images
-                    img_patterns = [
-                        r'imgurl=([^&]+)&',  # Patrón común en Google Images
-                        r'"ou":"([^"]+)"',   # Otro patrón en formato JSON
-                        r'src="([^"]+\.(?:jpg|jpeg|png|webp))"',  # Patrón para etiquetas src
-                        r'data-src="([^"]+\.(?:jpg|jpeg|png|webp))"',  # Para imágenes lazy-loaded
-                        r'"([^"]+\.(?:jpg|jpeg|png|webp))"'  # Patrón genérico para URLs de imágenes
+                    # Patrones para detectar URLs de imágenes
+                    patterns = [
+                        r'src="([^"]+\.(?:jpg|jpeg|png|webp))"',
+                        r'data-src="([^"]+\.(?:jpg|jpeg|png|webp))"',
+                        r'"contentUrl":"([^"]+)"'
                     ]
                     
-                    for pattern in img_patterns:
+                    for pattern in patterns:
                         matches = re.findall(pattern, html_content)
                         for match in matches:
-                            # Decodificar URL si es necesario
                             img_url = requests.utils.unquote(match)
                             
-                            # Filtrar URLs no deseadas
-                            if any(domain in img_url for domain in ['google.com', 'gstatic.com', 'schema.org', 'data:', 'doubleclick']):
+                            # Normalizar URL
+                            if img_url.startswith('//'):
+                                img_url = 'https:' + img_url
+                            elif not img_url.startswith(('http://', 'https://')):
                                 continue
                                 
-                            # Normalizar URL
-                            if img_url.startswith('//'):
-                                img_url = 'https:' + img_url
-                            elif not img_url.startswith(('http://', 'https://')):
-                                continue  # Omitir URLs relativas
-                                
-                            # Filtrar por extensiones de imagen
-                            if re.search(r'\.(jpg|jpeg|png|webp)(\?|$)', img_url.lower()):
+                            if img_url not in all_image_urls:
                                 all_image_urls.append(img_url)
             except Exception as e:
-                print(f"Error en búsqueda para {query}: {str(e)}")
-                continue
-        
-        # 4. Búsqueda en Bing como respaldo
-        try:
-            bing_query = f"{brand} {color_code} paint"
-            encoded_bing_query = requests.utils.quote(bing_query)
-            bing_url = f"https://www.bing.com/images/search?q={encoded_bing_query}&form=HDRSC2&first=1"
-            
-            bing_response = requests.get(bing_url, headers=headers, timeout=5)
-            
-            if bing_response.status_code == 200:
-                bing_content = bing_response.text
-                
-                # Patrones específicos para Bing Images
-                bing_patterns = [
-                    r'src="([^"]+\.(?:jpg|jpeg|png|webp))"',
-                    r'data-src="([^"]+\.(?:jpg|jpeg|png|webp))"',
-                    r'"contentUrl":"([^"]+)"'
-                ]
-                
-                for pattern in bing_patterns:
-                    matches = re.findall(pattern, bing_content)
-                    for match in matches:
-                        img_url = requests.utils.unquote(match)
-                        
-                        # Normalizar URL
-                        if img_url.startswith('//'):
-                            img_url = 'https:' + img_url
-                        elif not img_url.startswith(('http://', 'https://')):
-                            continue
-                            
-                        all_image_urls.append(img_url)
-        except Exception as e:
-            print(f"Error en búsqueda Bing: {str(e)}")
-        
-        # 5. También buscar en tiendas específicas de modelismo
-        model_shops = [
-            f"https://www.miniaturemarket.com/searchresults?q={brand}+{color_code}",
-            f"https://www.miniatureshop.co.uk/search?type=product&q={brand}+{color_code}",
-            f"https://www.fantasywelt.de/search?sSearch={brand}+{color_code}"
-        ]
-        
-        for shop_url in model_shops:
-            try:
-                shop_response = requests.get(shop_url, headers=headers, timeout=3)
-                
-                if shop_response.status_code == 200:
-                    shop_content = shop_response.text
-                    
-                    # Buscar imágenes de productos
-                    product_patterns = [
-                        r'src="([^"]+(?:product|items)[^"]+\.(?:jpg|jpeg|png|webp))"',
-                        r'data-src="([^"]+(?:product|items)[^"]+\.(?:jpg|jpeg|png|webp))"',
-                        r'"image":"([^"]+)"'
-                    ]
-                    
-                    for pattern in product_patterns:
-                        matches = re.findall(pattern, shop_content)
-                        for match in matches:
-                            img_url = requests.utils.unquote(match)
-                            
-                            # Normalizar URL
-                            if img_url.startswith('//'):
-                                img_url = 'https:' + img_url
-                            elif not img_url.startswith(('http://', 'https://')):
-                                # Para URLs relativas, intentar crear una URL absoluta
-                                base_url = '/'.join(shop_url.split('/')[:3])  # Obtener dominio
-                                if img_url.startswith('/'):
-                                    img_url = base_url + img_url
-                                else:
-                                    img_url = base_url + '/' + img_url
-                                    
-                            all_image_urls.append(img_url)
-            except Exception as e:
-                print(f"Error en búsqueda tienda {shop_url}: {str(e)}")
-                continue
+                print(f"Error en búsqueda fallback: {str(e)}")
         
         # Eliminar duplicados
         all_image_urls = list(dict.fromkeys(all_image_urls))
@@ -1462,7 +1396,7 @@ def search_images():
         # Filtrar URLs ya usadas
         available_urls = [url for url in all_image_urls if url not in used_urls]
         
-        # Si no hay URLs disponibles pero hay URLs ya usadas, usar la primera URL usada
+        # Si no hay URLs disponibles pero hay URLs ya usadas, dar la primera URL usada
         if not available_urls and all_image_urls:
             available_urls = [all_image_urls[0]]
         
@@ -1470,64 +1404,208 @@ def search_images():
         if not available_urls:
             return jsonify({"error": f"No se encontraron imágenes para {brand} {color_code}. Por favor, verifica la marca y el código o prueba con otros términos."})
         
-        # Intentar verificar las URLs (por lo menos algunas)
-        processed_images = []
+        # Verificar las URLs (por lo menos algunas)
+        valid_images = []
         verified_count = 0
         
-        for url in available_urls:
-            # Limitar a verificar solo 10 URLs para evitar tiempos de espera largos
-            if verified_count >= 10:
-                # Añadir el resto sin verificar
-                processed_images.append({
-                    'url': url,
-                    'width': None,
-                    'height': None
-                })
-                continue
-                
+        for url in available_urls[:15]:  # Limitar a verificar solo 15 máximo
             try:
-                # Verificar que la URL es accesible con un timeout muy corto
+                # Verificar que la URL es accesible con un timeout corto
                 head_response = requests.head(url, headers=headers, timeout=2)
                 content_type = head_response.headers.get('Content-Type', '')
                 
                 # Solo procesar imágenes válidas
                 if 'image' in content_type:
-                    processed_images.append({
+                    valid_images.append({
                         'url': url,
                         'width': None,
                         'height': None
                     })
                     verified_count += 1
+                    if verified_count >= 8:  # Limitar a 8 imágenes verificadas
+                        break
                 elif head_response.status_code == 200:
                     # Si el tipo de contenido no se especifica pero la URL es accesible
-                    processed_images.append({
+                    valid_images.append({
                         'url': url,
                         'width': None,
                         'height': None
                     })
                     verified_count += 1
+                    if verified_count >= 8:  # Limitar a 8 imágenes verificadas
+                        break
             except:
-                # Si falla la verificación, incluir de todos modos
-                processed_images.append({
+                # Incluir URLs que no se pudieron verificar (podrían funcionar en el navegador)
+                if len(valid_images) < 3:  # Solo añadir no verificadas si tenemos menos de 3
+                    valid_images.append({
+                        'url': url,
+                        'width': None,
+                        'height': None
+                    })
+        
+        # Si no quedan imágenes válidas, incluir todas sin verificar (hasta 20)
+        if not valid_images:
+            for url in available_urls[:10]:
+                valid_images.append({
                     'url': url,
                     'width': None,
                     'height': None
                 })
         
-        # Si después de filtrar no queda ninguna imagen, incluir todas sin verificar
-        if not processed_images:
-            for url in available_urls[:20]:  # Limitar a 20 resultados
-                processed_images.append({
-                    'url': url,
-                    'width': None,
-                    'height': None
-                })
-        
-        return jsonify({"images": processed_images})
+        return jsonify({"images": valid_images})
         
     except Exception as e:
         print(f"Error global en búsqueda: {str(e)}")
+        import traceback
+        traceback.print_exc()
         return jsonify({"error": f"Error al buscar imágenes: {str(e)}"})
+
+@app.route('/extract-color', methods=['POST'])
+@admin_required
+def extract_color():
+    """Extraer el color dominante de una imagen"""
+    try:
+        data = request.json
+        image_url = data.get('image_url')
+        
+        if not image_url:
+            return jsonify({"success": False, "error": "URL de imagen no proporcionada"})
+        
+        # Definir colores predeterminados según la marca
+        default_colors = {
+            'vallejo': "#1C75BC",  # Azul típico de Vallejo
+            'tamiya': "#FFD700",   # Amarillo típico de Tamiya
+            'citadel': "#00843D",  # Verde Citadel
+            'army painter': "#D40000",  # Rojo Army Painter
+            'ak interactive': "#D4AC0D"  # Dorado AK Interactive
+        }
+        
+        # Determinar el color predeterminado basado en la URL
+        default_color = "#3366CC"  # Azul genérico por defecto
+        for brand, color in default_colors.items():
+            if brand in image_url.lower():
+                default_color = color
+                break
+        
+        # Encabezados para simular un navegador real
+        headers = {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
+            'Accept': 'image/avif,image/webp,image/apng,image/*,*/*;q=0.8',
+            'Accept-Language': 'es-ES,es;q=0.9,en-US;q=0.8,en;q=0.7',
+            'Referer': 'https://www.google.com/'
+        }
+        
+        # Descargar la imagen con mejor manejo de errores
+        try:
+            response = requests.get(image_url, headers=headers, timeout=10)
+            
+            # Verificar si la solicitud fue exitosa
+            if response.status_code != 200:
+                return jsonify({
+                    "success": True,
+                    "hex": default_color,
+                    "rgb": [int(default_color[1:3], 16), int(default_color[3:5], 16), int(default_color[5:7], 16)],
+                    "note": f"Se usó un color predeterminado debido a un error HTTP: {response.status_code}"
+                })
+                
+        except requests.exceptions.RequestException as e:
+            return jsonify({
+                "success": True,
+                "hex": default_color,
+                "rgb": [int(default_color[1:3], 16), int(default_color[3:5], 16), int(default_color[5:7], 16)],
+                "note": f"Se usó un color predeterminado debido a un error de conexión: {str(e)}"
+            })
+        
+        try:
+            # Verificar que el contenido es una imagen
+            img = Image.open(BytesIO(response.content))
+            
+            # Redimensionar para procesar más rápido
+            img = img.resize((100, 100))
+            
+            # Convertir a RGB si no lo está
+            if img.mode != 'RGB':
+                img = img.convert('RGB')
+            
+            # Estrategia: analizar la región central de la imagen
+            # La pintura suele estar en el centro del bote
+            width, height = img.size
+            
+            # Definir región central (aproximadamente un tercio central)
+            x_start = width // 3
+            x_end = (width * 2) // 3
+            y_start = height // 3
+            y_end = (height * 2) // 3
+            
+            # Extraer la región central
+            region = img.crop((x_start, y_start, x_end, y_end))
+            
+            # Obtener píxeles de la región
+            pixels = list(region.getdata())
+            
+            # Filtrar píxeles muy claros, muy oscuros o sin saturación
+            filtered_pixels = []
+            for r, g, b in pixels:
+                # Detectar si tiene suficiente saturación (no es gris)
+                max_val = max(r, g, b)
+                min_val = min(r, g, b)
+                
+                # Evitar división por cero
+                if max_val == 0:
+                    continue
+                    
+                saturation = (max_val - min_val) / max_val
+                
+                # Filtrar píxeles casi blancos o casi negros
+                if (saturation > 0.2 and  # Tiene suficiente saturación
+                    30 < r < 225 and 30 < g < 225 and 30 < b < 225):  # Evita extremos
+                    filtered_pixels.append((r, g, b))
+            
+            # Si todos los píxeles fueron filtrados, usar píxeles originales
+            if not filtered_pixels:
+                filtered_pixels = pixels
+            
+            # Calcular el color promedio
+            if filtered_pixels:
+                r_total = g_total = b_total = 0
+                for r, g, b in filtered_pixels:
+                    r_total += r
+                    g_total += g
+                    b_total += b
+                
+                pixel_count = len(filtered_pixels)
+                r_avg = int(r_total / pixel_count)
+                g_avg = int(g_total / pixel_count)
+                b_avg = int(b_total / pixel_count)
+                
+                # Convertir a hexadecimal
+                hex_color = "#{:02x}{:02x}{:02x}".format(r_avg, g_avg, b_avg)
+                
+                return jsonify({
+                    "success": True,
+                    "hex": hex_color,
+                    "rgb": [r_avg, g_avg, b_avg]
+                })
+            else:
+                # Si no hay píxeles para analizar
+                return jsonify({
+                    "success": True,
+                    "hex": default_color,
+                    "rgb": [int(default_color[1:3], 16), int(default_color[3:5], 16), int(default_color[5:7], 16)],
+                    "note": "Se usó un color predeterminado porque no se pudieron procesar píxeles"
+                })
+            
+        except Exception as e:
+            # Si hay cualquier error, devolver un color predeterminado
+            return jsonify({
+                "success": True,
+                "hex": default_color,
+                "rgb": [int(default_color[1:3], 16), int(default_color[3:5], 16), int(default_color[5:7], 16)],
+                "note": f"Se usó un color predeterminado debido a un error: {str(e)}"
+            })
+        
+    except Exception as e:
+        return jsonify({"success": False, "error": f"Error al extraer color: {str(e)}"})
     
 @app.route('/extract-color', methods=['POST'])
 @admin_required
