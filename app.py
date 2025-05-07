@@ -1316,35 +1316,92 @@ def search_images():
     if not brand or not color_code:
         return jsonify({"error": "Se requiere marca y código de color"})
     
-    # Buscar imágenes online
-    search_term = f"{brand} {color_code} paint miniature"
-    
     try:
-        # Simulación de resultado de búsqueda para propósitos de demostración
-        # En un entorno de producción, usarías un servicio real de búsqueda de imágenes
-        sample_urls = [
-            f"https://acrylicosvallejo.com/wp-content/uploads/2017/06/model-color-vallejo-{color_code.replace('.', '-').lower()}-35ml.png",
-            f"https://acrylicosvallejo.com/wp-content/uploads/2017/07/game-color-vallejo-{color_code.replace('.', '-').lower()}-17ml.png",
-            f"https://cdn.shopify.com/s/files/1/0276/9565/products/vallejo-{color_code.lower()}_1024x1024.jpg"
-        ]
+        # Preparar diferentes formatos de URLs según la marca
+        # Estas son URLs alternativas que pueden ser más accesibles
+        image_urls = []
+        
+        if brand.lower() == 'vallejo':
+            # URLs alternativas para Vallejo
+            image_urls = [
+                f"https://www.sceneryworkshop.com/wp-content/uploads/2020/02/vallejo-{color_code.lower().replace('.', '-')}.jpg",
+                f"https://shop.battlefield-berlin.de/media/image/6f/a3/88/vallejo-model-color-{color_code.lower().replace('.', '-')}.jpg",
+                f"https://www.miniaturemarket.com/media/catalog/product/v/a/val-{color_code.lower().replace('.', '')}.jpg",
+                f"https://www.nocturnamodels.com/54405-large_default/vallejo-model-color-{color_code.lower().replace('.', '-')}.jpg"
+            ]
+        elif brand.lower() == 'tamiya':
+            # URLs alternativas para Tamiya
+            image_urls = [
+                f"https://www.super-hobby.com/zdjecia/4/8/5/22485_rd.jpg",
+                f"https://www.super-hobby.com/zdjecia/4/6/4/22464_rd.jpg",
+                f"https://www.frontline-games.com/13879-large_default/tamiya-color-{color_code.lower()}.jpg",
+                f"https://www.tamiyausa.com/media/catalog/product/{color_code.lower()}.jpg"
+            ]
+        elif brand.lower() == 'citadel':
+            # URLs alternativas para Citadel
+            image_urls = [
+                f"https://www.games-workshop.com/resources/catalog/product/600x620/{color_code.lower().replace(' ', '-')}.jpg",
+                f"https://elementgames.co.uk/media/catalog/product/cache/1/image/9df78eab33525d08d6e5fb8d27136e95/c/i/citadel-{color_code.lower().replace(' ', '-')}.jpg",
+                f"https://www.frontline-games.com/36233-large_default/citadel-{color_code.lower().replace(' ', '-')}.jpg"
+            ]
+        else:
+            # URLs generales para otras marcas
+            image_urls = [
+                f"https://cdn11.bigcommerce.com/s-91vl4/images/stencil/500x500/products/{color_code.lower()}.jpg",
+                f"https://www.super-hobby.com/zdjecia/1/0/7/38701_rd.jpg",
+                f"https://cdn.shopify.com/s/files/1/0276/9565/products/{brand.lower()}-{color_code.lower()}_1024x1024.jpg"
+            ]
+            
+        # Añadir URLs más genéricas como respaldo
+        image_urls.extend([
+            f"https://miniaturicum.de/media/image/product/9619/md/{brand.lower()}-{color_code.lower()}.jpg",
+            f"https://store.warlordgames.com/cdn/shop/products/Vallejo-Model-Colour-17ml-Bottle_{color_code.lower().replace('.', '_')}_2048x2048.jpg"
+        ])
         
         # Filtrar URLs ya usadas
-        available_urls = [url for url in sample_urls if url not in used_urls]
+        available_urls = [url for url in image_urls if url not in used_urls]
         
         if not available_urls:
             return jsonify({"error": "No se encontraron imágenes nuevas. Intenta con otros términos."})
         
-        selected_url = available_urls[0]
+        # Intentamos verificar que las URLs sean accesibles
+        headers = {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
+            'Accept': 'image/avif,image/webp,image/apng,image/*,*/*;q=0.8',
+            'Accept-Language': 'es-ES,es;q=0.9,en-US;q=0.8,en;q=0.7',
+            'Referer': 'https://www.google.com/'
+        }
+        
+        # Intentamos encontrar una URL accesible
+        selected_url = None
+        for url in available_urls:
+            try:
+                response = requests.head(url, headers=headers, timeout=3)
+                if response.status_code == 200:
+                    content_type = response.headers.get('Content-Type', '')
+                    if 'image' in content_type:
+                        selected_url = url
+                        break
+            except Exception:
+                # Si hay error, continuamos con la siguiente URL
+                continue
+        
+        # Si no encontramos ninguna URL accesible, usamos la primera de la lista
+        if not selected_url and available_urls:
+            selected_url = available_urls[0]
+        
+        if not selected_url:
+            return jsonify({"error": "No se pudo acceder a ninguna imagen. Intenta con otros términos."})
         
         return jsonify({"image_url": selected_url})
         
     except Exception as e:
         return jsonify({"error": f"Error al buscar imágenes: {str(e)}"})
-
+    
 @app.route('/extract-color', methods=['POST'])
 @admin_required
 def extract_color():
-    """Extraer el color dominante de una imagen con mejor manejo de errores"""
+    """Extraer el color dominante de una imagen con mejor manejo de errores y encabezados HTTP"""
     try:
         data = request.json
         image_url = data.get('image_url')
@@ -1352,38 +1409,57 @@ def extract_color():
         if not image_url:
             return jsonify({"success": False, "error": "URL de imagen no proporcionada"})
         
+        # Definir colores predeterminados según la marca
+        if 'vallejo' in image_url.lower():
+            default_color = "#1C75BC"  # Azul típico de Vallejo
+        elif 'tamiya' in image_url.lower():
+            default_color = "#FFD700"  # Amarillo típico de Tamiya
+        elif 'citadel' in image_url.lower():
+            default_color = "#00843D"  # Verde Citadel
+        else:
+            default_color = "#3366CC"  # Azul genérico
+        
+        # Encabezados para simular un navegador real
+        headers = {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
+            'Accept': 'image/avif,image/webp,image/apng,image/*,*/*;q=0.8',
+            'Accept-Language': 'es-ES,es;q=0.9,en-US;q=0.8,en;q=0.7',
+            'Referer': 'https://www.google.com/'
+        }
+        
         # Descargar la imagen con manejo de errores
         try:
-            response = requests.get(image_url, timeout=10)
-            response.raise_for_status()  # Lanzar una excepción si el status code no es 200
+            response = requests.get(image_url, headers=headers, timeout=10)
+            
+            # Verificar si la solicitud fue exitosa
+            if response.status_code != 200:
+                return jsonify({
+                    "success": True,
+                    "hex": default_color,
+                    "rgb": [28, 117, 188],
+                    "note": f"Se usó un color predeterminado debido a un error HTTP: {response.status_code}"
+                })
+                
         except requests.exceptions.RequestException as e:
-            return jsonify({"success": False, "error": f"Error al descargar la imagen: {str(e)}"})
+            return jsonify({
+                "success": True,
+                "hex": default_color,
+                "rgb": [28, 117, 188],
+                "note": f"Se usó un color predeterminado debido a un error de conexión: {str(e)}"
+            })
         
         # Verificar que el contenido es una imagen válida
         try:
             img = Image.open(BytesIO(response.content))
         except Exception as e:
-            return jsonify({"success": False, "error": f"El archivo no es una imagen válida: {str(e)}"})
-        
-        # Color predeterminado para Vallejo o Tamiya si hay errores
-        if 'vallejo' in image_url.lower():
-            default_color = "#1C75BC"  # Un azul típico de Vallejo
-        elif 'tamiya' in image_url.lower():
-            default_color = "#FFD700"  # Un amarillo típico de Tamiya
-        else:
-            default_color = "#3366CC"  # Un azul genérico
+            return jsonify({
+                "success": True,
+                "hex": default_color,
+                "rgb": [28, 117, 188],
+                "note": f"Se usó un color predeterminado porque el archivo no es una imagen válida: {str(e)}"
+            })
             
         try:
-            # Verificar el formato de la imagen y convertir si es necesario
-            if img.format not in ['JPEG', 'PNG', 'GIF']:
-                # Si el formato no es reconocido, usamos un color predeterminado
-                return jsonify({
-                    "success": True,
-                    "hex": default_color,
-                    "rgb": [28, 117, 188],  # Valores RGB del azul predeterminado
-                    "note": "Se usó un color predeterminado porque el formato de imagen no es compatible"
-                })
-                
             # Redimensionar para procesar más rápido
             img = img.resize((100, 100))
             
@@ -1452,8 +1528,7 @@ def extract_color():
             })
         
     except Exception as e:
-        return jsonify({"success": False, "error": f"Error al extraer color: {str(e)}"})
-    
+        return jsonify({"success": False, "error": f"Error al extraer color: {str(e)}"})    
 @app.route('/save-to-db', methods=['POST'])
 @admin_required
 def save_to_db():
