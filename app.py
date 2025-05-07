@@ -1304,7 +1304,7 @@ def update_paint_color(paint_id):
             "error": str(e)
         }), 500
     
-@@app.route('/search', methods=['POST'])
+@app.route('/search', methods=['POST'])
 @admin_required
 def search_images():
     """Buscar imágenes de pinturas online de forma dinámica usando Google Search"""
