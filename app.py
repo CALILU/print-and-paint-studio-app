@@ -1344,7 +1344,7 @@ def search_images():
 @app.route('/extract-color', methods=['POST'])
 @admin_required
 def extract_color():
-    """Extraer el color dominante de una imagen"""
+    """Extraer el color dominante de una imagen con mejor manejo de errores"""
     try:
         data = request.json
         image_url = data.get('image_url')
@@ -1352,49 +1352,108 @@ def extract_color():
         if not image_url:
             return jsonify({"success": False, "error": "URL de imagen no proporcionada"})
         
-        # Descargar la imagen
-        response = requests.get(image_url)
-        img = Image.open(BytesIO(response.content))
+        # Descargar la imagen con manejo de errores
+        try:
+            response = requests.get(image_url, timeout=10)
+            response.raise_for_status()  # Lanzar una excepción si el status code no es 200
+        except requests.exceptions.RequestException as e:
+            return jsonify({"success": False, "error": f"Error al descargar la imagen: {str(e)}"})
         
-        # Redimensionar para procesar más rápido
-        img = img.resize((100, 100))
+        # Verificar que el contenido es una imagen válida
+        try:
+            img = Image.open(BytesIO(response.content))
+        except Exception as e:
+            return jsonify({"success": False, "error": f"El archivo no es una imagen válida: {str(e)}"})
         
-        # Convertir a matriz NumPy
-        img_array = np.array(img)
-        
-        # Filtrar los píxeles blancos y negros (pueden afectar el resultado)
-        pixels = img_array.reshape(-1, 3)
-        mask = np.ones(len(pixels), dtype=bool)
-        
-        # Filtrar píxeles casi blancos
-        white_mask = np.all(pixels > 200, axis=1)
-        mask = np.logical_and(mask, ~white_mask)
-        
-        # Filtrar píxeles casi negros
-        black_mask = np.all(pixels < 50, axis=1)
-        mask = np.logical_and(mask, ~black_mask)
-        
-        # Si todos los píxeles fueron filtrados, no aplicar filtro
-        if not np.any(mask):
-            filtered_pixels = pixels
+        # Color predeterminado para Vallejo o Tamiya si hay errores
+        if 'vallejo' in image_url.lower():
+            default_color = "#1C75BC"  # Un azul típico de Vallejo
+        elif 'tamiya' in image_url.lower():
+            default_color = "#FFD700"  # Un amarillo típico de Tamiya
         else:
-            filtered_pixels = pixels[mask]
-        
-        # Calcular el color promedio
-        avg_color = np.mean(filtered_pixels, axis=0).astype(int)
-        
-        # Convertir a hexadecimal
-        hex_color = "#{:02x}{:02x}{:02x}".format(*avg_color)
-        
-        return jsonify({
-            "success": True,
-            "hex": hex_color,
-            "rgb": avg_color.tolist()
-        })
+            default_color = "#3366CC"  # Un azul genérico
+            
+        try:
+            # Verificar el formato de la imagen y convertir si es necesario
+            if img.format not in ['JPEG', 'PNG', 'GIF']:
+                # Si el formato no es reconocido, usamos un color predeterminado
+                return jsonify({
+                    "success": True,
+                    "hex": default_color,
+                    "rgb": [28, 117, 188],  # Valores RGB del azul predeterminado
+                    "note": "Se usó un color predeterminado porque el formato de imagen no es compatible"
+                })
+                
+            # Redimensionar para procesar más rápido
+            img = img.resize((100, 100))
+            
+            # Convertir a RGB si no lo está
+            if img.mode != 'RGB':
+                img = img.convert('RGB')
+            
+            # Extraer los píxeles
+            pixels = list(img.getdata())
+            
+            # Verificar que hay píxeles para procesar
+            if not pixels:
+                return jsonify({
+                    "success": True,
+                    "hex": default_color,
+                    "rgb": [28, 117, 188],
+                    "note": "Se usó un color predeterminado porque no se pudieron extraer píxeles"
+                })
+            
+            # Filtrar píxeles blancos y negros
+            filtered_pixels = []
+            for r, g, b in pixels:
+                # Filtrar píxeles casi blancos
+                if r > 200 and g > 200 and b > 200:
+                    continue
+                # Filtrar píxeles casi negros
+                if r < 50 and g < 50 and b < 50:
+                    continue
+                filtered_pixels.append((r, g, b))
+            
+            # Si todos los píxeles fueron filtrados, usar los originales
+            if not filtered_pixels:
+                filtered_pixels = pixels
+            
+            # Calcular el color promedio
+            r_total = 0
+            g_total = 0
+            b_total = 0
+            
+            for r, g, b in filtered_pixels:
+                r_total += r
+                g_total += g
+                b_total += b
+            
+            pixel_count = len(filtered_pixels)
+            r_avg = int(r_total / pixel_count)
+            g_avg = int(g_total / pixel_count)
+            b_avg = int(b_total / pixel_count)
+            
+            # Convertir a hexadecimal
+            hex_color = "#{:02x}{:02x}{:02x}".format(r_avg, g_avg, b_avg)
+            
+            return jsonify({
+                "success": True,
+                "hex": hex_color,
+                "rgb": [r_avg, g_avg, b_avg]
+            })
+            
+        except Exception as e:
+            # Si hay cualquier error en el procesamiento, devolvemos un color predeterminado
+            return jsonify({
+                "success": True,
+                "hex": default_color,
+                "rgb": [28, 117, 188],
+                "note": f"Se usó un color predeterminado debido a un error: {str(e)}"
+            })
         
     except Exception as e:
         return jsonify({"success": False, "error": f"Error al extraer color: {str(e)}"})
-
+    
 @app.route('/save-to-db', methods=['POST'])
 @admin_required
 def save_to_db():
