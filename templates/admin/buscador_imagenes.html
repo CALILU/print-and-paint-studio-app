@@ -83,25 +83,6 @@
             0% { transform: rotate(0deg); }
             100% { transform: rotate(360deg); }
         }
-        #progress-container {
-            height: 25px;
-            background-color: #f3f3f3;
-            border-radius: 5px;
-            margin: 10px 0;
-            display: none;
-        }
-        #progress-bar {
-            height: 100%;
-            background-color: #4CAF50;
-            border-radius: 5px;
-            width: 0%;
-            transition: width 0.5s;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: white;
-            font-weight: bold;
-        }
         #status-message {
             padding: 10px 15px;
             margin: 10px 0;
@@ -166,10 +147,6 @@
         
         <div id="status-message"></div>
         
-        <div id="progress-container">
-            <div id="progress-bar">0%</div>
-        </div>
-        
         <div class="loader" id="loader"></div>
         
         <div id="preview-grid" class="preview-grid" style="display:none;">
@@ -215,8 +192,6 @@
         const closeButton = document.getElementById('close-button');
         const applyButton = document.getElementById('apply-button');
         const statusMessage = document.getElementById('status-message');
-        const progressContainer = document.getElementById('progress-container');
-        const progressBar = document.getElementById('progress-bar');
         const loader = document.getElementById('loader');
         const previewGrid = document.getElementById('preview-grid');
         const imageContainer = document.getElementById('image-container');
@@ -235,20 +210,6 @@
                 colorCode: params.get('color_code') || '',
                 paintId: params.get('paint_id') || ''
             };
-        }
-        
-        // Función para actualizar la barra de progreso
-        function updateProgress(percent) {
-            progressBar.style.width = `${percent}%`;
-            progressBar.textContent = `${percent}%`;
-        }
-        
-        // Función para mostrar/ocultar la barra de progreso
-        function toggleProgressBar(show) {
-            progressContainer.style.display = show ? 'block' : 'none';
-            if (show) {
-                updateProgress(10); // Comenzar con 10%
-            }
         }
         
         // Función para mostrar mensajes de estado
@@ -282,13 +243,10 @@
             colorExtraction.style.display = 'none';
             showStatusMessage(`Buscando imágenes para: ${brand} ${colorCode}...`, 'info');
             toggleLoader(true);
-            toggleProgressBar(true);
             searchButton.disabled = true;
             
             try {
-                updateProgress(20);
-                
-                // Enviar solicitud al servidor (usar la ruta existente)
+                // Enviar solicitud al servidor
                 const response = await fetch('/search', {
                     method: 'POST',
                     headers: {
@@ -301,14 +259,11 @@
                     }),
                 });
                 
-                updateProgress(70);
-                
                 if (!response.ok) {
                     throw new Error(`Error en la búsqueda: ${response.status} ${response.statusText}`);
                 }
                 
                 const data = await response.json();
-                updateProgress(90);
                 
                 if (data.error) {
                     showStatusMessage(data.error, 'error');
@@ -341,8 +296,6 @@
                 } else {
                     showStatusMessage('No se encontraron imágenes para esta búsqueda.', 'warning');
                 }
-                
-                updateProgress(100);
             } catch (error) {
                 console.error('Error en la búsqueda:', error);
                 showStatusMessage(`Error en la búsqueda: ${error.message}`, 'error');
@@ -350,11 +303,6 @@
                 isSearching = false;
                 searchButton.disabled = false;
                 toggleLoader(false);
-                
-                // Ocultar la barra de progreso después de un breve retraso
-                setTimeout(() => {
-                    toggleProgressBar(false);
-                }, 1000);
             }
         }
         
@@ -379,14 +327,13 @@
             extractColor(imageUrl);
         }
         
-        // Función para extraer el color (usar la ruta existente)
+        // Función para extraer el color
         async function extractColor(imageUrl) {
             colorExtraction.style.display = 'none';
             showStatusMessage('Extrayendo color de la imagen...', 'info');
             toggleLoader(true);
             
             try {
-                // Solicitar extracción de color al servidor
                 const response = await fetch('/extract-color', {
                     method: 'POST',
                     headers: {
@@ -407,7 +354,7 @@
                     // Mostrar el color extraído
                     colorSample.style.backgroundColor = data.hex;
                     hexValue.textContent = data.hex;
-                    rgbValue.textContent = `RGB(${data.rgb.join(', ')})`;
+                    rgbValue.textContent = `RGB(${data.rgb[0]}, ${data.rgb[1]}, ${data.rgb[2]})`;
                     
                     colorExtraction.style.display = 'block';
                     showStatusMessage(`Color extraído: ${data.hex}`, 'success');
@@ -455,7 +402,6 @@
             imageContainer.style.display = 'none';
             colorExtraction.style.display = 'none';
             statusMessage.style.display = 'none';
-            progressContainer.style.display = 'none';
             loader.style.display = 'none';
         }
         
