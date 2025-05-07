@@ -570,11 +570,6 @@
                                                     <div class="color-picker-wrapper">
                                                         <input type="color" id="color_preview" class="form-control">
                                                     </div>
-                                                    <div class="mt-2">
-                                                        <button type="button" class="btn btn-outline-primary w-100" id="buscarImagenBtn">
-                                                            <i class="bi bi-search me-2"></i>Buscar imagen y extraer color
-                                                        </button>
-                                                    </div>
                                                 </div>
                                                 <!-- Botón de búsqueda de imágenes eliminado -->
                                             </div>
@@ -1607,84 +1602,5 @@
         }
     </script>
 
-    <!-- Código para integración con buscador de imágenes -->
-    <script>
-        // Función para abrir el modal de búsqueda de imágenes
-        // Función para abrir la ventana de búsqueda de imágenes
-        document.getElementById('buscarImagenBtn').addEventListener('click', function() {
-            try {
-                const brand = document.getElementById('brand').value;
-                const colorCode = document.getElementById('color_code').value;
-                const paintId = document.getElementById('paint_id').value;
-                
-                if (!brand || !colorCode) {
-                    alert('Por favor, ingrese la marca y el código de color antes de buscar la imagen.');
-                    return;
-                }
-                
-                // Intentar primero usar la modalidad integrada si está disponible
-                if (window.paintImageSearch && typeof window.paintImageSearch.showModal === 'function') {
-                    console.log("Usando modal integrado para búsqueda de imágenes");
-                    window.paintImageSearch.showModal(brand, colorCode);
-                    return;
-                }
-                
-                // Si no hay modal integrado, usar la ventana separada como fallback
-                console.log("Abriendo ventana de búsqueda de imágenes para:", brand, colorCode);
-                
-                // Guardar la ventana actual para la comunicación
-                window.name = 'paintFormWindow';
-                
-                // Construir URL con parámetros
-                const url = `/buscador-imagenes?brand=${encodeURIComponent(brand)}&color_code=${encodeURIComponent(colorCode)}&paint_id=${encodeURIComponent(paintId)}`;
-                
-                // Abrir en una nueva ventana con tamaño controlado
-                const searchWindow = window.open(url, 'buscarImagenWindow', 'width=1000,height=800,resizable=yes,scrollbars=yes');
-                
-                if (!searchWindow) {
-                    alert('El navegador ha bloqueado la apertura de la ventana. Por favor, permita ventanas emergentes para este sitio.');
-                }
-            } catch (error) {
-                console.error("Error al abrir búsqueda de imágenes:", error);
-                alert('Ocurrió un error al abrir el buscador de imágenes. Por favor, intente nuevamente.');
-            }
-        });        
-        // Receptor de mensajes desde la ventana de búsqueda
-        window.addEventListener('message', function(event) {
-            try {
-                console.log('Mensaje recibido:', event.data);
-                
-                const data = event.data;
-                
-                if (data && data.type === 'colorExtraido') {
-                    // Actualizar color preview
-                    const colorPreviewElement = document.getElementById('color_preview');
-                    const imageUrlElement = document.getElementById('image_url');
-                    
-                    if (colorPreviewElement && data.hexColor) {
-                        colorPreviewElement.value = data.hexColor;
-                        
-                        // Disparar evento para actualizar vista previa
-                        colorPreviewElement.dispatchEvent(new Event('input'));
-                    }
-                    
-                    // Actualizar URL de imagen si está disponible
-                    if (imageUrlElement && data.imageUrl) {
-                        imageUrlElement.value = data.imageUrl;
-                    }
-                    
-                    // Mostrar notificación después de pequeño retraso
-                    setTimeout(() => {
-                        alert('Color y URL de imagen actualizados correctamente.');
-                    }, 500);
-                }
-            } catch (error) {
-                console.error('Error al procesar mensaje:', error);
-                alert('Ocurrió un error al procesar los datos recibidos.');
-            }
-        });
-        // Cargar la funcionalidad de búsqueda de imágenes
-    </script>
-<script src="/static/js/paint_image_search.js"></script>
 </body>
 </html>
