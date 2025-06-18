@@ -426,18 +426,18 @@
                                     <div class="row">
                                         <div class="col-md-6 mb-3">
                                             <label class="form-label fw-bold">Filtrar por categoría:</label>
-                                            <div class="category-selector">
-                                                <div class="category-pill active" data-category="all">Todas</div>
-                                                <div class="category-pill" data-category="Sin categoría">Sin categoría</div>
-                                                <div class="category-pill" data-category="Pintura Base">Pintura Base</div>
-                                                <div class="category-pill" data-category="Sombreado">Sombreado</div>
-                                                <div class="category-pill" data-category="Iluminación">Iluminación</div>
-                                                <div class="category-pill" data-category="Detalles">Detalles</div>
-                                                <div class="category-pill" data-category="Efectos Especiales">Efectos Especiales</div>
-                                                <div class="category-pill" data-category="Barnizado">Barnizado</div>
-                                                <div class="category-pill" data-category="Peanas">Peanas</div>
-                                                <div class="category-pill" data-category="Otros">Otros</div>
-                                            </div>
+                                            <select class="form-select" id="categoryFilter" onchange="updateCategoryFilter()">
+                                                <option value="all">Todas las categorías</option>
+                                                <option value="Sin categoría">Sin categoría</option>
+                                                <option value="Pintura Base">Pintura Base</option>
+                                                <option value="Sombreado">Sombreado</option>
+                                                <option value="Iluminación">Iluminación</option>
+                                                <option value="Detalles">Detalles</option>
+                                                <option value="Efectos Especiales">Efectos Especiales</option>
+                                                <option value="Barnizado">Barnizado</option>
+                                                <option value="Peanas">Peanas</option>
+                                                <option value="Otros">Otros</option>
+                                            </select>
                                         </div>
                                         <div class="col-md-6 mb-3">
                                             <label class="form-label fw-bold">Filtrar por dificultad:</label>
@@ -1166,6 +1166,12 @@
             }
         }
         
+        // Función para actualizar el filtro de categoría
+        function updateCategoryFilter() {
+            const select = document.getElementById('categoryFilter');
+            currentCategory = select.value;
+        }
+        
         document.addEventListener('DOMContentLoaded', () => {
             // Inicializar tooltips
             initTooltips();
@@ -1203,16 +1209,9 @@
             // Inicializar conversión y validación de tiempo
             initTimeInputs();
             
-            // Configurar filtros de categorías
+            // Configurar filtros de dificultad (mantener existente)
             document.querySelectorAll('.category-pill').forEach(pill => {
                 pill.addEventListener('click', function() {
-                    // Si es filtro de categoría
-                    if (this.hasAttribute('data-category')) {
-                        document.querySelectorAll('.category-pill[data-category]').forEach(p => p.classList.remove('active'));
-                        this.classList.add('active');
-                        currentCategory = this.getAttribute('data-category');
-                    }
-                    
                     // Si es filtro de dificultad
                     if (this.hasAttribute('data-difficulty')) {
                         document.querySelectorAll('.category-pill[data-difficulty]').forEach(p => p.classList.remove('active'));
@@ -2592,11 +2591,8 @@
             currentSearchTerm = '';
             document.getElementById('searchInput').value = '';
             
-            // Resetear categorías
-            document.querySelectorAll('.category-pill[data-category]').forEach(pill => {
-                pill.classList.remove('active');
-            });
-            document.querySelector('.category-pill[data-category="all"]').classList.add('active');
+            // Resetear categorías - MODIFICADO para usar el select
+            document.getElementById('categoryFilter').value = 'all';
             currentCategory = 'all';
             
             // Resetear dificultad
@@ -2640,10 +2636,7 @@
             // Categoría
             if (currentCategory !== 'all') {
                 addFilterChip(activeFiltersContainer, 'Categoría: ' + currentCategory, () => {
-                    document.querySelectorAll('.category-pill[data-category]').forEach(pill => {
-                        pill.classList.remove('active');
-                    });
-                    document.querySelector('.category-pill[data-category="all"]').classList.add('active');
+                    document.getElementById('categoryFilter').value = 'all';
                     currentCategory = 'all';
                     filterVideos();
                 });
@@ -2978,174 +2971,41 @@
                 
                 const categories = await response.json();
                 const categorySelect = document.getElementById('category_id');
+                const categoryFilter = document.getElementById('categoryFilter');
                 
-                // Mantener la opción 'Sin categoría'
+                // Mantener la opción 'Sin categoría' en el formulario
                 categorySelect.innerHTML = '<option value="">Sin categoría</option>';
+                
+                // Mantener las opciones por defecto en el filtro
+                categoryFilter.innerHTML = `
+                    <option value="all">Todas las categorías</option>
+                    <option value="Sin categoría">Sin categoría</option>
+                `;
                 
                 // Añadir las categorías desde la base de datos
                 categories.forEach(category => {
+                    // Para el formulario
                     const option = document.createElement('option');
                     option.value = category.id;
                     option.textContent = category.name;
                     categorySelect.appendChild(option);
+                    
+                    // Para el filtro
+                    const filterOption = document.createElement('option');
+                    filterOption.value = category.name;
+                    filterOption.textContent = category.name;
+                    categoryFilter.appendChild(filterOption);
                 });
             } catch (error) {
                 console.error('Error al cargar categorías:', error);
             }
         }
 
-        // Modificar la función saveVideo
-        async function saveVideo() {
-            const videoId = document.getElementById('video_id_edit').value;
-            const isEdit = videoId !== '';
-            
-            // Extraer el ID de YouTube de la URL
-            let youtubeInputValue = document.getElementById('youtube_id').value.trim();
-            let youtubeVideoId = youtubeInputValue;
-            
-            // Si es una URL completa, extraer solo el ID
-            if (youtubeInputValue.includes('youtube.com/watch?v=')) {
-                const url = new URL(youtubeInputValue);
-                youtubeVideoId = url.searchParams.get('v');
-            } else if (youtubeInputValue.includes('youtu.be/')) {
-                youtubeVideoId = youtubeInputValue.split('youtu.be/')[1];
-            }
-            
-            // Si hay parámetros adicionales después del ID, eliminarlos
-            if (youtubeVideoId && youtubeVideoId.includes('&')) {
-                youtubeVideoId = youtubeVideoId.split('&')[0];
-            }
-            
-            const categoryId = document.getElementById('category_id').value;
-            const categoryName = categoryId ? 
-                document.getElementById('category_id').options[document.getElementById('category_id').selectedIndex].text : 
-                'Sin categoría';
-            
-            const videoData = {
-                title: document.getElementById('title').value,
-                video_id: youtubeVideoId,
-                description: document.getElementById('description').value,
-                channel: document.getElementById('channel').value,
-                category: categoryName,
-                category_id: categoryId || null,
-                difficulty_level: document.getElementById('difficulty_level').value,
-                technique_start_time: parseInt(document.getElementById('technique_start_time').value) || 0
-            };
-            
-            const endTime = document.getElementById('technique_end_time').value;
-            if (endTime) {
-                videoData.technique_end_time = parseInt(endTime);
-            }
-            
-            try {
-                let url = '/admin/videos';
-                let method = 'POST';
-                
-                if (isEdit) {
-                    url = `/admin/videos/${videoId}`;
-                    method = 'PUT';
-                }
-                
-                const response = await fetch(url, {
-                    method: method,
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify(videoData)
-                });
-                
-                if (!response.ok) {
-                    const data = await response.json();
-                    throw new Error(data.error || 'Error al guardar el video');
-                }
-                
-                const data = await response.json();
-                
-                // Si es un nuevo video, preguntar si quiere añadir técnicas
-                if (!isEdit && confirm('Video guardado correctamente. ¿Deseas añadir técnicas a este video ahora?')) {
-                    goToTechniques(data.id);
-                } else {
-                    // Resetear formulario
-                    resetForm();
-                    
-                    // Cambiar a la pestaña de videos
-                    document.getElementById('video-list-tab').click();
-                    
-                    // Recargar lista de videos
-                    fetchVideos();
-                    loadStatistics();
-                    
-                    // Mostrar mensaje de éxito
-                    alert(isEdit ? 'Video actualizado correctamente' : 'Video guardado correctamente');
-                }
-                
-            } catch (error) {
-                console.error('Error:', error);
-                alert(`Error: ${error.message}`);
-            }
-        }
-
-        // Modificar la función editVideo
-        async function editVideo(id) {
-            try {
-                const response = await fetch(`/admin/videos/${id}`);
-                
-                if (!response.ok) {
-                    throw new Error('Error al cargar datos del video');
-                }
-                
-                const video = await response.json();
-                
-                // Cambiar a la pestaña de añadir/editar
-                document.getElementById('add-video-tab').click();
-                
-                // Llenar formulario
-                document.getElementById('video_id_edit').value = video.id;
-                document.getElementById('title').value = video.title;
-                document.getElementById('youtube_id').value = video.video_id;
-                document.getElementById('description').value = video.description || '';
-                document.getElementById('channel').value = video.channel || '';
-                
-                // Seleccionar categoría si existe
-                if (video.category_id) {
-                    document.getElementById('category_id').value = video.category_id;
-                } else {
-                    document.getElementById('category_id').value = '';
-                }
-                
-                document.getElementById('difficulty_level').value = video.difficulty_level || 'beginner';
-                
-                // Actualizar los campos de tiempo en formato MM:SS
-                const startTimeMin = document.getElementById('technique_start_time_min');
-                const startTimeSec = document.getElementById('technique_start_time_sec');
-                const endTimeMin = document.getElementById('technique_end_time_min');
-                const endTimeSec = document.getElementById('technique_end_time_sec');
-                const startTimeHidden = document.getElementById('technique_start_time');
-                const endTimeHidden = document.getElementById('technique_end_time');
-                
-                // Convertir segundos a formato MM:SS
-                if (video.technique_start_time !== null && video.technique_start_time !== undefined) {
-                    secondsToMinSec(video.technique_start_time, startTimeMin, startTimeSec);
-                    startTimeHidden.value = video.technique_start_time;
-                }
-                
-                if (video.technique_end_time !== null && video.technique_end_time !== undefined) {
-                    secondsToMinSec(video.technique_end_time, endTimeMin, endTimeSec);
-                    endTimeHidden.value = video.technique_end_time;
-                }
-                
-                // Actualizar vista previa
-                updateVideoPreview();
-                
-                // Cambiar texto del formulario
-                document.getElementById('form-title').textContent = 'Editar Video';
-                document.getElementById('submit-btn').textContent = 'Actualizar Video';
-                
-            } catch (error) {
-                console.error('Error:', error);
-                alert(`Error al cargar datos del video: ${error.message}`);
-            }
-        }
+        // Modificar la función saveVideo (ya está correcta en el código original)
+        
+        // Modificar la función editVideo (ya está correcta en el código original)
     </script>
+    <!-- Script para ApexCharts necesario para las estadísticas -->
+    <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
 </body>
 </html>
