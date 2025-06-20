@@ -1,0 +1,1863 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Print and Paint Studio - Gestión de Videos</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css" rel="stylesheet">
+    <style>
+        body {
+            background-color: #f8f9fa;
+            min-height: 100vh;
+        }
+        .sidebar {
+            background-color: #343a40;
+            color: white;
+            height: 100vh;
+            position: fixed;
+            padding-top: 20px;
+        }
+        .sidebar a {
+            color: #ced4da;
+            text-decoration: none;
+            display: block;
+            padding: 10px 15px;
+            transition: all 0.3s;
+        }
+        .sidebar a:hover {
+            background-color: #495057;
+            color: white;
+        }
+        .sidebar a.active {
+            background-color: #dc3545;
+            color: white;
+        }
+        .sidebar-heading {
+            padding: 0 15px 20px 15px;
+            font-size: 1.2rem;
+            border-bottom: 1px solid #495057;
+            margin-bottom: 20px;
+        }
+        .content {
+            padding: 20px;
+            margin-left: 250px;
+        }
+        .content-header {
+            margin-bottom: 30px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid #dee2e6;
+        }
+        .card {
+            box-shadow: 0 0 15px rgba(0, 0, 0, 0.1);
+            margin-bottom: 20px;
+        }
+        .card-header {
+            background-color: #dc3545;
+            color: white;
+        }
+        .admin-badge {
+            background-color: #dc3545;
+            color: white;
+            padding: 5px 10px;
+            border-radius: 5px;
+            font-size: 0.8rem;
+            margin-left: 10px;
+        }
+        .btn-primary {
+            background-color: #dc3545;
+            border-color: #dc3545;
+        }
+        .btn-primary:hover {
+            background-color: #c82333;
+            border-color: #bd2130;
+        }
+        
+        /* OPTIMIZACIONES DE RENDIMIENTO */
+        .video-container {
+            margin-bottom: 20px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            padding: 15px;
+            background-color: white;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            transition: transform 0.2s ease;
+            contain: layout style;
+        }
+        .video-container:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        }
+        .video-title {
+            font-weight: bold;
+            margin-bottom: 10px;
+            font-size: 1.1rem;
+        }
+        
+        /* NUEVO: Contenedor de miniatura optimizado */
+        .thumbnail-container {
+            position: relative;
+            padding-bottom: 56.25%;
+            height: 0;
+            overflow: hidden;
+            border-radius: 4px;
+            margin-bottom: 10px;
+            background-color: #f0f0f0;
+            cursor: pointer;
+        }
+        
+        .video-thumbnail {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            border: none;
+            transition: opacity 0.3s ease;
+        }
+        
+        .video-thumbnail.lazy {
+            opacity: 0;
+        }
+        
+        .video-thumbnail.loaded {
+            opacity: 1;
+        }
+        
+        .play-overlay {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background-color: rgba(0, 0, 0, 0.7);
+            border-radius: 50%;
+            width: 60px;
+            height: 60px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 24px;
+            transition: all 0.3s ease;
+        }
+        
+        .play-overlay:hover {
+            background-color: rgba(220, 53, 69, 0.9);
+            transform: translate(-50%, -50%) scale(1.1);
+        }
+        
+        .thumbnail-loading {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: #666;
+        }
+        
+        /* Grid optimizado */
+        .video-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+            gap: 20px;
+            contain: layout style;
+        }
+        
+        /* Paginación */
+        .pagination-container {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 20px;
+            padding: 20px 0;
+        }
+        
+        .pagination-info {
+            color: #666;
+            font-size: 0.9rem;
+        }
+        
+        /* Skeleton loading */
+        .skeleton-container {
+            padding: 15px;
+            background-color: white;
+            border-radius: 5px;
+            margin-bottom: 20px;
+            border: 1px solid #ddd;
+        }
+        
+        .skeleton-thumbnail {
+            width: 100%;
+            height: 180px;
+            background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+            background-size: 200% 100%;
+            animation: loading 1.5s infinite;
+            border-radius: 4px;
+            margin-bottom: 10px;
+        }
+        
+        .skeleton-text {
+            height: 20px;
+            background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+            background-size: 200% 100%;
+            animation: loading 1.5s infinite;
+            border-radius: 4px;
+            margin-bottom: 8px;
+        }
+        
+        .skeleton-text.short {
+            width: 60%;
+        }
+        
+        @keyframes loading {
+            0% {
+                background-position: 200% 0;
+            }
+            100% {
+                background-position: -200% 0;
+            }
+        }
+        
+        /* Mejorar resto de estilos existentes */
+        .technique-item {
+            margin-bottom: 10px;
+            padding: 10px;
+            background-color: #f8f9fa;
+            border-radius: 5px;
+            border-left: 3px solid #dc3545;
+            transition: all 0.3s;
+        }
+        .technique-item:hover {
+            background-color: #f1f1f1;
+            border-left-width: 5px;
+        }
+        .badge-beginner {
+            background-color: #28a745;
+        }
+        .badge-intermediate {
+            background-color: #fd7e14;
+        }
+        .badge-expert {
+            background-color: #dc3545;
+        }
+        .techniques-container {
+            max-height: 250px;
+            overflow-y: auto;
+        }
+        .technique-item a {
+            color: inherit;
+            text-decoration: none;
+            cursor: pointer;
+            transition: color 0.2s;
+        }
+        .technique-item a:hover {
+            color: #dc3545;
+            text-decoration: underline;
+        }
+        .technique-highlight {
+            background-color: rgba(220, 53, 69, 0.1);
+            border-left-color: #dc3545;
+            font-weight: bold;
+        }
+        .time-selector {
+            display: inline-block;
+            background-color: #f8d7da;
+            color: #721c24;
+            padding: 3px 8px;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .time-selector:hover {
+            background-color: #721c24;
+            color: white;
+            transform: scale(1.05);
+        }
+        .time-text {
+            font-weight: bold;
+        }
+        .technique-content {
+            margin-bottom: 8px;
+        }
+        .tab-content {
+            padding: 20px 0;
+        }
+        .nav-pills .nav-link.active {
+            background-color: #dc3545;
+        }
+        .nav-pills .nav-link {
+            color: #495057;
+        }
+        .form-section {
+            border-left: 3px solid #dc3545;
+            padding-left: 15px;
+            margin-bottom: 20px;
+        }
+        .drag-drop-area {
+            border: 2px dashed #dee2e6;
+            border-radius: 5px;
+            padding: 25px;
+            text-align: center;
+            background-color: #f8f9fa;
+            margin-bottom: 15px;
+            transition: all 0.3s;
+        }
+        .drag-drop-area:hover {
+            border-color: #dc3545;
+            background-color: #f8f9fa;
+        }
+        .drag-drop-area.dragover {
+            border-color: #28a745;
+            background-color: #e8f5e9;
+        }
+        .checkbox-filter {
+            padding: 15px;
+            border-radius: 5px;
+            background-color: #f8f9fa;
+            margin-bottom: 15px;
+        }
+        .category-selector {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-top: 10px;
+        }
+        .category-pill {
+            display: inline-block;
+            padding: 5px 15px;
+            border-radius: 20px;
+            background-color: #f1f1f1;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .category-pill:hover, .category-pill.active {
+            background-color: #dc3545;
+            color: white;
+        }
+        .empty-message {
+            background-color: #f8f9fa;
+            padding: 50px;
+            text-align: center;
+            border-radius: 10px;
+            margin: 20px 0;
+        }
+        .filter-chip {
+            display: inline-block;
+            background-color: #e9ecef;
+            color: #495057;
+            border-radius: 16px;
+            padding: 5px 12px;
+            margin-right: 5px;
+            margin-bottom: 5px;
+            font-size: 0.85rem;
+        }
+        .filter-chip .close {
+            margin-left: 8px;
+            cursor: pointer;
+        }
+        .tooltip-inner {
+            max-width: 200px;
+            padding: 8px 10px;
+            color: #fff;
+            text-align: center;
+            background-color: #dc3545;
+            border-radius: 4px;
+        }
+        .form-floating {
+            margin-bottom: 15px;
+        }
+        .thumbnail-preview {
+            width: 100%;
+            height: 180px;
+            background-color: #e9ecef;
+            background-position: center;
+            background-size: cover;
+            border-radius: 4px;
+            margin-bottom: 10px;
+        }
+        .technique-tag {
+            display: inline-block;
+            background-color: #f8f9fa;
+            color: #495057;
+            padding: 3px 10px;
+            border-radius: 3px;
+            margin-right: 5px;
+            margin-bottom: 5px;
+            font-size: 0.85rem;
+            border: 1px solid #dee2e6;
+        }
+        .video-actions {
+            opacity: 0;
+            transition: opacity 0.2s;
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background-color: rgba(0,0,0,0.5);
+            border-radius: 4px;
+            padding: 5px;
+        }
+        .video-container:hover .video-actions {
+            opacity: 1;
+        }
+        .action-icon {
+            color: white;
+            margin: 0 5px;
+            cursor: pointer;
+            font-size: 1.2rem;
+        }
+        .batch-actions {
+            display: none;
+            margin-bottom: 20px;
+        }
+        
+        /* NUEVOS ESTILOS PARA VISTA PREVIA Y GESTIÓN DE COLORES */
+        .video-player-container {
+            position: relative;
+            padding-bottom: 56.25%;
+            height: 0;
+            overflow: hidden;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            background-color: #000;
+        }
+        
+        .video-player-container iframe {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            border: none;
+        }
+        
+        .selected-colors-section {
+            background-color: #f8f9fa;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        
+        .selected-colors-grid {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            margin-top: 15px;
+        }
+        
+        .selected-color-item {
+            display: flex;
+            align-items: center;
+            background-color: white;
+            border: 1px solid #dee2e6;
+            border-radius: 8px;
+            padding: 10px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            transition: all 0.2s;
+        }
+        
+        .selected-color-item:hover {
+            box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+            transform: translateY(-1px);
+        }
+        
+        .color-preview-circle {
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            border: 2px solid #dee2e6;
+            margin-right: 10px;
+            flex-shrink: 0;
+        }
+        
+        .color-info {
+            flex-grow: 1;
+            margin-right: 10px;
+        }
+        
+        .color-name {
+            font-weight: 600;
+            font-size: 0.9rem;
+            margin-bottom: 2px;
+        }
+        
+        .color-code {
+            font-size: 0.8rem;
+            color: #6c757d;
+            font-family: monospace;
+        }
+        
+        .color-brand {
+            font-size: 0.75rem;
+            color: #6c757d;
+        }
+        
+        .remove-color-btn {
+            background: none;
+            border: none;
+            color: #dc3545;
+            cursor: pointer;
+            padding: 5px;
+            font-size: 1.2rem;
+            transition: all 0.2s;
+        }
+        
+        .remove-color-btn:hover {
+            color: #c82333;
+            transform: scale(1.1);
+        }
+        
+        /* Modal de selección de colores */
+        .color-selector-modal .modal-dialog {
+            max-width: 900px;
+        }
+        
+        .color-selector-filters {
+            background-color: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+        
+        .colors-selection-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 15px;
+            max-height: 400px;
+            overflow-y: auto;
+            padding: 10px;
+        }
+        
+        .color-selection-item {
+            display: flex;
+            align-items: center;
+            padding: 10px;
+            border: 1px solid #dee2e6;
+            border-radius: 8px;
+            background-color: white;
+            transition: all 0.2s;
+            cursor: pointer;
+        }
+        
+        .color-selection-item:hover {
+            background-color: #f8f9fa;
+            border-color: #dc3545;
+        }
+        
+        .color-selection-item.selected {
+            background-color: #fde7e9;
+            border-color: #dc3545;
+        }
+        
+        .color-selection-checkbox {
+            margin-right: 10px;
+        }
+        
+        .video-colors-count {
+            background-color: #28a745;
+            color: white;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 0.8rem;
+            margin-left: 5px;
+        }
+        
+        @media (max-width: 768px) {
+            .sidebar {
+                width: 100%;
+                position: relative;
+                height: auto;
+            }
+            .content {
+                margin-left: 0;
+            }
+            .video-grid {
+                grid-template-columns: 1fr;
+            }
+            .colors-selection-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container-fluid">
+        <div class="row">
+            <!-- Sidebar -->
+            <div class="col-md-3 col-lg-2 d-md-block sidebar collapse">
+                <div class="sidebar-heading">
+                    Print and Paint Studio <span class="admin-badge">ADMIN</span>
+                </div>
+                <ul class="nav flex-column">
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('admin_dashboard') }}">
+                            <i class="bi bi-speedometer2 me-2"></i> Panel
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link active" href="{{ url_for('admin_videos') }}">
+                            <i class="bi bi-collection-play me-2"></i> Gestión de Videos
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('admin_categories') }}">
+                            <i class="bi bi-tags me-2"></i> Gestión de Categorías
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('admin_paints') }}">
+                            <i class="bi bi-palette me-2"></i> Gestión de Pinturas
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('admin_users') }}">
+                            <i class="bi bi-people me-2"></i> Gestión de Usuarios
+                        </a>
+                    </li>
+                    <li class="nav-item mt-5">
+                        <a class="nav-link" href="{{ url_for('logout') }}">
+                            <i class="bi bi-box-arrow-left me-2"></i> Cerrar Sesión
+                        </a> 
+                    </li>
+                </ul>
+            </div>
+            
+            <!-- Main Content -->
+            <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4 content">
+                <div class="content-header">
+                    <h1>Gestión de Videos</h1>
+                    <p>Administra los videos de técnicas de pintura para modelos 3D en resina</p>
+                </div>
+                
+                {% with messages = get_flashed_messages(with_categories=true) %}
+                    {% if messages %}
+                        {% for category, message in messages %}
+                            <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                                {{ message }}
+                                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                            </div>
+                        {% endfor %}
+                    {% endif %}
+                {% endwith %}
+                
+                <!-- Navigation Tabs -->
+                <ul class="nav nav-pills mb-4" id="adminVideosTabs" role="tablist">
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link active" id="video-list-tab" data-bs-toggle="pill" data-bs-target="#video-list" type="button" role="tab" aria-controls="video-list" aria-selected="true">
+                            <i class="bi bi-grid me-1"></i> Videos
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="add-video-tab" data-bs-toggle="pill" data-bs-target="#add-video" type="button" role="tab" aria-controls="add-video" aria-selected="false">
+                            <i class="bi bi-plus-circle me-1"></i> Añadir Video
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="techniques-tab" data-bs-toggle="pill" data-bs-target="#techniques" type="button" role="tab" aria-controls="techniques" aria-selected="false" style="display: none;">
+                            <i class="bi bi-list-check me-1"></i> Técnicas
+                        </button>
+                    </li>
+                </ul>
+                
+                <!-- Tab Content -->
+                <div class="tab-content" id="adminVideosTabsContent">
+                    <!-- Videos List Tab -->
+                    <div class="tab-pane fade show active" id="video-list" role="tabpanel" aria-labelledby="video-list-tab">
+                        <!-- Search and filters -->
+                        <div class="card mb-4">
+                            <div class="card-header">
+                                <i class="bi bi-search me-2"></i> Buscar y Filtrar Videos
+                            </div>
+                            <div class="card-body">
+                                <div class="row">
+                                    <div class="col-md-8 mb-3">
+                                        <div class="input-group">
+                                            <input type="text" class="form-control" id="searchInput" placeholder="Buscar por título, descripción o canal...">
+                                            <button class="btn btn-primary" type="button" onclick="performSearch()">
+                                                <i class="bi bi-search"></i> Buscar
+                                            </button>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4 mb-3">
+                                        <button class="btn btn-outline-secondary w-100" type="button" data-bs-toggle="collapse" data-bs-target="#advancedFilters" aria-expanded="false" aria-controls="advancedFilters">
+                                            <i class="bi bi-funnel"></i> Filtros avanzados
+                                        </button>
+                                    </div>
+                                </div>
+                                
+                                <div class="collapse" id="advancedFilters">
+                                    <div class="row">
+                                        <div class="col-md-6 mb-3">
+                                            <label class="form-label fw-bold">Filtrar por categoría:</label>
+                                            <select class="form-select" id="categoryFilter" onchange="updateCategoryFilter()">
+                                                <option value="all">Todas las categorías</option>
+                                                <option value="Sin categoría">Sin categoría</option>
+                                                <option value="Pintura Base">Pintura Base</option>
+                                                <option value="Sombreado">Sombreado</option>
+                                                <option value="Iluminación">Iluminación</option>
+                                                <option value="Detalles">Detalles</option>
+                                                <option value="Efectos Especiales">Efectos Especiales</option>
+                                                <option value="Barnizado">Barnizado</option>
+                                                <option value="Peanas">Peanas</option>
+                                                <option value="Otros">Otros</option>
+                                            </select>
+                                        </div>
+                                        <div class="col-md-6 mb-3">
+                                            <label class="form-label fw-bold">Filtrar por dificultad:</label>
+                                            <div class="category-selector">
+                                                <div class="category-pill active" data-difficulty="all">Todos</div>
+                                                <div class="category-pill" data-difficulty="beginner">Principiante</div>
+                                                <div class="category-pill" data-difficulty="intermediate">Intermedio</div>
+                                                <div class="category-pill" data-difficulty="expert">Experto</div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="row">
+                                        <div class="col-md-12">
+                                            <div class="checkbox-filter">
+                                                <div class="form-check form-check-inline">
+                                                    <input class="form-check-input" type="checkbox" id="filterHasTechniques">
+                                                    <label class="form-check-label" for="filterHasTechniques">Solo videos con técnicas</label>
+                                                </div>
+                                                <div class="form-check form-check-inline">
+                                                    <input class="form-check-input" type="checkbox" id="filterNoTechniques">
+                                                    <label class="form-check-label" for="filterNoTechniques">Solo videos sin técnicas</label>
+                                                </div>
+                                                <div class="form-check form-check-inline">
+                                                    <input class="form-check-input" type="checkbox" id="filterHasColors">
+                                                    <label class="form-check-label" for="filterHasColors">Solo videos con colores asignados</label>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <div id="activeFilters" class="mt-3"></div>
+                                    
+                                    <div class="d-flex justify-content-end mt-3">
+                                        <button class="btn btn-secondary me-2" onclick="clearFilters()">Limpiar filtros</button>
+                                        <button class="btn btn-primary" onclick="applyFilters()">Aplicar filtros</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Batch actions -->
+                        <div class="batch-actions" id="batchActions">
+                            <div class="alert alert-info d-flex justify-content-between align-items-center">
+                                <div>
+                                    <span id="selectedCount">0</span> videos seleccionados
+                                </div>
+                                <div>
+                                    <button class="btn btn-sm btn-outline-danger me-2" onclick="deleteSelectedVideos()">
+                                        <i class="bi bi-trash"></i> Eliminar seleccionados
+                                    </button>
+                                    <button class="btn btn-sm btn-outline-secondary" onclick="clearSelection()">
+                                        <i class="bi bi-x"></i> Cancelar
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Videos display -->
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <h3>Videos <span class="badge bg-secondary" id="videoCount">0</span></h3>
+                            <div class="btn-group">
+                                <button id="gridViewBtn" class="btn btn-outline-secondary active" onclick="setViewMode('grid')">
+                                    <i class="bi bi-grid"></i>
+                                </button>
+                                <button id="listViewBtn" class="btn btn-outline-secondary" onclick="setViewMode('list')">
+                                    <i class="bi bi-list"></i>
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <div id="videos-container" class="video-grid">
+                            <!-- Skeleton loading inicial -->
+                            <div class="skeleton-container">
+                                <div class="skeleton-thumbnail"></div>
+                                <div class="skeleton-text"></div>
+                                <div class="skeleton-text short"></div>
+                            </div>
+                            <div class="skeleton-container">
+                                <div class="skeleton-thumbnail"></div>
+                                <div class="skeleton-text"></div>
+                                <div class="skeleton-text short"></div>
+                            </div>
+                            <div class="skeleton-container">
+                                <div class="skeleton-thumbnail"></div>
+                                <div class="skeleton-text"></div>
+                                <div class="skeleton-text short"></div>
+                            </div>
+                        </div>
+                        
+                        <!-- Paginación -->
+                        <div class="pagination-container" id="paginationContainer" style="display: none;">
+                            <div class="pagination-info" id="paginationInfo">
+                                Mostrando 1-12 de 50 videos
+                            </div>
+                            <nav aria-label="Navegación de videos">
+                                <ul class="pagination mb-0" id="paginationNav">
+                                    <!-- Se genera dinámicamente -->
+                                </ul>
+                            </nav>
+                            <div class="dropdown">
+                                <button class="btn btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                                    <span id="currentPageSize">12</span> por página
+                                </button>
+                                <ul class="dropdown-menu">
+                                    <li><a class="dropdown-item" href="#" onclick="changePageSize(6)">6 por página</a></li>
+                                    <li><a class="dropdown-item" href="#" onclick="changePageSize(12)">12 por página</a></li>
+                                    <li><a class="dropdown-item" href="#" onclick="changePageSize(24)">24 por página</a></li>
+                                    <li><a class="dropdown-item" href="#" onclick="changePageSize(48)">48 por página</a></li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Add/Edit Video Tab -->
+                    <div class="tab-pane fade" id="add-video" role="tabpanel" aria-labelledby="add-video-tab">
+                        <!-- Contenido del formulario igual que antes -->
+                        <div class="card">
+                            <div class="card-header">
+                                <i class="bi bi-plus-circle me-2"></i> <span id="form-title">Añadir Nuevo Video</span>
+                            </div>
+                            <div class="card-body">
+                                <form id="videoForm">
+                                    <input type="hidden" id="video_id_edit" value="">
+                                    
+                                    <!-- Main video info -->
+                                    <div class="form-section">
+                                        <h5 class="mb-3"><i class="bi bi-info-circle me-2"></i> Información General</h5>
+                                        <div class="row">
+                                            <div class="col-md-6">
+                                                <div class="form-floating mb-3">
+                                                    <input type="text" class="form-control" id="title" placeholder="Título del video" required>
+                                                    <label for="title">Título*</label>
+                                                </div>
+                                                
+                                                <div class="form-floating mb-3">
+                                                    <input type="text" class="form-control" id="youtube_id" placeholder="ID de YouTube" required>
+                                                    <label for="youtube_id">ID de YouTube*</label>
+                                                    <div class="form-text">Ej: dQw4w9WgXcQ (de https://www.youtube.com/watch?v=dQw4w9WgXcQ)</div>
+                                                </div>
+                                                
+                                                <div class="form-floating mb-3">
+                                                    <input type="text" class="form-control" id="channel" placeholder="Canal">
+                                                    <label for="channel">Canal</label>
+                                                </div>
+                                            </div>
+                                            
+                                            <div class="col-md-6">
+                                                <div class="form-floating mb-3">
+                                                    <textarea class="form-control" id="description" placeholder="Descripción" style="height: 100px"></textarea>
+                                                    <label for="description">Descripción</label>
+                                                </div>
+                                                
+                                                <div class="row">
+                                                    <div class="col-md-6">
+                                                        <div class="form-floating mb-3">
+                                                            <select class="form-select" id="category_id">
+                                                                <option value="">Sin categoría</option>
+                                                            </select>
+                                                            <label for="category_id">Categoría</label>
+                                                        </div>
+                                                    </div>
+                                                    <div class="col-md-6">
+                                                        <div class="form-floating mb-3">
+                                                            <select class="form-select" id="difficulty_level">
+                                                                <option value="beginner">Principiante</option>
+                                                                <option value="intermediate">Intermedio</option>
+                                                                <option value="expert">Experto</option>
+                                                            </select>
+                                                            <label for="difficulty_level">Nivel de Dificultad</label>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="d-flex justify-content-between mt-4">
+                                        <button type="button" class="btn btn-secondary" onclick="resetForm()">Cancelar</button>
+                                        <button type="submit" class="btn btn-primary" id="submit-btn">Guardar Video</button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Techniques Tab -->
+                    <div class="tab-pane fade" id="techniques" role="tabpanel" aria-labelledby="techniques-tab">
+                        <!-- Contenido igual que antes -->
+                    </div>
+                </div>
+                
+                <!-- Modal de Vista Previa del Video -->
+                <div class="modal fade" id="videoPreviewModal" tabindex="-1" aria-labelledby="videoPreviewModalLabel" aria-hidden="true">
+                    <div class="modal-dialog modal-xl">
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <h5 class="modal-title" id="videoPreviewModalLabel">Vista Previa del Video</h5>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                            </div>
+                            <div class="modal-body">
+                                <!-- Reproductor de Video -->
+                                <div class="video-player-container" id="videoPlayerContainer">
+                                    <!-- El iframe del video se insertará aquí dinámicamente -->
+                                </div>
+                                
+                                <!-- Sección de Colores Seleccionados -->
+                                <div class="selected-colors-section">
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <h5 class="mb-0">
+                                            <i class="bi bi-palette me-2"></i>Colores Necesarios para este Video
+                                            <span class="video-colors-count" id="selectedColorsCount">0</span>
+                                        </h5>
+                                        <button class="btn btn-primary btn-sm" onclick="openColorSelector()">
+                                            <i class="bi bi-plus-circle me-1"></i> Gestionar Colores
+                                        </button>
+                                    </div>
+                                    <div class="selected-colors-grid" id="selectedColorsGrid">
+                                        <!-- Los colores seleccionados se mostrarán aquí -->
+                                        <div class="text-muted text-center w-100 py-3">
+                                            No hay colores asignados a este video. Haz clic en "Gestionar Colores" para añadir pinturas.
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <!-- Lista de Técnicas -->
+                                <div class="mt-4">
+                                    <h5><i class="bi bi-list-check me-2"></i>Técnicas en este Video</h5>
+                                    <div class="techniques-container" id="videoTechniques">
+                                        <div class="text-muted">Cargando técnicas...</div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="modal-footer">
+                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Modal de Selección de Colores -->
+                <div class="modal fade color-selector-modal" id="colorSelectorModal" tabindex="-1" aria-labelledby="colorSelectorModalLabel" aria-hidden="true">
+                    <div class="modal-dialog modal-lg">
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <h5 class="modal-title" id="colorSelectorModalLabel">
+                                    <i class="bi bi-palette me-2"></i>Seleccionar Colores para el Video
+                                </h5>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                            </div>
+                            <div class="modal-body">
+                                <!-- Filtros de búsqueda -->
+                                <div class="color-selector-filters">
+                                    <div class="row">
+                                        <div class="col-md-6 mb-3">
+                                            <input type="text" class="form-control" id="colorSearchInput" placeholder="Buscar por nombre o código...">
+                                        </div>
+                                        <div class="col-md-3 mb-3">
+                                            <select class="form-select" id="colorBrandFilter">
+                                                <option value="">Todas las marcas</option>
+                                                <option value="Vallejo">Vallejo</option>
+                                                <option value="Citadel">Citadel</option>
+                                                <option value="Army Painter">Army Painter</option>
+                                                <option value="AK Interactive">AK Interactive</option>
+                                                <option value="Scale75">Scale75</option>
+                                                <option value="Tamiya">Tamiya</option>
+                                            </select>
+                                        </div>
+                                        <div class="col-md-3 mb-3">
+                                            <select class="form-select" id="colorFamilyFilter">
+                                                <option value="">Todas las familias</option>
+                                                <option value="Red">Rojo</option>
+                                                <option value="Blue">Azul</option>
+                                                <option value="Green">Verde</option>
+                                                <option value="Yellow">Amarillo</option>
+                                                <option value="Brown">Marrón</option>
+                                                <option value="Purple">Púrpura</option>
+                                                <option value="Orange">Naranja</option>
+                                                <option value="Grey">Gris</option>
+                                                <option value="Black">Negro</option>
+                                                <option value="White">Blanco</option>
+                                                <option value="Metallic">Metálico</option>
+                                                <option value="Flesh">Carne</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <!-- Lista de colores disponibles -->
+                                <div class="colors-selection-grid" id="colorsSelectionGrid">
+                                    <!-- Los colores disponibles se cargarán aquí -->
+                                </div>
+                            </div>
+                            <div class="modal-footer">
+                                <div class="me-auto">
+                                    <span id="selectedColorsSummary" class="text-muted">0 colores seleccionados</span>
+                                </div>
+                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                                <button type="button" class="btn btn-primary" onclick="saveColorSelection()">
+                                    <i class="bi bi-check-circle me-1"></i> Guardar Selección
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </main>
+        </div>
+    </div>
+    
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // ============================================
+        // VARIABLES GLOBALES Y CONFIGURACIÓN
+        // ============================================
+        let allVideos = [];
+        let allPaints = [];
+        let currentVideoId = null;
+        let selectedColors = new Map(); // Map para almacenar colores seleccionados por video
+        let currentPage = 1;
+        let pageSize = 12;
+        let totalPages = 1;
+        let totalVideos = 0;
+        let currentSearchTerm = '';
+        let currentCategory = 'all';
+        let currentDifficulty = 'all';
+        let searchTimeout = null;
+        let selectedVideos = new Set();
+        let viewMode = 'grid';
+        
+        // Cache de miniaturas
+        const thumbnailCache = new Map();
+        
+        // Intersection Observer para lazy loading
+        let imageObserver;
+        
+        // Modales
+        let videoPreviewModal;
+        let colorSelectorModal;
+        
+        // ============================================
+        // INICIALIZACIÓN
+        // ============================================
+        document.addEventListener('DOMContentLoaded', () => {
+            initializeApp();
+        });
+        
+        function initializeApp() {
+            console.log('🚀 Inicializando aplicación optimizada con gestión de colores...');
+            
+            // Inicializar modales
+            videoPreviewModal = new bootstrap.Modal(document.getElementById('videoPreviewModal'));
+            colorSelectorModal = new bootstrap.Modal(document.getElementById('colorSelectorModal'));
+            
+            // Configurar Intersection Observer para lazy loading
+            setupLazyLoading();
+            
+            // Configurar eventos
+            setupEventListeners();
+            
+            // Cargar datos iniciales
+            loadCategories();
+            fetchVideos();
+            fetchPaints();
+            
+            console.log('✅ Aplicación inicializada correctamente');
+        }
+        
+        // ============================================
+        // LAZY LOADING CON INTERSECTION OBSERVER
+        // ============================================
+        function setupLazyLoading() {
+            imageObserver = new IntersectionObserver((entries, observer) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        const img = entry.target;
+                        const src = img.dataset.src;
+                        
+                        if (src) {
+                            img.src = src;
+                            img.classList.remove('lazy');
+                            img.classList.add('loaded');
+                            observer.unobserve(img);
+                        }
+                    }
+                });
+            }, {
+                rootMargin: '50px 0px',
+                threshold: 0.01
+            });
+        }
+        
+        // ============================================
+        // CONFIGURACIÓN DE EVENTOS
+        // ============================================
+        function setupEventListeners() {
+            // Búsqueda con debounce
+            document.getElementById('searchInput').addEventListener('input', handleSearchInput);
+            document.getElementById('searchInput').addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    performSearch();
+                }
+            });
+            
+            // Filtros de dificultad
+            document.querySelectorAll('.category-pill[data-difficulty]').forEach(pill => {
+                pill.addEventListener('click', function() {
+                    document.querySelectorAll('.category-pill[data-difficulty]').forEach(p => p.classList.remove('active'));
+                    this.classList.add('active');
+                    currentDifficulty = this.getAttribute('data-difficulty');
+                });
+            });
+            
+            // Eventos del selector de colores
+            document.getElementById('colorSearchInput').addEventListener('input', filterColors);
+            document.getElementById('colorBrandFilter').addEventListener('change', filterColors);
+            document.getElementById('colorFamilyFilter').addEventListener('change', filterColors);
+        }
+        
+        // ============================================
+        // BÚSQUEDA CON DEBOUNCE
+        // ============================================
+        function handleSearchInput(e) {
+            clearTimeout(searchTimeout);
+            searchTimeout = setTimeout(() => {
+                currentSearchTerm = e.target.value.toLowerCase().trim();
+                currentPage = 1;
+                filterAndDisplayVideos();
+            }, 300);
+        }
+        
+        function performSearch() {
+            clearTimeout(searchTimeout);
+            currentSearchTerm = document.getElementById('searchInput').value.toLowerCase().trim();
+            currentPage = 1;
+            filterAndDisplayVideos();
+        }
+        
+        // ============================================
+        // GESTIÓN DE CACHÉ DE MINIATURAS
+        // ============================================
+        function getThumbnailUrl(videoId) {
+            if (!thumbnailCache.has(videoId)) {
+                thumbnailCache.set(videoId, `https://img.youtube.com/vi/${videoId}/mqdefault.jpg`);
+            }
+            return thumbnailCache.get(videoId);
+        }
+        
+        // ============================================
+        // CARGA DE VIDEOS CON PAGINACIÓN
+        // ============================================
+        async function fetchVideos() {
+            console.log('📡 Cargando videos...');
+            showLoadingSkeleton();
+            
+            try {
+                const response = await fetch('/api/videos');
+                
+                if (!response.ok) {
+                    throw new Error(`Error HTTP: ${response.status} ${response.statusText}`);
+                }
+                
+                const data = await response.json();
+                
+                if (!Array.isArray(data)) {
+                    throw new Error("Formato de datos incorrecto. Se esperaba un array de videos.");
+                }
+                
+                console.log(`✅ ${data.length} videos cargados correctamente`);
+                
+                allVideos = data;
+                totalVideos = data.length;
+                
+                // Cargar colores asociados a cada video (simulado)
+                loadVideoColors();
+                
+                // Aplicar filtros y mostrar
+                filterAndDisplayVideos();
+                
+            } catch (error) {
+                console.error('❌ Error al cargar videos:', error);
+                showErrorMessage(error.message);
+            }
+        }
+        
+        // ============================================
+        // CARGA DE PINTURAS
+        // ============================================
+        async function fetchPaints() {
+            try {
+                const response = await fetch('/api/paints');
+                
+                if (!response.ok) {
+                    throw new Error(`Error HTTP: ${response.status}`);
+                }
+                
+                const data = await response.json();
+                allPaints = data;
+                console.log(`✅ ${data.length} pinturas cargadas`);
+                
+            } catch (error) {
+                console.error('❌ Error al cargar pinturas:', error);
+            }
+        }
+        
+        // ============================================
+        // GESTIÓN DE COLORES POR VIDEO
+        // ============================================
+        function loadVideoColors() {
+            // Simulación de datos - En producción, esto vendría del servidor
+            // Por ahora, inicializamos con arrays vacíos
+            allVideos.forEach(video => {
+                if (!selectedColors.has(video.id)) {
+                    selectedColors.set(video.id, []);
+                }
+            });
+        }
+        
+        // ============================================
+        // FILTRADO Y PAGINACIÓN
+        // ============================================
+        function filterAndDisplayVideos() {
+            let filteredVideos = [...allVideos];
+            
+            // Aplicar filtros
+            filteredVideos = applyFilters(filteredVideos);
+            
+            // Calcular paginación
+            totalVideos = filteredVideos.length;
+            totalPages = Math.ceil(totalVideos / pageSize);
+            
+            // Obtener videos para la página actual
+            const startIndex = (currentPage - 1) * pageSize;
+            const endIndex = startIndex + pageSize;
+            const videosToShow = filteredVideos.slice(startIndex, endIndex);
+            
+            // Mostrar videos
+            displayVideos(videosToShow);
+            
+            // Actualizar paginación
+            updatePagination();
+            
+            // Actualizar contador
+            updateVideoCount();
+        }
+        
+        function applyFilters(videos) {
+            let filtered = videos;
+            
+            // Filtro de búsqueda
+            if (currentSearchTerm) {
+                filtered = filtered.filter(video => {
+                    return (
+                        (video.title && video.title.toLowerCase().includes(currentSearchTerm)) ||
+                        (video.description && video.description.toLowerCase().includes(currentSearchTerm)) ||
+                        (video.channel && video.channel.toLowerCase().includes(currentSearchTerm))
+                    );
+                });
+            }
+            
+            // Filtro de categoría
+            if (currentCategory !== 'all') {
+                filtered = filtered.filter(video => 
+                    (video.category || 'Sin categoría') === currentCategory
+                );
+            }
+            
+            // Filtro de dificultad
+            if (currentDifficulty !== 'all') {
+                filtered = filtered.filter(video => 
+                    video.difficulty_level === currentDifficulty
+                );
+            }
+            
+            // Filtros de técnicas
+            const filterHasTechniques = document.getElementById('filterHasTechniques')?.checked;
+            const filterNoTechniques = document.getElementById('filterNoTechniques')?.checked;
+            
+            if (filterHasTechniques && !filterNoTechniques) {
+                filtered = filtered.filter(video => 
+                    video.techniques && video.techniques.length > 0
+                );
+            } else if (!filterHasTechniques && filterNoTechniques) {
+                filtered = filtered.filter(video => 
+                    !video.techniques || video.techniques.length === 0
+                );
+            }
+            
+            // Filtro de colores
+            const filterHasColors = document.getElementById('filterHasColors')?.checked;
+            if (filterHasColors) {
+                filtered = filtered.filter(video => {
+                    const colors = selectedColors.get(video.id) || [];
+                    return colors.length > 0;
+                });
+            }
+            
+            return filtered;
+        }
+        
+        // ============================================
+        // RENDERIZADO OPTIMIZADO DE VIDEOS
+        // ============================================
+        function displayVideos(videos) {
+            const container = document.getElementById('videos-container');
+            
+            if (videos.length === 0) {
+                showEmptyMessage(container);
+                return;
+            }
+            
+            // Usar DocumentFragment para mejor rendimiento
+            const fragment = document.createDocumentFragment();
+            
+            videos.forEach(video => {
+                const videoElement = createVideoElement(video);
+                fragment.appendChild(videoElement);
+            });
+            
+            // Limpiar y añadir todo de una vez
+            container.innerHTML = '';
+            container.appendChild(fragment);
+            
+            // Aplicar lazy loading a las nuevas imágenes
+            container.querySelectorAll('img[data-src]').forEach(img => {
+                imageObserver.observe(img);
+            });
+            
+            console.log(`🎬 ${videos.length} videos renderizados en página ${currentPage}`);
+        }
+        
+        function createVideoElement(video) {
+            const videoCard = document.createElement('div');
+            videoCard.className = 'video-container';
+            videoCard.setAttribute('data-id', video.id);
+            
+            // Badge para dificultad
+            const { difficultyText, difficultyClass } = getDifficultyInfo(video.difficulty_level);
+            
+            // Determinar si tiene técnicas y colores
+            const hasTechniques = video.techniques && video.techniques.length > 0;
+            const videoColors = selectedColors.get(video.id) || [];
+            const hasColors = videoColors.length > 0;
+            const thumbnailUrl = getThumbnailUrl(video.video_id);
+            
+            videoCard.innerHTML = `
+                <div class="position-relative">
+                    <div class="thumbnail-container" onclick="openVideoPreview('${video.video_id}', ${video.id})">
+                        <img 
+                            class="video-thumbnail lazy" 
+                            data-src="${thumbnailUrl}" 
+                            alt="${video.title}"
+                            loading="lazy"
+                        >
+                        <div class="play-overlay">
+                            <i class="bi bi-play-circle-fill"></i>
+                        </div>
+                        <div class="thumbnail-loading">
+                            <div class="spinner-border spinner-border-sm" role="status">
+                                <span class="visually-hidden">Cargando...</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="video-actions">
+                        <i class="bi bi-eye action-icon" onclick="openVideoPreview('${video.video_id}', ${video.id})" title="Vista previa"></i>
+                        <i class="bi bi-pencil action-icon" onclick="editVideo(${video.id})" title="Editar"></i>
+                        <i class="bi bi-trash action-icon" onclick="confirmDelete(${video.id})" title="Eliminar"></i>
+                        <i class="bi bi-list-check action-icon" onclick="goToTechniques(${video.id})" title="Gestionar técnicas"></i>
+                    </div>
+                </div>
+                <div class="d-flex justify-content-between align-items-center mt-2">
+                    <div class="video-title">${video.title}</div>
+                    <div class="checkbox-wrapper">
+                        <input type="checkbox" class="video-selector form-check-input" onclick="toggleVideoSelection(${video.id})">
+                    </div>
+                </div>
+                <div>
+                    <span class="badge bg-secondary">${video.category || 'Sin categoría'}</span>
+                    <span class="badge ${difficultyClass}">${difficultyText}</span>
+                    ${hasTechniques ? '<span class="badge bg-info ms-1"><i class="bi bi-check-circle me-1"></i> ' + video.techniques.length + ' técnicas</span>' : ''}
+                    ${hasColors ? '<span class="badge bg-success ms-1"><i class="bi bi-palette me-1"></i> ' + videoColors.length + ' colores</span>' : ''}
+                </div>
+                <div class="mt-2">
+                    <small class="text-muted">Canal: ${video.channel || 'No especificado'}</small>
+                </div>
+            `;
+            
+            return videoCard;
+        }
+        
+        // ============================================
+        // VISTA PREVIA DEL VIDEO
+        // ============================================
+        function openVideoPreview(videoId, id) {
+            console.log('Abriendo preview del video:', videoId, id);
+            currentVideoId = id;
+            
+            // Configurar el reproductor de YouTube
+            const playerContainer = document.getElementById('videoPlayerContainer');
+            playerContainer.innerHTML = `
+                <iframe 
+                    src="https://www.youtube.com/embed/${videoId}?rel=0&modestbranding=1" 
+                    frameborder="0" 
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
+                    allowfullscreen>
+                </iframe>
+            `;
+            
+            // Cargar colores seleccionados
+            displaySelectedColors();
+            
+            // Cargar técnicas (simulado)
+            loadVideoTechniques(id);
+            
+            // Actualizar título del modal
+            const video = allVideos.find(v => v.id === id);
+            if (video) {
+                document.getElementById('videoPreviewModalLabel').textContent = video.title;
+            }
+            
+            // Mostrar modal
+            videoPreviewModal.show();
+        }
+        
+        // ============================================
+        // GESTIÓN DE COLORES
+        // ============================================
+        function openColorSelector() {
+            console.log('Abriendo selector de colores para video:', currentVideoId);
+            
+            // Cargar colores disponibles
+            displayAvailableColors();
+            
+            // Mostrar modal
+            colorSelectorModal.show();
+        }
+        
+        function displayAvailableColors() {
+            const container = document.getElementById('colorsSelectionGrid');
+            const currentColors = selectedColors.get(currentVideoId) || [];
+            
+            container.innerHTML = '';
+            
+            allPaints.forEach(paint => {
+                const isSelected = currentColors.some(c => c.id === paint.id);
+                
+                const colorItem = document.createElement('div');
+                colorItem.className = `color-selection-item ${isSelected ? 'selected' : ''}`;
+                colorItem.onclick = () => toggleColorSelection(paint.id);
+                
+                colorItem.innerHTML = `
+                    <input type="checkbox" class="form-check-input color-selection-checkbox" 
+                           ${isSelected ? 'checked' : ''} 
+                           data-paint-id="${paint.id}">
+                    <div class="color-preview-circle" style="background-color: ${paint.color_preview || '#ccc'}"></div>
+                    <div class="color-info">
+                        <div class="color-name">${paint.name}</div>
+                        <div class="color-code">${paint.color_code || 'Sin código'}</div>
+                        <div class="color-brand">${paint.brand}</div>
+                    </div>
+                `;
+                
+                container.appendChild(colorItem);
+            });
+            
+            updateSelectedColorsSummary();
+        }
+        
+        function toggleColorSelection(paintId) {
+            const checkbox = document.querySelector(`[data-paint-id="${paintId}"]`);
+            const colorItem = checkbox.closest('.color-selection-item');
+            
+            checkbox.checked = !checkbox.checked;
+            colorItem.classList.toggle('selected');
+            
+            updateSelectedColorsSummary();
+        }
+        
+        function updateSelectedColorsSummary() {
+            const selectedCount = document.querySelectorAll('.color-selection-checkbox:checked').length;
+            document.getElementById('selectedColorsSummary').textContent = `${selectedCount} colores seleccionados`;
+        }
+        
+        function saveColorSelection() {
+            const selected = [];
+            
+            document.querySelectorAll('.color-selection-checkbox:checked').forEach(checkbox => {
+                const paintId = parseInt(checkbox.getAttribute('data-paint-id'));
+                const paint = allPaints.find(p => p.id === paintId);
+                if (paint) {
+                    selected.push(paint);
+                }
+            });
+            
+            // Guardar selección
+            selectedColors.set(currentVideoId, selected);
+            
+            // TODO: Aquí deberías enviar los datos al servidor
+            console.log('Colores guardados para video', currentVideoId, selected);
+            
+            // Actualizar vista
+            displaySelectedColors();
+            
+            // Cerrar modal
+            colorSelectorModal.hide();
+            
+            // Actualizar la lista de videos para reflejar el cambio
+            filterAndDisplayVideos();
+        }
+        
+        function displaySelectedColors() {
+            const container = document.getElementById('selectedColorsGrid');
+            const colors = selectedColors.get(currentVideoId) || [];
+            
+            document.getElementById('selectedColorsCount').textContent = colors.length;
+            
+            if (colors.length === 0) {
+                container.innerHTML = `
+                    <div class="text-muted text-center w-100 py-3">
+                        No hay colores asignados a este video. Haz clic en "Gestionar Colores" para añadir pinturas.
+                    </div>
+                `;
+                return;
+            }
+            
+            container.innerHTML = '';
+            
+            colors.forEach(paint => {
+                const colorItem = document.createElement('div');
+                colorItem.className = 'selected-color-item';
+                
+                colorItem.innerHTML = `
+                    <div class="color-preview-circle" style="background-color: ${paint.color_preview || '#ccc'}"></div>
+                    <div class="color-info">
+                        <div class="color-name">${paint.name}</div>
+                        <div class="color-code">${paint.color_code || 'Sin código'}</div>
+                        <div class="color-brand">${paint.brand}</div>
+                    </div>
+                    <button class="remove-color-btn" onclick="removeColorFromVideo(${paint.id})" title="Quitar color">
+                        <i class="bi bi-x-circle"></i>
+                    </button>
+                `;
+                
+                container.appendChild(colorItem);
+            });
+        }
+        
+        function removeColorFromVideo(paintId) {
+            const colors = selectedColors.get(currentVideoId) || [];
+            const filtered = colors.filter(c => c.id !== paintId);
+            selectedColors.set(currentVideoId, filtered);
+            
+            displaySelectedColors();
+            
+            // TODO: Actualizar en el servidor
+            console.log('Color eliminado:', paintId);
+        }
+        
+        function filterColors() {
+            const searchTerm = document.getElementById('colorSearchInput').value.toLowerCase();
+            const brandFilter = document.getElementById('colorBrandFilter').value;
+            const familyFilter = document.getElementById('colorFamilyFilter').value;
+            
+            const items = document.querySelectorAll('.color-selection-item');
+            
+            items.forEach(item => {
+                const name = item.querySelector('.color-name').textContent.toLowerCase();
+                const code = item.querySelector('.color-code').textContent.toLowerCase();
+                const brand = item.querySelector('.color-brand').textContent;
+                
+                let show = true;
+                
+                if (searchTerm && !name.includes(searchTerm) && !code.includes(searchTerm)) {
+                    show = false;
+                }
+                
+                if (brandFilter && brand !== brandFilter) {
+                    show = false;
+                }
+                
+                // TODO: Añadir filtro por familia cuando esté disponible en los datos
+                
+                item.style.display = show ? 'flex' : 'none';
+            });
+        }
+        
+        // ============================================
+        // FUNCIONES AUXILIARES EXISTENTES
+        // ============================================
+        function loadVideoTechniques(videoId) {
+            const container = document.getElementById('videoTechniques');
+            const video = allVideos.find(v => v.id === videoId);
+            
+            if (!video || !video.techniques || video.techniques.length === 0) {
+                container.innerHTML = '<div class="text-muted">No hay técnicas registradas para este video.</div>';
+                return;
+            }
+            
+            container.innerHTML = '';
+            
+            video.techniques.forEach((technique, index) => {
+                const techniqueItem = document.createElement('div');
+                techniqueItem.className = 'technique-item';
+                
+                techniqueItem.innerHTML = `
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div class="technique-content">
+                            <strong>${index + 1}. ${technique.title}</strong>
+                            <div class="mt-1">${technique.description}</div>
+                        </div>
+                        <span class="time-selector" title="Ir a este momento">
+                            ${technique.timestamp}
+                        </span>
+                    </div>
+                `;
+                
+                container.appendChild(techniqueItem);
+            });
+        }
+        
+        // ============================================
+        // PAGINACIÓN
+        // ============================================
+        function updatePagination() {
+            const container = document.getElementById('paginationContainer');
+            const info = document.getElementById('paginationInfo');
+            const nav = document.getElementById('paginationNav');
+            
+            if (totalVideos === 0) {
+                container.style.display = 'none';
+                return;
+            }
+            
+            container.style.display = 'flex';
+            
+            // Actualizar información
+            const start = (currentPage - 1) * pageSize + 1;
+            const end = Math.min(currentPage * pageSize, totalVideos);
+            info.textContent = `Mostrando ${start}-${end} de ${totalVideos} videos`;
+            
+            // Actualizar navegación
+            nav.innerHTML = generatePaginationHTML();
+        }
+        
+        function generatePaginationHTML() {
+            let html = '';
+            
+            // Botón anterior
+            html += `
+                <li class="page-item ${currentPage === 1 ? 'disabled' : ''}">
+                    <a class="page-link" href="#" onclick="goToPage(${currentPage - 1})">Anterior</a>
+                </li>
+            `;
+            
+            // Números de página
+            const startPage = Math.max(1, currentPage - 2);
+            const endPage = Math.min(totalPages, currentPage + 2);
+            
+            if (startPage > 1) {
+                html += `<li class="page-item"><a class="page-link" href="#" onclick="goToPage(1)">1</a></li>`;
+                if (startPage > 2) {
+                    html += `<li class="page-item disabled"><span class="page-link">...</span></li>`;
+                }
+            }
+            
+            for (let i = startPage; i <= endPage; i++) {
+                html += `
+                    <li class="page-item ${i === currentPage ? 'active' : ''}">
+                        <a class="page-link" href="#" onclick="goToPage(${i})">${i}</a>
+                    </li>
+                `;
+            }
+            
+            if (endPage < totalPages) {
+                if (endPage < totalPages - 1) {
+                    html += `<li class="page-item disabled"><span class="page-link">...</span></li>`;
+                }
+                html += `<li class="page-item"><a class="page-link" href="#" onclick="goToPage(${totalPages})">${totalPages}</a></li>`;
+            }
+            
+            // Botón siguiente
+            html += `
+                <li class="page-item ${currentPage === totalPages ? 'disabled' : ''}">
+                    <a class="page-link" href="#" onclick="goToPage(${currentPage + 1})">Siguiente</a>
+                </li>
+            `;
+            
+            return html;
+        }
+        
+        function goToPage(page) {
+            if (page < 1 || page > totalPages || page === currentPage) return;
+            
+            currentPage = page;
+            filterAndDisplayVideos();
+            
+            // Scroll suave al inicio de la lista
+            document.getElementById('videos-container').scrollIntoView({ 
+                behavior: 'smooth', 
+                block: 'start' 
+            });
+        }
+        
+        function changePageSize(newSize) {
+            pageSize = newSize;
+            currentPage = 1;
+            document.getElementById('currentPageSize').textContent = newSize;
+            filterAndDisplayVideos();
+        }
+        
+        // ============================================
+        // FUNCIONES DE UI
+        // ============================================
+        function showLoadingSkeleton() {
+            const container = document.getElementById('videos-container');
+            container.innerHTML = '';
+            
+            // Crear skeleton cards
+            for (let i = 0; i < pageSize; i++) {
+                const skeleton = document.createElement('div');
+                skeleton.className = 'skeleton-container';
+                skeleton.innerHTML = `
+                    <div class="skeleton-thumbnail"></div>
+                    <div class="skeleton-text"></div>
+                    <div class="skeleton-text short"></div>
+                `;
+                container.appendChild(skeleton);
+            }
+        }
+        
+        function showEmptyMessage(container) {
+            container.innerHTML = `
+                <div class="empty-message">
+                    <div class="alert alert-info">
+                        <i class="bi bi-info-circle me-2"></i> No se encontraron videos que coincidan con tu búsqueda.
+                    </div>
+                    <button class="btn btn-outline-secondary mt-3" onclick="clearFilters()">
+                        <i class="bi bi-funnel me-2"></i> Limpiar filtros
+                    </button>
+                </div>
+            `;
+        }
+        
+        function showErrorMessage(message) {
+            const container = document.getElementById('videos-container');
+            container.innerHTML = `
+                <div class="empty-message">
+                    <div class="alert alert-danger">
+                        <i class="bi bi-exclamation-triangle me-2"></i> Error al cargar los videos: ${message}
+                    </div>
+                    <button class="btn btn-primary mt-3" onclick="fetchVideos()">
+                        <i class="bi bi-arrow-clockwise me-2"></i> Intentar de nuevo
+                    </button>
+                </div>
+            `;
+        }
+        
+        function updateVideoCount() {
+            const countElement = document.getElementById('videoCount');
+            if (countElement) {
+                countElement.textContent = totalVideos;
+            }
+        }
+        
+        // ============================================
+        // FUNCIONES AUXILIARES
+        // ============================================
+        function getDifficultyInfo(level) {
+            switch(level) {
+                case 'beginner':
+                    return { difficultyText: 'Principiante', difficultyClass: 'badge-beginner' };
+                case 'intermediate':
+                    return { difficultyText: 'Intermedio', difficultyClass: 'badge-intermediate' };
+                case 'expert':
+                    return { difficultyText: 'Experto', difficultyClass: 'badge-expert' };
+                default:
+                    return { difficultyText: 'Principiante', difficultyClass: 'badge-beginner' };
+            }
+        }
+        
+        function updateCategoryFilter() {
+            const select = document.getElementById('categoryFilter');
+            currentCategory = select.value;
+            currentPage = 1;
+            filterAndDisplayVideos();
+        }
+        
+        function clearFilters() {
+            currentSearchTerm = '';
+            currentCategory = 'all';
+            currentDifficulty = 'all';
+            currentPage = 1;
+            
+            document.getElementById('searchInput').value = '';
+            document.getElementById('categoryFilter').value = 'all';
+            
+            // Resetear pills de dificultad
+            document.querySelectorAll('.category-pill[data-difficulty]').forEach(pill => {
+                pill.classList.remove('active');
+            });
+            document.querySelector('.category-pill[data-difficulty="all"]').classList.add('active');
+            
+            // Resetear checkboxes
+            document.getElementById('filterHasTechniques').checked = false;
+            document.getElementById('filterNoTechniques').checked = false;
+            document.getElementById('filterHasColors').checked = false;
+            
+            filterAndDisplayVideos();
+        }
+        
+        function applyFilters() {
+            currentPage = 1;
+            filterAndDisplayVideos();
+        }
+        
+        // ============================================
+        // FUNCIONES DE ACCIONES (placeholder)
+        // ============================================
+        function editVideo(id) {
+            console.log('Editando video:', id);
+            // Aquí iría la lógica de edición
+        }
+        
+        function confirmDelete(id) {
+            console.log('Confirmando eliminación del video:', id);
+            // Aquí iría la lógica de confirmación
+        }
+        
+        function goToTechniques(id) {
+            console.log('Ir a técnicas del video:', id);
+            // Aquí iría la lógica de técnicas
+        }
+        
+        function toggleVideoSelection(id) {
+            if (selectedVideos.has(id)) {
+                selectedVideos.delete(id);
+            } else {
+                selectedVideos.add(id);
+            }
+            // Actualizar UI de selección
+        }
+        
+        function setViewMode(mode) {
+            viewMode = mode;
+            // Aquí iría la lógica para cambiar entre grid y lista
+        }
+        
+        function resetForm() {
+            console.log('Reseteando formulario');
+            // Aquí iría la lógica del formulario
+        }
+        
+        async function loadCategories() {
+            console.log('Cargando categorías...');
+            // Aquí iría la lógica para cargar categorías
+        }
+        
+        console.log('🎯 Script de videos con gestión de colores cargado correctamente');
+    </script>
+</body>
+</html>
