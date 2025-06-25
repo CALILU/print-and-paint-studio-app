@@ -960,6 +960,80 @@ def delete_paint(paint_id):
     
     return '', 204
 
+# Endpoints para gestión de pinturas por video
+@app.route('/api/videos/<int:video_id>/paints', methods=['GET'])
+def get_video_paints(video_id):
+    try:
+        # Verificar que el video existe
+        video = Video.query.get_or_404(video_id)
+        
+        # Obtener pinturas asociadas al video usando SQL directo
+        query = """
+        SELECT p.id, p.name, p.brand, p.color_code, p.color_preview, p.description, p.color_type, p.color_family
+        FROM paints p
+        INNER JOIN video_paints vp ON p.id = vp.paint_id
+        WHERE vp.video_id = :video_id
+        ORDER BY p.name
+        """
+        
+        result = db.session.execute(query, {'video_id': video_id})
+        paints = result.fetchall()
+        
+        paint_list = []
+        for paint in paints:
+            paint_list.append({
+                'id': paint[0],
+                'name': paint[1],
+                'brand': paint[2],
+                'color_code': paint[3],
+                'color_preview': paint[4],
+                'description': paint[5],
+                'color_type': paint[6],
+                'color_family': paint[7]
+            })
+        
+        return jsonify(paint_list)
+        
+    except Exception as e:
+        print(f"Error en get_video_paints: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/videos/<int:video_id>/paints', methods=['POST'])
+@admin_required
+def save_video_paints(video_id):
+    try:
+        # Verificar que el video existe
+        video = Video.query.get_or_404(video_id)
+        
+        data = request.get_json()
+        paint_ids = data.get('paint_ids', [])
+        
+        # Eliminar asociaciones existentes
+        delete_query = "DELETE FROM video_paints WHERE video_id = :video_id"
+        db.session.execute(delete_query, {'video_id': video_id})
+        
+        # Insertar nuevas asociaciones
+        if paint_ids:
+            for paint_id in paint_ids:
+                # Verificar que la pintura existe
+                paint = Paint.query.get(paint_id)
+                if paint:
+                    insert_query = "INSERT INTO video_paints (video_id, paint_id) VALUES (:video_id, :paint_id)"
+                    db.session.execute(insert_query, {'video_id': video_id, 'paint_id': paint_id})
+        
+        db.session.commit()
+        
+        return jsonify({
+            'message': 'Pinturas asociadas correctamente',
+            'video_id': video_id,
+            'paint_count': len(paint_ids)
+        })
+        
+    except Exception as e:
+        print(f"Error en save_video_paints: {str(e)}")
+        db.session.rollback()
+        return jsonify({'error': str(e)}), 500
+
 @app.route('/admin/users', methods=['POST'])
 @admin_required
 def add_user():
