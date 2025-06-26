@@ -799,6 +799,9 @@
                             </div>
                             <div class="modal-footer">
                                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+                                    <i class="bi bi-palette me-2"></i> Gestionar Pinturas
+                                </button>
+                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>      
                             </div>
                         </div>
                     </div>
@@ -1220,13 +1223,14 @@
         let viewMode = 'grid';
         let selectedVideos = new Set();
         let tooltips = [];
+        let currentPreviewVideoId = null; // ID del video actual en vista previa
         let youtubePlayer; // Variable para el reproductor de YouTube
         // Variables globales para gestión de pinturas
         let allPaintsModal = [];
         let currentVideoId = null;
         let associatedPaints = new Set();
         let paintsModal;
-        let currentPreviewVideoId = null; // ID del video actual en vista previa
+        
 
         // Función para cargar estadísticas
         async function loadStatistics() {
