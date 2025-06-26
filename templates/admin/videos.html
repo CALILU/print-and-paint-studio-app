@@ -2024,15 +2024,31 @@
             }
         }
 
-        // Función para abrir gestión de pinturas del video actual
-        function openPaintManagement() {
+        // Función para abrir gestión de pinturas del video actual (VERSIÓN CORREGIDA)
+        async function openPaintManagement() {
             if (currentPreviewVideoId) {
-                // Cerrar el modal de vista previa
-                previewModal.hide();
-                
-                // Redirigir a la gestión de pinturas del video específico
-                // Nota: Esta ruta debe existir en el backend
-                window.location.href = `/admin/videos/${currentPreviewVideoId}/paints`;
+                try {
+                    // Primero obtener los datos del video para tener el título
+                    const response = await fetch(`/admin/videos/${currentPreviewVideoId}`);
+                    if (!response.ok) {
+                        throw new Error('Error al cargar datos del video');
+                    }
+                    
+                    const video = await response.json();
+                    
+                    // Cerrar el modal de vista previa
+                    previewModal.hide();
+                    
+                    // Esperar un poco para que se cierre completamente
+                    setTimeout(() => {
+                        // Abrir el modal de pinturas usando la función existente
+                        openPaintsModal(currentPreviewVideoId, video.title);
+                    }, 300);
+                    
+                } catch (error) {
+                    console.error('Error al cargar datos del video:', error);
+                    alert('Error al cargar los datos del video');
+                }
             } else {
                 alert('Error: No se pudo identificar el video actual');
             }
