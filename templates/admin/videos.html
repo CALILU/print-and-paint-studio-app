@@ -366,13 +366,40 @@
             cursor: pointer;
             font-weight: bold;
         }
-        </style>
+        
+        /* Estilos para modales superpuestos */
+        #previewModal {
+            z-index: 1050;
+        }
+        
+        #paintsModal {
+            z-index: 1060;
+        }
+        
+        .modal-backdrop.show:nth-of-type(1) {
+            z-index: 1049;
+        }
+        
+        .modal-backdrop.show:nth-of-type(2) {
+            z-index: 1059;
+        }
+        
+        /* Ajustar el tamaño del modal de pinturas cuando está sobre el de preview */
+        #paintsModal .modal-dialog {
+            margin: 1.75rem auto;
+            max-width: 90%;
+        }
+        
+        /* Hacer que el modal de preview sea un poco más pequeño cuando hay dos modales */
+        .dual-modal #previewModal .modal-dialog {
+            transform: scale(0.9);
+            opacity: 0.9;
+        }
     </style>
 </head>
 <body>
     <div class="container-fluid">
         <div class="row">
-            <!-- Sidebar -->
             <!-- Sidebar -->
             <div class="col-md-3 col-lg-2 d-md-block sidebar collapse">
                 <div class="sidebar-heading">
@@ -859,7 +886,7 @@
                     </div>
                 </div>
                 <!-- Modal para gestionar pinturas del video -->
-                <div class="modal fade" id="paintsModal" tabindex="-1" aria-labelledby="paintsModalLabel" aria-hidden="true">
+                <div class="modal fade" id="paintsModal" tabindex="-1" aria-labelledby="paintsModalLabel" aria-hidden="true" data-bs-backdrop="static">
                     <div class="modal-dialog modal-xl modal-dialog-scrollable">
                         <div class="modal-content">
                             <div class="modal-header">
@@ -911,7 +938,6 @@
                                 <button type="button" class="btn btn-primary" onclick="savePaintAssociations()">
                                     <i class="bi bi-check-circle me-2"></i> Guardar Cambios
                                 </button>
-                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
                             </div>
                         </div>
                     </div>
@@ -1378,8 +1404,17 @@
                 // Quitar resaltados
                 resetTechniqueHighlights();
                 
+                // Quitar clase de modal dual
+                document.body.classList.remove('dual-modal');
+                
                 // Limpiar el ID del video actual
                 currentPreviewVideoId = null;
+            });
+            
+            // Manejar el cierre del modal de pinturas
+            document.getElementById('paintsModal').addEventListener('hidden.bs.modal', function () {
+                // Quitar clase de modal dual
+                document.body.classList.remove('dual-modal');
             });
         });
         
@@ -1432,7 +1467,6 @@
             tooltips = [];
         }
         
-        // Función para actualizar vista previa del video
         // Función para actualizar vista previa del video
         function updateVideoPreview() {
             const youtubeId = document.getElementById('youtube_id').value.trim();
@@ -2024,7 +2058,7 @@
             }
         }
 
-        // Función para abrir gestión de pinturas del video actual (VERSIÓN CORREGIDA)
+        // Función para abrir gestión de pinturas del video actual (MODIFICADA PARA MANTENER PREVIEW ABIERTO)
         async function openPaintManagement() {
             if (currentPreviewVideoId) {
                 try {
@@ -2036,14 +2070,12 @@
                     
                     const video = await response.json();
                     
-                    // Cerrar el modal de vista previa
-                    previewModal.hide();
+                    // Añadir clase para indicar que hay dos modales
+                    document.body.classList.add('dual-modal');
                     
-                    // Esperar un poco para que se cierre completamente
-                    setTimeout(() => {
-                        // Abrir el modal de pinturas usando la función existente
-                        openPaintsModal(currentPreviewVideoId, video.title);
-                    }, 300);
+                    // NO cerrar el modal de vista previa
+                    // Simplemente abrir el modal de pinturas encima
+                    openPaintsModal(currentPreviewVideoId, video.title);
                     
                 } catch (error) {
                     console.error('Error al cargar datos del video:', error);
@@ -3168,245 +3200,244 @@
             }
         }
 
-        // Modificar la función saveVideo (ya está correcta en el código original)
-        
-        // Modificar la función editVideo (ya está correcta en el código original)
-
         // Función para abrir el modal de pinturas
-                async function openPaintsModal(videoId, videoTitle) {
-                    currentVideoId = videoId;
-                    document.getElementById('paintsVideoTitle').textContent = videoTitle;
-                    
-                    if (!paintsModal) {
-                        paintsModal = new bootstrap.Modal(document.getElementById('paintsModal'));
-                    }
-                    
-                    // Cargar pinturas y asociaciones
-                    await loadPaintsForModal();
-                    await loadVideoAssociatedPaints(videoId);
-                    
-                    paintsModal.show();
-                }
+        async function openPaintsModal(videoId, videoTitle) {
+            currentVideoId = videoId;
+            document.getElementById('paintsVideoTitle').textContent = videoTitle;
+            
+            if (!paintsModal) {
+                paintsModal = new bootstrap.Modal(document.getElementById('paintsModal'), {
+                    backdrop: 'static'
+                });
+            }
+            
+            // Cargar pinturas y asociaciones
+            await loadPaintsForModal();
+            await loadVideoAssociatedPaints(videoId);
+            
+            paintsModal.show();
+        }
 
-                // Función para cargar todas las pinturas
-                async function loadPaintsForModal() {
-                    try {
-                        const response = await fetch('/api/paints');
-                        if (!response.ok) {
-                            throw new Error('Error al cargar pinturas');
-                        }
-                        
-                        allPaintsModal = await response.json();
-                        
-                        // Cargar marcas para el filtro
-                        const brands = [...new Set(allPaintsModal.map(paint => paint.brand))].sort();
-                        const brandSelect = document.getElementById('filterPaintsBrand');
-                        brandSelect.innerHTML = '<option value="">Todas las marcas</option>';
-                        brands.forEach(brand => {
-                            brandSelect.innerHTML += `<option value="${brand}">${brand}</option>`;
-                        });
-                        
-                        displayPaintsInModal(allPaintsModal);
-                        
-                    } catch (error) {
-                        console.error('Error al cargar pinturas:', error);
-                        document.getElementById('availablePaintsList').innerHTML = `
-                            <div class="col-12">
-                                <div class="alert alert-danger">Error al cargar pinturas: ${error.message}</div>
+        // Función para cargar todas las pinturas
+        async function loadPaintsForModal() {
+            try {
+                const response = await fetch('/api/paints');
+                if (!response.ok) {
+                    throw new Error('Error al cargar pinturas');
+                }
+                
+                allPaintsModal = await response.json();
+                
+                // Cargar marcas para el filtro
+                const brands = [...new Set(allPaintsModal.map(paint => paint.brand))].sort();
+                const brandSelect = document.getElementById('filterPaintsBrand');
+                brandSelect.innerHTML = '<option value="">Todas las marcas</option>';
+                brands.forEach(brand => {
+                    brandSelect.innerHTML += `<option value="${brand}">${brand}</option>`;
+                });
+                
+                displayPaintsInModal(allPaintsModal);
+                
+            } catch (error) {
+                console.error('Error al cargar pinturas:', error);
+                document.getElementById('availablePaintsList').innerHTML = `
+                    <div class="col-12">
+                        <div class="alert alert-danger">Error al cargar pinturas: ${error.message}</div>
+                    </div>
+                `;
+            }
+        }
+
+        // Función para cargar pinturas ya asociadas al video
+        async function loadVideoAssociatedPaints(videoId) {
+            try {
+                const response = await fetch(`/api/videos/${videoId}/paints`);
+                if (response.ok) {
+                    const paints = await response.json();
+                    associatedPaints = new Set(paints.map(paint => paint.id));
+                    displayAssociatedPaints(paints);
+                } else {
+                    // Si no existe el endpoint, inicializar vacío
+                    associatedPaints = new Set();
+                    displayAssociatedPaints([]);
+                }
+            } catch (error) {
+                console.error('Error al cargar pinturas asociadas:', error);
+                associatedPaints = new Set();
+                displayAssociatedPaints([]);
+            }
+        }
+
+        // Función para mostrar las pinturas en el modal
+        function displayPaintsInModal(paints) {
+            const container = document.getElementById('availablePaintsList');
+            
+            if (paints.length === 0) {
+                container.innerHTML = `
+                    <div class="col-12">
+                        <div class="alert alert-info">No se encontraron pinturas.</div>
+                    </div>
+                `;
+                return;
+            }
+            
+            container.innerHTML = '';
+            
+            paints.forEach(paint => {
+                const isAssociated = associatedPaints.has(paint.id);
+                const paintElement = document.createElement('div');
+                paintElement.className = 'col-md-6 col-lg-4';
+                
+                paintElement.innerHTML = `
+                    <div class="paint-item ${isAssociated ? 'associated' : ''}" onclick="togglePaintSelection(${paint.id})">
+                        <div class="d-flex align-items-center mb-2">
+                            <div class="paint-color-circle" style="background-color: ${paint.color_preview || '#cccccc'}"></div>
+                            <div class="flex-grow-1">
+                                <strong>${paint.name}</strong>
+                                <div class="small text-muted">${paint.brand} - ${paint.color_code || 'Sin código'}</div>
                             </div>
-                        `;
-                    }
-                }
-
-                // Función para cargar pinturas ya asociadas al video
-                async function loadVideoAssociatedPaints(videoId) {
-                    try {
-                        const response = await fetch(`/api/videos/${videoId}/paints`);
-                        if (response.ok) {
-                            const paints = await response.json();
-                            associatedPaints = new Set(paints.map(paint => paint.id));
-                            displayAssociatedPaints(paints);
-                        } else {
-                            // Si no existe el endpoint, inicializar vacío
-                            associatedPaints = new Set();
-                            displayAssociatedPaints([]);
-                        }
-                    } catch (error) {
-                        console.error('Error al cargar pinturas asociadas:', error);
-                        associatedPaints = new Set();
-                        displayAssociatedPaints([]);
-                    }
-                }
-
-                // Función para mostrar las pinturas en el modal
-                function displayPaintsInModal(paints) {
-                    const container = document.getElementById('availablePaintsList');
-                    
-                    if (paints.length === 0) {
-                        container.innerHTML = `
-                            <div class="col-12">
-                                <div class="alert alert-info">No se encontraron pinturas.</div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" ${isAssociated ? 'checked' : ''} id="paint_${paint.id}">
                             </div>
-                        `;
-                        return;
-                    }
-                    
-                    container.innerHTML = '';
-                    
-                    paints.forEach(paint => {
-                        const isAssociated = associatedPaints.has(paint.id);
-                        const paintElement = document.createElement('div');
-                        paintElement.className = 'col-md-6 col-lg-4';
-                        
-                        paintElement.innerHTML = `
-                            <div class="paint-item ${isAssociated ? 'associated' : ''}" onclick="togglePaintSelection(${paint.id})">
-                                <div class="d-flex align-items-center mb-2">
-                                    <div class="paint-color-circle" style="background-color: ${paint.color_preview || '#cccccc'}"></div>
-                                    <div class="flex-grow-1">
-                                        <strong>${paint.name}</strong>
-                                        <div class="small text-muted">${paint.brand} - ${paint.color_code || 'Sin código'}</div>
-                                    </div>
-                                    <div class="form-check">
-                                        <input class="form-check-input" type="checkbox" ${isAssociated ? 'checked' : ''} id="paint_${paint.id}">
-                                    </div>
-                                </div>
-                                <div class="small">
-                                    <span class="badge bg-secondary">${paint.color_type || 'Sin tipo'}</span>
-                                    ${paint.color_family ? `<span class="badge bg-light text-dark">${paint.color_family}</span>` : ''}
-                                </div>
-                                ${paint.description ? `<div class="small text-muted mt-2">${paint.description}</div>` : ''}
-                            </div>
-                        `;
-                        
-                        container.appendChild(paintElement);
-                    });
-                }
+                        </div>
+                        <div class="small">
+                            <span class="badge bg-secondary">${paint.color_type || 'Sin tipo'}</span>
+                            ${paint.color_family ? `<span class="badge bg-light text-dark">${paint.color_family}</span>` : ''}
+                        </div>
+                        ${paint.description ? `<div class="small text-muted mt-2">${paint.description}</div>` : ''}
+                    </div>
+                `;
+                
+                container.appendChild(paintElement);
+            });
+        }
 
-                // Función para mostrar pinturas asociadas
-                function displayAssociatedPaints(paints) {
-                    const container = document.getElementById('associatedPaintsList');
-                    const counter = document.getElementById('associatedPaintsCount');
-                    
-                    counter.textContent = paints.length;
-                    
-                    if (paints.length === 0) {
-                        container.innerHTML = '<span class="text-muted">Ninguna pintura asociada</span>';
-                        return;
-                    }
-                    
-                    container.innerHTML = '';
-                    paints.forEach(paint => {
-                        const chip = document.createElement('span');
-                        chip.className = 'associated-paint-chip';
-                        chip.innerHTML = `
-                            ${paint.name} (${paint.brand})
-                            <span class="remove-paint" onclick="removePaintAssociation(${paint.id})">&times;</span>
-                        `;
-                        container.appendChild(chip);
-                    });
-                }
+        // Función para mostrar pinturas asociadas
+        function displayAssociatedPaints(paints) {
+            const container = document.getElementById('associatedPaintsList');
+            const counter = document.getElementById('associatedPaintsCount');
+            
+            counter.textContent = paints.length;
+            
+            if (paints.length === 0) {
+                container.innerHTML = '<span class="text-muted">Ninguna pintura asociada</span>';
+                return;
+            }
+            
+            container.innerHTML = '';
+            paints.forEach(paint => {
+                const chip = document.createElement('span');
+                chip.className = 'associated-paint-chip';
+                chip.innerHTML = `
+                    ${paint.name} (${paint.brand})
+                    <span class="remove-paint" onclick="removePaintAssociation(${paint.id})">&times;</span>
+                `;
+                container.appendChild(chip);
+            });
+        }
 
-                // Función para alternar selección de pintura
-                function togglePaintSelection(paintId) {
-                    const checkbox = document.getElementById(`paint_${paintId}`);
-                    const paintItem = checkbox.closest('.paint-item');
-                    
-                    if (associatedPaints.has(paintId)) {
-                        associatedPaints.delete(paintId);
-                        checkbox.checked = false;
-                        paintItem.classList.remove('associated');
-                    } else {
-                        associatedPaints.add(paintId);
-                        checkbox.checked = true;
-                        paintItem.classList.add('associated');
-                    }
-                    
-                    updateAssociatedPaintsDisplay();
-                }
+        // Función para alternar selección de pintura
+        function togglePaintSelection(paintId) {
+            const checkbox = document.getElementById(`paint_${paintId}`);
+            const paintItem = checkbox.closest('.paint-item');
+            
+            if (associatedPaints.has(paintId)) {
+                associatedPaints.delete(paintId);
+                checkbox.checked = false;
+                paintItem.classList.remove('associated');
+            } else {
+                associatedPaints.add(paintId);
+                checkbox.checked = true;
+                paintItem.classList.add('associated');
+            }
+            
+            updateAssociatedPaintsDisplay();
+        }
 
-                // Función para quitar asociación de pintura
-                function removePaintAssociation(paintId) {
-                    associatedPaints.delete(paintId);
-                    const checkbox = document.getElementById(`paint_${paintId}`);
-                    if (checkbox) {
-                        checkbox.checked = false;
-                        checkbox.closest('.paint-item').classList.remove('associated');
-                    }
-                    updateAssociatedPaintsDisplay();
-                }
+        // Función para quitar asociación de pintura
+        function removePaintAssociation(paintId) {
+            associatedPaints.delete(paintId);
+            const checkbox = document.getElementById(`paint_${paintId}`);
+            if (checkbox) {
+                checkbox.checked = false;
+                checkbox.closest('.paint-item').classList.remove('associated');
+            }
+            updateAssociatedPaintsDisplay();
+        }
 
-                // Función para actualizar la visualización de pinturas asociadas
-                function updateAssociatedPaintsDisplay() {
-                    const associatedPaintsList = Array.from(associatedPaints).map(id => 
-                        allPaintsModal.find(paint => paint.id === id)
-                    ).filter(paint => paint);
-                    
-                    displayAssociatedPaints(associatedPaintsList);
-                }
+        // Función para actualizar la visualización de pinturas asociadas
+        function updateAssociatedPaintsDisplay() {
+            const associatedPaintsList = Array.from(associatedPaints).map(id => 
+                allPaintsModal.find(paint => paint.id === id)
+            ).filter(paint => paint);
+            
+            displayAssociatedPaints(associatedPaintsList);
+        }
 
-                // Función para buscar pinturas en el modal
-                function searchPaintsInModal() {
-                    const searchTerm = document.getElementById('searchPaintsInput').value.toLowerCase();
-                    const brand = document.getElementById('filterPaintsBrand').value;
-                    
-                    let filteredPaints = allPaintsModal.filter(paint => {
-                        const matchesSearch = !searchTerm || 
-                            paint.name.toLowerCase().includes(searchTerm) ||
-                            paint.brand.toLowerCase().includes(searchTerm) ||
-                            (paint.color_code && paint.color_code.toLowerCase().includes(searchTerm));
-                        
-                        const matchesBrand = !brand || paint.brand === brand;
-                        
-                        return matchesSearch && matchesBrand;
-                    });
-                    
-                    displayPaintsInModal(filteredPaints);
-                }
+        // Función para buscar pinturas en el modal
+        function searchPaintsInModal() {
+            const searchTerm = document.getElementById('searchPaintsInput').value.toLowerCase();
+            const brand = document.getElementById('filterPaintsBrand').value;
+            
+            let filteredPaints = allPaintsModal.filter(paint => {
+                const matchesSearch = !searchTerm || 
+                    paint.name.toLowerCase().includes(searchTerm) ||
+                    paint.brand.toLowerCase().includes(searchTerm) ||
+                    (paint.color_code && paint.color_code.toLowerCase().includes(searchTerm));
+                
+                const matchesBrand = !brand || paint.brand === brand;
+                
+                return matchesSearch && matchesBrand;
+            });
+            
+            displayPaintsInModal(filteredPaints);
+        }
 
-                // Función para filtrar pinturas por marca
-                function filterPaintsInModal() {
-                    searchPaintsInModal();
-                }
+        // Función para filtrar pinturas por marca
+        function filterPaintsInModal() {
+            searchPaintsInModal();
+        }
 
-                // Función para guardar las asociaciones
-                async function savePaintAssociations() {
-                    try {
-                        const paintIds = Array.from(associatedPaints);
-                        
-                        const response = await fetch(`/api/videos/${currentVideoId}/paints`, {
-                            method: 'POST',
-                            headers: {
-                                'Content-Type': 'application/json'
-                            },
-                            body: JSON.stringify({ paint_ids: paintIds })
-                        });
-                        
-                        if (!response.ok) {
-                            throw new Error('Error al guardar las asociaciones');
-                        }
-                        
-                        alert('Asociaciones de pinturas guardadas correctamente');
-                        paintsModal.hide();
-                        
-                    } catch (error) {
-                        console.error('Error al guardar asociaciones:', error);
-                        alert(`Error al guardar: ${error.message}`);
-                    }
+        // Función para guardar las asociaciones
+        async function savePaintAssociations() {
+            try {
+                const paintIds = Array.from(associatedPaints);
+                
+                const response = await fetch(`/api/videos/${currentVideoId}/paints`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ paint_ids: paintIds })
+                });
+                
+                if (!response.ok) {
+                    throw new Error('Error al guardar las asociaciones');
                 }
+                
+                alert('Asociaciones de pinturas guardadas correctamente');
+                paintsModal.hide();
+                
+            } catch (error) {
+                console.error('Error al guardar asociaciones:', error);
+                alert(`Error al guardar: ${error.message}`);
+            }
+        }
 
-                // Función para ir a gestión de pinturas
-                function goToPaintsManagement() {
-                    if (currentPreviewVideoId) {
-                        // Opción 1: Redirigir a la página de pinturas
-                        window.location.href = `/admin/paints?video_id=${currentPreviewVideoId}`;
-                        
-                        // Opción 2: Si prefieres cerrar el modal y hacer algo más
-                        // previewModal.hide();
-                        // Tu código aquí...
-                    }
-                }
+        // Función para ir a gestión de pinturas
+        function goToPaintsManagement() {
+            if (currentPreviewVideoId) {
+                // Opción 1: Redirigir a la página de pinturas
+                window.location.href = `/admin/paints?video_id=${currentPreviewVideoId}`;
+                
+                // Opción 2: Si prefieres cerrar el modal y hacer algo más
+                // previewModal.hide();
+                // Tu código aquí...
+            }
+        }
     </script>
     <!-- Script para ApexCharts necesario para las estadísticas -->
     <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
 </body>
-</html>
+</html> = document.getElementById('filterHasTechniques').checked;
+            const filterNoTechniques
