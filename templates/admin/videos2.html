@@ -1191,11 +1191,7 @@
                                 </div>
                             </div>
                             <div class="modal-footer">
-                                <button type="button" class="btn btn-primary me-2" onclick="openPaintManagement()">
-                                    <i class="bi bi-palette me-2"></i> Gestionar Pinturas
-                                </button>
                                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
-                            </div>      
                             </div>
                         </div>
                     </div>
@@ -1226,7 +1222,6 @@
         let currentVideoId = null;
         let associatedPaints = new Set();
         let paintsModal;
-        let currentPreviewVideoId = null; // ID del video actual en vista previa
 
         // Función para cargar estadísticas
         async function loadStatistics() {
@@ -1372,12 +1367,9 @@
                 
                 // Quitar resaltados
                 resetTechniqueHighlights();
-                
-                // Limpiar el ID del video actual
-                currentPreviewVideoId = null;
             });
         });
-        
+
         // Función para inicializar el reproductor de YouTube
         function initYouTubePlayer(videoId) {
             // Si ya existe un reproductor, destruirlo primero
@@ -1965,10 +1957,6 @@
         
         // Función para abrir vista previa
         async function openPreview(videoId, id) {
-
-            // Guardar el ID del video para usar en gestión de pinturas
-            currentPreviewVideoId = id;
-
             const iframe = document.getElementById('previewIframe');
             iframe.src = `https://www.youtube.com/embed/${videoId}`;
             
@@ -2018,21 +2006,6 @@
                 previewModal.show();
             }
         }
-
-        // Función para abrir gestión de pinturas del video actual
-        function openPaintManagement() {
-            if (currentPreviewVideoId) {
-                // Cerrar el modal de vista previa
-                previewModal.hide();
-                
-                // Redirigir a la gestión de pinturas del video específico
-                // Nota: Esta ruta debe existir en el backend
-                window.location.href = `/admin/videos/${currentPreviewVideoId}/paints`;
-            } else {
-                alert('Error: No se pudo identificar el video actual');
-            }
-        }
-
         // Función para navegar a la pestaña de técnicas
         function goToTechniques(videoId) {
             // Guardar el ID del video
