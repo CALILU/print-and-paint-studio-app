@@ -911,6 +911,7 @@
                                 <button type="button" class="btn btn-primary" onclick="savePaintAssociations()">
                                     <i class="bi bi-check-circle me-2"></i> Guardar Cambios
                                 </button>
+                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
                             </div>
                         </div>
                     </div>
@@ -3374,6 +3375,18 @@
                     } catch (error) {
                         console.error('Error al guardar asociaciones:', error);
                         alert(`Error al guardar: ${error.message}`);
+                    }
+                }
+
+                // Función para ir a gestión de pinturas
+                function goToPaintsManagement() {
+                    if (currentPreviewVideoId) {
+                        // Opción 1: Redirigir a la página de pinturas
+                        window.location.href = `/admin/paints?video_id=${currentPreviewVideoId}`;
+                        
+                        // Opción 2: Si prefieres cerrar el modal y hacer algo más
+                        // previewModal.hide();
+                        // Tu código aquí...
                     }
                 }
     </script>
