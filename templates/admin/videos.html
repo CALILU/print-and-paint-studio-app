@@ -372,16 +372,12 @@
             z-index: 1050;
         }
         
-        #previewModal .modal-dialog {
-            pointer-events: all;
-        }
-        
-        #previewModal .modal-content {
-            pointer-events: all;
-        }
-        
         #paintsModal {
             z-index: 1060;
+        }
+        
+        .modal-backdrop {
+            opacity: 0.5;
         }
         
         .modal-backdrop.show:nth-of-type(1) {
@@ -401,16 +397,7 @@
         /* Hacer que el modal de preview sea un poco más pequeño cuando hay dos modales */
         .dual-modal #previewModal .modal-dialog {
             transform: scale(0.9);
-            opacity: 0.9;
-        }
-        
-        /* Asegurar que el contenedor de YouTube no bloquee la interacción */
-        .youtube-container {
-            pointer-events: all;
-        }
-        
-        .youtube-container iframe {
-            pointer-events: all;
+            opacity: 0.95;
         }
     </style>
 </head>
@@ -825,7 +812,7 @@
                 </div>
                 
                 <!-- Preview Modal -->
-                <div class="modal fade" id="previewModal" tabindex="-1" aria-labelledby="previewModalLabel" aria-hidden="true">
+                <div class="modal fade" id="previewModal" aria-labelledby="previewModalLabel" aria-hidden="true">
                     <div class="modal-dialog modal-xl">
                         <div class="modal-content">
                             <div class="modal-header">
@@ -834,7 +821,7 @@
                             </div>
                             <div class="modal-body">
                                 <div class="youtube-container">
-                                    <iframe id="previewIframe" src="" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+                                    <!-- El iframe se insertará dinámicamente aquí -->
                                 </div>
                                 <div class="mt-3">
                                     <h6>Técnicas en este video:</h6>
@@ -1275,65 +1262,6 @@
         let associatedPaints = new Set();
         let paintsModal;
         
-
-        // Función para cargar estadísticas
-        async function loadStatistics() {
-            try {
-                // Cargar videos para contar
-                const videosResponse = await fetch('/api/videos');
-                if (!videosResponse.ok) {
-                    throw new Error('Error al cargar videos');
-                }
-                const videos = await videosResponse.json();
-                document.querySelector('.videos-count').textContent = videos.length;
-                
-                // Obtener categorías únicas
-                const categories = new Set();
-                videos.forEach(video => {
-                    if (video.category) {
-                        categories.add(video.category);
-                    } else {
-                        categories.add('Sin categoría');
-                    }
-                });
-                document.querySelector('.categories-count').textContent = categories.size;
-                
-                // Solicitud para obtener diagnóstico que incluye conteos
-                const diagnosticResponse = await fetch('/debug/db');
-                if (!diagnosticResponse.ok) {
-                    throw new Error('Error al cargar diagnóstico');
-                }
-                
-                const data = await diagnosticResponse.json();
-                
-                // Extraer cantidad de usuarios
-                if (data.tables && data.tables.users) {
-                    const usersMatch = data.tables.users.match(/\((\d+) registros\)/);
-                    if (usersMatch && usersMatch[1]) {
-                        document.querySelector('.users-count').textContent = usersMatch[1];
-                    } else {
-                        document.querySelector('.users-count').textContent = '0';
-                    }
-                }
-                
-                // Extraer cantidad de favoritos
-                if (data.tables && data.tables.favorites) {
-                    const favoritesMatch = data.tables.favorites.match(/\((\d+) registros\)/);
-                    if (favoritesMatch && favoritesMatch[1]) {
-                        document.querySelector('.favorites-count').textContent = favoritesMatch[1];
-                    } else {
-                        document.querySelector('.favorites-count').textContent = '0';
-                    }
-                }
-            } catch (error) {
-                console.error('Error al cargar estadísticas:', error);
-                document.querySelector('.videos-count').textContent = '-';
-                document.querySelector('.users-count').textContent = '-';
-                document.querySelector('.favorites-count').textContent = '-';
-                document.querySelector('.categories-count').textContent = '-';
-            }
-        }
-        
         // Función para actualizar el filtro de categoría
         function updateCategoryFilter() {
             const select = document.getElementById('categoryFilter');
@@ -1345,7 +1273,11 @@
             initTooltips();
             
             // Inicializar modales
-            previewModal = new bootstrap.Modal(document.getElementById('previewModal'));
+            previewModal = new bootstrap.Modal(document.getElementById('previewModal'), {
+                backdrop: true,
+                keyboard: true,
+                focus: true
+            });
             confirmDeleteModal = new bootstrap.Modal(document.getElementById('confirmDeleteModal'));
             
             // Cargar categorías
@@ -1405,7 +1337,6 @@
             
             // Cargar videos al inicio
             fetchVideos();
-            loadStatistics();
             
             // Manejar cuando el modal se muestra
             document.getElementById('previewModal').addEventListener('shown.bs.modal', function () {
@@ -1421,11 +1352,9 @@
                     activeVideoTimer = null;
                 }
                 
-                // Detener la reproducción del video limpiando el src
-                const iframe = document.getElementById('previewIframe');
-                if (iframe) {
-                    iframe.src = '';
-                }
+                // Limpiar el contenedor del video
+                const container = document.querySelector('#previewModal .youtube-container');
+                container.innerHTML = '';
                 
                 // Quitar resaltados
                 resetTechniqueHighlights();
@@ -2033,9 +1962,12 @@
             // Guardar el ID del video para usar en gestión de pinturas
             currentPreviewVideoId = id;
 
-            // Limpiar el iframe primero
-            const iframe = document.getElementById('previewIframe');
-            iframe.src = '';
+            // Preparar el contenedor del video primero
+            const container = document.querySelector('#previewModal .youtube-container');
+            container.innerHTML = '<div class="text-center p-4"><div class="spinner-border text-primary" role="status"><span class="visually-hidden">Cargando video...</span></div></div>';
+            
+            // Mostrar el modal
+            previewModal.show();
             
             // Cargar técnicas
             try {
@@ -2074,19 +2006,15 @@
                     });
                 }
                 
-                // Mostrar el modal primero
-                previewModal.show();
-                
-                // Luego cargar el video con un pequeño retraso para asegurar que el modal esté completamente abierto
+                // Cargar el iframe después de que el modal esté visible
                 setTimeout(() => {
-                    iframe.src = `https://www.youtube.com/embed/${videoId}?rel=0&modestbranding=1&enablejsapi=1`;
-                }, 300);
+                    container.innerHTML = `<iframe src="https://www.youtube.com/embed/${videoId}?rel=0&modestbranding=1&enablejsapi=1" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe>`;
+                }, 500);
                 
             } catch (error) {
                 console.error('Error:', error);
                 document.getElementById('previewTechniques').innerHTML = 
                     `<div class="alert alert-danger">Error al cargar técnicas: ${error.message}</div>`;
-                previewModal.show();
             }
         }
 
@@ -2420,22 +2348,31 @@
                 activeVideoTimer = null;
             }
             
-            // Obtener el iframe del video
-            const iframe = document.getElementById('previewIframe');
-            if (iframe) {
+            // Obtener o crear el iframe del video
+            const container = document.querySelector('#previewModal .youtube-container');
+            if (!container) return;
+            
+            let iframe = container.querySelector('iframe');
+            
+            if (!iframe) {
+                // Si no existe el iframe, crearlo
+                container.innerHTML = `<iframe src="https://www.youtube.com/embed/${videoId}?start=${startTime}&autoplay=1&rel=0&modestbranding=1&enablejsapi=1" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>`;
+            } else {
                 // Actualizar la URL con los parámetros de tiempo y autoplay
                 iframe.src = `https://www.youtube.com/embed/${videoId}?start=${startTime}&autoplay=1&rel=0&modestbranding=1&enablejsapi=1`;
-                
-                // Calcular la duración de la técnica
-                const duration = endTime - startTime;
-                
-                // Configurar un temporizador para detener el video después de que termine la técnica
-                activeVideoTimer = setTimeout(() => {
-                    // Resetear el video al tiempo inicial pero pausado
-                    iframe.src = `https://www.youtube.com/embed/${videoId}?start=${startTime}&rel=0&modestbranding=1&enablejsapi=1`;
-                    activeVideoTimer = null;
-                }, duration * 1000);
             }
+            
+            // Calcular la duración de la técnica
+            const duration = endTime - startTime;
+            
+            // Configurar un temporizador para detener el video después de que termine la técnica
+            activeVideoTimer = setTimeout(() => {
+                const currentIframe = container.querySelector('iframe');
+                if (currentIframe) {
+                    currentIframe.src = `https://www.youtube.com/embed/${videoId}?start=${startTime}&rel=0&modestbranding=1&enablejsapi=1`;
+                }
+                activeVideoTimer = null;
+            }, duration * 1000);
         }
         
         // Función para editar técnica
@@ -2976,24 +2913,30 @@
         }
         
         function updateDashboardStatistics(data) {
+            // Verificar que los datos existan antes de usarlos
+            if (!data || !data.users || !data.videos || !data.techniques || !data.favorites) {
+                console.error('Datos de estadísticas incompletos:', data);
+                return;
+            }
+            
             // Métricas principales
-            document.getElementById('totalUsers').textContent = data.users.total;
-            document.getElementById('totalVideos').textContent = data.videos.total;
-            document.getElementById('totalTechniques').textContent = data.techniques.total;
-            document.getElementById('totalFavorites').textContent = data.favorites.total;
+            document.getElementById('totalUsers').textContent = data.users.total || 0;
+            document.getElementById('totalVideos').textContent = data.videos.total || 0;
+            document.getElementById('totalTechniques').textContent = data.techniques.total || 0;
+            document.getElementById('totalFavorites').textContent = data.favorites.total || 0;
             
             // Usuarios
-            document.getElementById('regularUsers').textContent = data.users.regular;
-            document.getElementById('adminUsers').textContent = data.users.admin;
+            document.getElementById('regularUsers').textContent = data.users.regular || 0;
+            document.getElementById('adminUsers').textContent = data.users.admin || 0;
             
             // Técnicas
-            document.getElementById('techniquesCount').textContent = data.techniques.total;
-            document.getElementById('avgTechniquesPerVideo').textContent = data.techniques.avg_per_video;
-            document.getElementById('totalTechniquesDuration').textContent = data.techniques.total_duration_formatted;
+            document.getElementById('techniquesCount').textContent = data.techniques.total || 0;
+            document.getElementById('avgTechniquesPerVideo').textContent = data.techniques.avg_per_video || 0;
+            document.getElementById('totalTechniquesDuration').textContent = data.techniques.total_duration_formatted || '0:00';
             
             // Videos populares
             const popularVideosList = document.getElementById('popularVideosList');
-            if (data.favorites.popular_videos && data.favorites.popular_videos.length > 0) {
+            if (data.favorites && data.favorites.popular_videos && data.favorites.popular_videos.length > 0) {
                 popularVideosList.innerHTML = '';
                 data.favorites.popular_videos.forEach(video => {
                     popularVideosList.innerHTML += `
@@ -3009,7 +2952,7 @@
             
             // Usuarios activos
             const activeUsersList = document.getElementById('activeUsersList');
-            if (data.favorites.active_users && data.favorites.active_users.length > 0) {
+            if (data.favorites && data.favorites.active_users && data.favorites.active_users.length > 0) {
                 activeUsersList.innerHTML = '';
                 data.favorites.active_users.forEach(user => {
                     activeUsersList.innerHTML += `
@@ -3025,7 +2968,7 @@
             
              // Videos con más técnicas
             const videosWithTechniquesList = document.getElementById('videosWithMostTechniquesList');
-            if (data.techniques.videos_with_most_techniques && data.techniques.videos_with_most_techniques.length > 0) {
+            if (data.techniques && data.techniques.videos_with_most_techniques && data.techniques.videos_with_most_techniques.length > 0) {
                 videosWithTechniquesList.innerHTML = '';
                 data.techniques.videos_with_most_techniques.forEach(video => {
                     videosWithTechniquesList.innerHTML += `
@@ -3039,11 +2982,19 @@
                 videosWithTechniquesList.innerHTML = '<tr><td colspan="2" class="text-center">No hay datos disponibles</td></tr>';
             }
             
-            // Generar gráficos
-            createUsersChart(data.users);
-            createUserLevelsChart(data.users.by_level);
-            createVideoDifficultyChart(data.videos.by_level);
-            createVideoCategoriesChart(data.videos.by_category);
+            // Generar gráficos solo si los datos existen
+            if (data.users) {
+                createUsersChart(data.users);
+            }
+            if (data.users && data.users.by_level) {
+                createUserLevelsChart(data.users.by_level);
+            }
+            if (data.videos && data.videos.by_level) {
+                createVideoDifficultyChart(data.videos.by_level);
+            }
+            if (data.videos && data.videos.by_category) {
+                createVideoCategoriesChart(data.videos.by_category);
+            }
         }
         
         function createUsersChart(userData) {
