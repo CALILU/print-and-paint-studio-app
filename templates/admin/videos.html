@@ -372,6 +372,14 @@
             z-index: 1050;
         }
         
+        #previewModal .modal-dialog {
+            pointer-events: all;
+        }
+        
+        #previewModal .modal-content {
+            pointer-events: all;
+        }
+        
         #paintsModal {
             z-index: 1060;
         }
@@ -394,6 +402,15 @@
         .dual-modal #previewModal .modal-dialog {
             transform: scale(0.9);
             opacity: 0.9;
+        }
+        
+        /* Asegurar que el contenedor de YouTube no bloquee la interacción */
+        .youtube-container {
+            pointer-events: all;
+        }
+        
+        .youtube-container iframe {
+            pointer-events: all;
         }
     </style>
 </head>
@@ -817,7 +834,7 @@
                             </div>
                             <div class="modal-body">
                                 <div class="youtube-container">
-                                    <iframe id="previewIframe" src="" frameborder="0" allowfullscreen></iframe>
+                                    <iframe id="previewIframe" src="" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
                                 </div>
                                 <div class="mt-3">
                                     <h6>Técnicas en este video:</h6>
@@ -1390,6 +1407,12 @@
             fetchVideos();
             loadStatistics();
             
+            // Manejar cuando el modal se muestra
+            document.getElementById('previewModal').addEventListener('shown.bs.modal', function () {
+                // Asegurar que el modal tenga el foco correcto
+                this.focus();
+            });
+            
             // Manejar cierre del modal
             document.getElementById('previewModal').addEventListener('hidden.bs.modal', function () {
                 // Detener cualquier temporizador activo
@@ -1398,8 +1421,11 @@
                     activeVideoTimer = null;
                 }
                 
-                // Detener la reproducción del video
-                document.getElementById('previewIframe').src = '';
+                // Detener la reproducción del video limpiando el src
+                const iframe = document.getElementById('previewIframe');
+                if (iframe) {
+                    iframe.src = '';
+                }
                 
                 // Quitar resaltados
                 resetTechniqueHighlights();
@@ -2004,12 +2030,12 @@
         
         // Función para abrir vista previa
         async function openPreview(videoId, id) {
-
             // Guardar el ID del video para usar en gestión de pinturas
             currentPreviewVideoId = id;
 
+            // Limpiar el iframe primero
             const iframe = document.getElementById('previewIframe');
-            iframe.src = `https://www.youtube.com/embed/${videoId}`;
+            iframe.src = '';
             
             // Cargar técnicas
             try {
@@ -2048,7 +2074,13 @@
                     });
                 }
                 
+                // Mostrar el modal primero
                 previewModal.show();
+                
+                // Luego cargar el video con un pequeño retraso para asegurar que el modal esté completamente abierto
+                setTimeout(() => {
+                    iframe.src = `https://www.youtube.com/embed/${videoId}?rel=0&modestbranding=1&enablejsapi=1`;
+                }, 300);
                 
             } catch (error) {
                 console.error('Error:', error);
@@ -2392,15 +2424,15 @@
             const iframe = document.getElementById('previewIframe');
             if (iframe) {
                 // Actualizar la URL con los parámetros de tiempo y autoplay
-                iframe.src = `https://www.youtube.com/embed/${videoId}?start=${startTime}&autoplay=1`;
+                iframe.src = `https://www.youtube.com/embed/${videoId}?start=${startTime}&autoplay=1&rel=0&modestbranding=1&enablejsapi=1`;
                 
                 // Calcular la duración de la técnica
                 const duration = endTime - startTime;
                 
                 // Configurar un temporizador para detener el video después de que termine la técnica
                 activeVideoTimer = setTimeout(() => {
-                    // Resetear el video
-                    iframe.src = `https://www.youtube.com/embed/${videoId}`;
+                    // Resetear el video al tiempo inicial pero pausado
+                    iframe.src = `https://www.youtube.com/embed/${videoId}?start=${startTime}&rel=0&modestbranding=1&enablejsapi=1`;
                     activeVideoTimer = null;
                 }, duration * 1000);
             }
