@@ -314,96 +314,12 @@
                 grid-template-columns: 1fr;
             }
         }
-
-        /* Estilos para el modal de pinturas */
-        .paint-item {
-            border: 2px solid #dee2e6;
-            border-radius: 8px;
-            padding: 15px;
-            margin-bottom: 15px;
-            background-color: white;
-            transition: all 0.3s ease;
-            cursor: pointer;
-        }
-
-        .paint-item:hover {
-            border-color: #6c757d;
-            transform: translateY(-2px);
-            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
-        }
-
-        .paint-item.selected {
-            border-color: #dc3545;
-            background-color: #fff5f5;
-        }
-
-        .paint-item.associated {
-            border-color: #28a745;
-            background-color: #f8fff8;
-        }
-
-        .paint-color-circle {
-            width: 30px;
-            height: 30px;
-            border-radius: 50%;
-            display: inline-block;
-            margin-right: 10px;
-            border: 2px solid #dee2e6;
-        }
-
-        .associated-paint-chip {
-            display: inline-block;
-            background-color: #28a745;
-            color: white;
-            padding: 5px 10px;
-            border-radius: 15px;
-            margin: 2px;
-            font-size: 0.8rem;
-        }
-
-        .associated-paint-chip .remove-paint {
-            margin-left: 5px;
-            cursor: pointer;
-            font-weight: bold;
-        }
-        
-        /* Estilos para modales superpuestos */
-        #previewModal {
-            z-index: 1050;
-        }
-        
-        #paintsModal {
-            z-index: 1060;
-        }
-        
-        .modal-backdrop {
-            opacity: 0.5;
-        }
-        
-        .modal-backdrop.show:nth-of-type(1) {
-            z-index: 1049;
-        }
-        
-        .modal-backdrop.show:nth-of-type(2) {
-            z-index: 1059;
-        }
-        
-        /* Ajustar el tamaño del modal de pinturas cuando está sobre el de preview */
-        #paintsModal .modal-dialog {
-            margin: 1.75rem auto;
-            max-width: 90%;
-        }
-        
-        /* Hacer que el modal de preview sea un poco más pequeño cuando hay dos modales */
-        .dual-modal #previewModal .modal-dialog {
-            transform: scale(0.9);
-            opacity: 0.95;
-        }
     </style>
 </head>
 <body>
     <div class="container-fluid">
         <div class="row">
+            <!-- Sidebar -->
             <!-- Sidebar -->
             <div class="col-md-3 col-lg-2 d-md-block sidebar collapse">
                 <div class="sidebar-heading">
@@ -812,7 +728,7 @@
                 </div>
                 
                 <!-- Preview Modal -->
-                <div class="modal fade" id="previewModal" aria-labelledby="previewModalLabel" aria-hidden="true">
+                <div class="modal fade" id="previewModal" tabindex="-1" aria-labelledby="previewModalLabel" aria-hidden="true">
                     <div class="modal-dialog modal-xl">
                         <div class="modal-content">
                             <div class="modal-header">
@@ -821,7 +737,7 @@
                             </div>
                             <div class="modal-body">
                                 <div class="youtube-container">
-                                    <!-- El iframe se insertará dinámicamente aquí -->
+                                    <iframe id="previewIframe" src="" frameborder="0" allowfullscreen></iframe>
                                 </div>
                                 <div class="mt-3">
                                     <h6>Técnicas en este video:</h6>
@@ -830,9 +746,6 @@
                             </div>
                             <div class="modal-footer">
                                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
-                                <button type="button" class="btn btn-primary" onclick="openPaintManagement()">
-                                    <i class="bi bi-palette me-2"></i> Gestionar Pinturas
-                                </button>
                             </div>
                         </div>
                     </div>
@@ -889,64 +802,7 @@
                         </div>
                     </div>
                 </div>
-                <!-- Modal para gestionar pinturas del video -->
-                <div class="modal fade" id="paintsModal" tabindex="-1" aria-labelledby="paintsModalLabel" aria-hidden="true" data-bs-backdrop="static">
-                    <div class="modal-dialog modal-xl modal-dialog-scrollable">
-                        <div class="modal-content">
-                            <div class="modal-header">
-                                <h5 class="modal-title" id="paintsModalLabel">
-                                    <i class="bi bi-palette me-2"></i> Gestionar Pinturas - <span id="paintsVideoTitle"></span>
-                                </h5>
-                                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                            </div>
-                            <div class="modal-body">
-                                <!-- Filtros de búsqueda -->
-                                <div class="row mb-4">
-                                    <div class="col-md-8">
-                                        <div class="input-group">
-                                            <input type="text" class="form-control" id="searchPaintsInput" placeholder="Buscar pinturas por nombre, marca, código...">
-                                            <button class="btn btn-outline-secondary" type="button" onclick="searchPaintsInModal()">
-                                                <i class="bi bi-search"></i>
-                                            </button>
-                                        </div>
-                                    </div>
-                                    <div class="col-md-4">
-                                        <select class="form-select" id="filterPaintsBrand" onchange="filterPaintsInModal()">
-                                            <option value="">Todas las marcas</option>
-                                        </select>
-                                    </div>
-                                </div>
-                                
-                                <!-- Pinturas asociadas actualmente -->
-                                <div class="mb-4">
-                                    <h6><i class="bi bi-check-circle me-2"></i> Pinturas asociadas a este video (<span id="associatedPaintsCount">0</span>)</h6>
-                                    <div id="associatedPaintsList" class="d-flex flex-wrap gap-2 mb-3">
-                                        <!-- Se llenarán dinámicamente -->
-                                    </div>
-                                </div>
-                                
-                                <!-- Lista de todas las pinturas disponibles -->
-                                <div>
-                                    <h6><i class="bi bi-palette me-2"></i> Pinturas disponibles</h6>
-                                    <div id="availablePaintsList" class="row">
-                                        <div class="col-12 text-center">
-                                            <div class="spinner-border text-primary" role="status">
-                                                <span class="visually-hidden">Cargando pinturas...</span>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="modal-footer">
-                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
-                                <button type="button" class="btn btn-primary" onclick="savePaintAssociations()">
-                                    <i class="bi bi-check-circle me-2"></i> Guardar Cambios
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                <!-- Botón para abrir modal de estadísticas -->                 
+                <!-- Botón para abrir modal de estadísticas -->
                 <div class="position-fixed" style="bottom: 30px; right: 30px; z-index: 1000;">
                     <button type="button" class="btn btn-primary btn-lg rounded-circle shadow" 
                             data-bs-toggle="modal" data-bs-target="#statisticsModal" 
@@ -1225,11 +1081,7 @@
                                 </div>
                             </div>
                             <div class="modal-footer">
-                                <button type="button" class="btn btn-primary" onclick="goToPaintsManagement()">
-                                    <i class="bi bi-palette me-2"></i> Gestionar Pinturas
-                                </button>
                                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
-                            </div>
                             </div>
                         </div>
                     </div>
@@ -1254,13 +1106,65 @@
         let viewMode = 'grid';
         let selectedVideos = new Set();
         let tooltips = [];
-        let currentPreviewVideoId = null; // ID del video actual en vista previa
         let youtubePlayer; // Variable para el reproductor de YouTube
-        // Variables globales para gestión de pinturas
-        let allPaintsModal = [];
-        let currentVideoId = null;
-        let associatedPaints = new Set();
-        let paintsModal;
+
+        // Función para cargar estadísticas
+        async function loadStatistics() {
+            try {
+                // Cargar videos para contar
+                const videosResponse = await fetch('/api/videos');
+                if (!videosResponse.ok) {
+                    throw new Error('Error al cargar videos');
+                }
+                const videos = await videosResponse.json();
+                document.querySelector('.videos-count').textContent = videos.length;
+                
+                // Obtener categorías únicas
+                const categories = new Set();
+                videos.forEach(video => {
+                    if (video.category) {
+                        categories.add(video.category);
+                    } else {
+                        categories.add('Sin categoría');
+                    }
+                });
+                document.querySelector('.categories-count').textContent = categories.size;
+                
+                // Solicitud para obtener diagnóstico que incluye conteos
+                const diagnosticResponse = await fetch('/debug/db');
+                if (!diagnosticResponse.ok) {
+                    throw new Error('Error al cargar diagnóstico');
+                }
+                
+                const data = await diagnosticResponse.json();
+                
+                // Extraer cantidad de usuarios
+                if (data.tables && data.tables.users) {
+                    const usersMatch = data.tables.users.match(/\((\d+) registros\)/);
+                    if (usersMatch && usersMatch[1]) {
+                        document.querySelector('.users-count').textContent = usersMatch[1];
+                    } else {
+                        document.querySelector('.users-count').textContent = '0';
+                    }
+                }
+                
+                // Extraer cantidad de favoritos
+                if (data.tables && data.tables.favorites) {
+                    const favoritesMatch = data.tables.favorites.match(/\((\d+) registros\)/);
+                    if (favoritesMatch && favoritesMatch[1]) {
+                        document.querySelector('.favorites-count').textContent = favoritesMatch[1];
+                    } else {
+                        document.querySelector('.favorites-count').textContent = '0';
+                    }
+                }
+            } catch (error) {
+                console.error('Error al cargar estadísticas:', error);
+                document.querySelector('.videos-count').textContent = '-';
+                document.querySelector('.users-count').textContent = '-';
+                document.querySelector('.favorites-count').textContent = '-';
+                document.querySelector('.categories-count').textContent = '-';
+            }
+        }
         
         // Función para actualizar el filtro de categoría
         function updateCategoryFilter() {
@@ -1273,11 +1177,7 @@
             initTooltips();
             
             // Inicializar modales
-            previewModal = new bootstrap.Modal(document.getElementById('previewModal'), {
-                backdrop: true,
-                keyboard: true,
-                focus: true
-            });
+            previewModal = new bootstrap.Modal(document.getElementById('previewModal'));
             confirmDeleteModal = new bootstrap.Modal(document.getElementById('confirmDeleteModal'));
             
             // Cargar categorías
@@ -1337,12 +1237,7 @@
             
             // Cargar videos al inicio
             fetchVideos();
-            
-            // Manejar cuando el modal se muestra
-            document.getElementById('previewModal').addEventListener('shown.bs.modal', function () {
-                // Asegurar que el modal tenga el foco correcto
-                this.focus();
-            });
+            loadStatistics();
             
             // Manejar cierre del modal
             document.getElementById('previewModal').addEventListener('hidden.bs.modal', function () {
@@ -1352,27 +1247,14 @@
                     activeVideoTimer = null;
                 }
                 
-                // Limpiar el contenedor del video
-                const container = document.querySelector('#previewModal .youtube-container');
-                container.innerHTML = '';
+                // Detener la reproducción del video
+                document.getElementById('previewIframe').src = '';
                 
                 // Quitar resaltados
                 resetTechniqueHighlights();
-                
-                // Quitar clase de modal dual
-                document.body.classList.remove('dual-modal');
-                
-                // Limpiar el ID del video actual
-                currentPreviewVideoId = null;
-            });
-            
-            // Manejar el cierre del modal de pinturas
-            document.getElementById('paintsModal').addEventListener('hidden.bs.modal', function () {
-                // Quitar clase de modal dual
-                document.body.classList.remove('dual-modal');
             });
         });
-        
+
         // Función para inicializar el reproductor de YouTube
         function initYouTubePlayer(videoId) {
             // Si ya existe un reproductor, destruirlo primero
@@ -1422,6 +1304,7 @@
             tooltips = [];
         }
         
+        // Función para actualizar vista previa del video
         // Función para actualizar vista previa del video
         function updateVideoPreview() {
             const youtubeId = document.getElementById('youtube_id').value.trim();
@@ -1669,7 +1552,6 @@
                             <i class="bi bi-pencil action-icon" onclick="editVideo(${video.id})" data-bs-toggle="tooltip" title="Editar"></i>
                             <i class="bi bi-trash action-icon" onclick="confirmDelete(${video.id})" data-bs-toggle="tooltip" title="Eliminar"></i>
                             <i class="bi bi-list-check action-icon" onclick="goToTechniques(${video.id})" data-bs-toggle="tooltip" title="Gestionar técnicas"></i>
-                            <i class="bi bi-palette action-icon" onclick="openPaintsModal(${video.id}, '${video.title}')" data-bs-toggle="tooltip" title="Gestionar pinturas"></i>
                             <i class="bi bi-files action-icon" onclick="openCloneModal(${video.id}, '${video.title}', '${video.difficulty_level}')" data-bs-toggle="tooltip" title="Clonar para otro nivel"></i>
                         </div>
                     </div>
@@ -1767,9 +1649,6 @@
                             </button>
                             <button class="btn btn-sm btn-outline-info" onclick="goToTechniques(${video.id})" title="Técnicas">
                                 <i class="bi bi-list-check"></i>
-                            </button>
-                            <button class="btn btn-sm btn-outline-warning" onclick="openPaintsModal(${video.id}, '${video.title}')" title="Pinturas">
-                                <i class="bi bi-palette"></i>
                             </button>
                             <button class="btn btn-sm btn-outline-danger" onclick="confirmDelete(${video.id})" title="Eliminar">
                                 <i class="bi bi-trash"></i>
@@ -1959,15 +1838,8 @@
         
         // Función para abrir vista previa
         async function openPreview(videoId, id) {
-            // Guardar el ID del video para usar en gestión de pinturas
-            currentPreviewVideoId = id;
-
-            // Preparar el contenedor del video primero
-            const container = document.querySelector('#previewModal .youtube-container');
-            container.innerHTML = '<div class="text-center p-4"><div class="spinner-border text-primary" role="status"><span class="visually-hidden">Cargando video...</span></div></div>';
-            
-            // Mostrar el modal
-            previewModal.show();
+            const iframe = document.getElementById('previewIframe');
+            iframe.src = `https://www.youtube.com/embed/${videoId}`;
             
             // Cargar técnicas
             try {
@@ -2006,46 +1878,15 @@
                     });
                 }
                 
-                // Cargar el iframe después de que el modal esté visible
-                setTimeout(() => {
-                    container.innerHTML = `<iframe src="https://www.youtube.com/embed/${videoId}?rel=0&modestbranding=1&enablejsapi=1" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe>`;
-                }, 500);
+                previewModal.show();
                 
             } catch (error) {
                 console.error('Error:', error);
                 document.getElementById('previewTechniques').innerHTML = 
                     `<div class="alert alert-danger">Error al cargar técnicas: ${error.message}</div>`;
+                previewModal.show();
             }
         }
-
-        // Función para abrir gestión de pinturas del video actual (MODIFICADA PARA MANTENER PREVIEW ABIERTO)
-        async function openPaintManagement() {
-            if (currentPreviewVideoId) {
-                try {
-                    // Primero obtener los datos del video para tener el título
-                    const response = await fetch(`/admin/videos/${currentPreviewVideoId}`);
-                    if (!response.ok) {
-                        throw new Error('Error al cargar datos del video');
-                    }
-                    
-                    const video = await response.json();
-                    
-                    // Añadir clase para indicar que hay dos modales
-                    document.body.classList.add('dual-modal');
-                    
-                    // NO cerrar el modal de vista previa
-                    // Simplemente abrir el modal de pinturas encima
-                    openPaintsModal(currentPreviewVideoId, video.title);
-                    
-                } catch (error) {
-                    console.error('Error al cargar datos del video:', error);
-                    alert('Error al cargar los datos del video');
-                }
-            } else {
-                alert('Error: No se pudo identificar el video actual');
-            }
-        }
-
         // Función para navegar a la pestaña de técnicas
         function goToTechniques(videoId) {
             // Guardar el ID del video
@@ -2348,31 +2189,22 @@
                 activeVideoTimer = null;
             }
             
-            // Obtener o crear el iframe del video
-            const container = document.querySelector('#previewModal .youtube-container');
-            if (!container) return;
-            
-            let iframe = container.querySelector('iframe');
-            
-            if (!iframe) {
-                // Si no existe el iframe, crearlo
-                container.innerHTML = `<iframe src="https://www.youtube.com/embed/${videoId}?start=${startTime}&autoplay=1&rel=0&modestbranding=1&enablejsapi=1" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>`;
-            } else {
+            // Obtener el iframe del video
+            const iframe = document.getElementById('previewIframe');
+            if (iframe) {
                 // Actualizar la URL con los parámetros de tiempo y autoplay
-                iframe.src = `https://www.youtube.com/embed/${videoId}?start=${startTime}&autoplay=1&rel=0&modestbranding=1&enablejsapi=1`;
+                iframe.src = `https://www.youtube.com/embed/${videoId}?start=${startTime}&autoplay=1`;
+                
+                // Calcular la duración de la técnica
+                const duration = endTime - startTime;
+                
+                // Configurar un temporizador para detener el video después de que termine la técnica
+                activeVideoTimer = setTimeout(() => {
+                    // Resetear el video
+                    iframe.src = `https://www.youtube.com/embed/${videoId}`;
+                    activeVideoTimer = null;
+                }, duration * 1000);
             }
-            
-            // Calcular la duración de la técnica
-            const duration = endTime - startTime;
-            
-            // Configurar un temporizador para detener el video después de que termine la técnica
-            activeVideoTimer = setTimeout(() => {
-                const currentIframe = container.querySelector('iframe');
-                if (currentIframe) {
-                    currentIframe.src = `https://www.youtube.com/embed/${videoId}?start=${startTime}&rel=0&modestbranding=1&enablejsapi=1`;
-                }
-                activeVideoTimer = null;
-            }, duration * 1000);
         }
         
         // Función para editar técnica
@@ -2913,30 +2745,24 @@
         }
         
         function updateDashboardStatistics(data) {
-            // Verificar que los datos existan antes de usarlos
-            if (!data || !data.users || !data.videos || !data.techniques || !data.favorites) {
-                console.error('Datos de estadísticas incompletos:', data);
-                return;
-            }
-            
             // Métricas principales
-            document.getElementById('totalUsers').textContent = data.users.total || 0;
-            document.getElementById('totalVideos').textContent = data.videos.total || 0;
-            document.getElementById('totalTechniques').textContent = data.techniques.total || 0;
-            document.getElementById('totalFavorites').textContent = data.favorites.total || 0;
+            document.getElementById('totalUsers').textContent = data.users.total;
+            document.getElementById('totalVideos').textContent = data.videos.total;
+            document.getElementById('totalTechniques').textContent = data.techniques.total;
+            document.getElementById('totalFavorites').textContent = data.favorites.total;
             
             // Usuarios
-            document.getElementById('regularUsers').textContent = data.users.regular || 0;
-            document.getElementById('adminUsers').textContent = data.users.admin || 0;
+            document.getElementById('regularUsers').textContent = data.users.regular;
+            document.getElementById('adminUsers').textContent = data.users.admin;
             
             // Técnicas
-            document.getElementById('techniquesCount').textContent = data.techniques.total || 0;
-            document.getElementById('avgTechniquesPerVideo').textContent = data.techniques.avg_per_video || 0;
-            document.getElementById('totalTechniquesDuration').textContent = data.techniques.total_duration_formatted || '0:00';
+            document.getElementById('techniquesCount').textContent = data.techniques.total;
+            document.getElementById('avgTechniquesPerVideo').textContent = data.techniques.avg_per_video;
+            document.getElementById('totalTechniquesDuration').textContent = data.techniques.total_duration_formatted;
             
             // Videos populares
             const popularVideosList = document.getElementById('popularVideosList');
-            if (data.favorites && data.favorites.popular_videos && data.favorites.popular_videos.length > 0) {
+            if (data.favorites.popular_videos && data.favorites.popular_videos.length > 0) {
                 popularVideosList.innerHTML = '';
                 data.favorites.popular_videos.forEach(video => {
                     popularVideosList.innerHTML += `
@@ -2952,7 +2778,7 @@
             
             // Usuarios activos
             const activeUsersList = document.getElementById('activeUsersList');
-            if (data.favorites && data.favorites.active_users && data.favorites.active_users.length > 0) {
+            if (data.favorites.active_users && data.favorites.active_users.length > 0) {
                 activeUsersList.innerHTML = '';
                 data.favorites.active_users.forEach(user => {
                     activeUsersList.innerHTML += `
@@ -2968,7 +2794,7 @@
             
              // Videos con más técnicas
             const videosWithTechniquesList = document.getElementById('videosWithMostTechniquesList');
-            if (data.techniques && data.techniques.videos_with_most_techniques && data.techniques.videos_with_most_techniques.length > 0) {
+            if (data.techniques.videos_with_most_techniques && data.techniques.videos_with_most_techniques.length > 0) {
                 videosWithTechniquesList.innerHTML = '';
                 data.techniques.videos_with_most_techniques.forEach(video => {
                     videosWithTechniquesList.innerHTML += `
@@ -2982,19 +2808,11 @@
                 videosWithTechniquesList.innerHTML = '<tr><td colspan="2" class="text-center">No hay datos disponibles</td></tr>';
             }
             
-            // Generar gráficos solo si los datos existen
-            if (data.users) {
-                createUsersChart(data.users);
-            }
-            if (data.users && data.users.by_level) {
-                createUserLevelsChart(data.users.by_level);
-            }
-            if (data.videos && data.videos.by_level) {
-                createVideoDifficultyChart(data.videos.by_level);
-            }
-            if (data.videos && data.videos.by_category) {
-                createVideoCategoriesChart(data.videos.by_category);
-            }
+            // Generar gráficos
+            createUsersChart(data.users);
+            createUserLevelsChart(data.users.by_level);
+            createVideoDifficultyChart(data.videos.by_level);
+            createVideoCategoriesChart(data.videos.by_category);
         }
         
         function createUsersChart(userData) {
@@ -3161,7 +2979,7 @@
                 // Mantener las opciones por defecto en el filtro
                 categoryFilter.innerHTML = `
                     <option value="all">Todas las categorías</option>
-                    <option value="Sin categoría">Sin categoría</option>  
+                    <option value="Sin categoría">Sin categoría</option>
                 `;
                 
                 // Añadir las categorías desde la base de datos
@@ -3183,244 +3001,11 @@
             }
         }
 
-        // Función para abrir el modal de pinturas
-        async function openPaintsModal(videoId, videoTitle) {
-            currentVideoId = videoId;
-            document.getElementById('paintsVideoTitle').textContent = videoTitle;
-            
-            if (!paintsModal) {
-                paintsModal = new bootstrap.Modal(document.getElementById('paintsModal'), {
-                    backdrop: 'static'
-                });
-            }
-            
-            // Cargar pinturas y asociaciones
-            await loadPaintsForModal();
-            await loadVideoAssociatedPaints(videoId);
-            
-            paintsModal.show();
-        }
-
-        // Función para cargar todas las pinturas
-        async function loadPaintsForModal() {
-            try {
-                const response = await fetch('/api/paints');
-                if (!response.ok) {
-                    throw new Error('Error al cargar pinturas');
-                }
-                
-                allPaintsModal = await response.json();
-                
-                // Cargar marcas para el filtro
-                const brands = [...new Set(allPaintsModal.map(paint => paint.brand))].sort();
-                const brandSelect = document.getElementById('filterPaintsBrand');
-                brandSelect.innerHTML = '<option value="">Todas las marcas</option>';
-                brands.forEach(brand => {
-                    brandSelect.innerHTML += `<option value="${brand}">${brand}</option>`;
-                });
-                
-                displayPaintsInModal(allPaintsModal);
-                
-            } catch (error) {
-                console.error('Error al cargar pinturas:', error);
-                document.getElementById('availablePaintsList').innerHTML = `
-                    <div class="col-12">
-                        <div class="alert alert-danger">Error al cargar pinturas: ${error.message}</div>
-                    </div>
-                `;
-            }
-        }
-
-        // Función para cargar pinturas ya asociadas al video
-        async function loadVideoAssociatedPaints(videoId) {
-            try {
-                const response = await fetch(`/api/videos/${videoId}/paints`);
-                if (response.ok) {
-                    const paints = await response.json();
-                    associatedPaints = new Set(paints.map(paint => paint.id));
-                    displayAssociatedPaints(paints);
-                } else {
-                    // Si no existe el endpoint, inicializar vacío
-                    associatedPaints = new Set();
-                    displayAssociatedPaints([]);
-                }
-            } catch (error) {
-                console.error('Error al cargar pinturas asociadas:', error);
-                associatedPaints = new Set();
-                displayAssociatedPaints([]);
-            }
-        }
-
-        // Función para mostrar las pinturas en el modal
-        function displayPaintsInModal(paints) {
-            const container = document.getElementById('availablePaintsList');
-            
-            if (paints.length === 0) {
-                container.innerHTML = `
-                    <div class="col-12">
-                        <div class="alert alert-info">No se encontraron pinturas.</div>
-                    </div>
-                `;
-                return;
-            }
-            
-            container.innerHTML = '';
-            
-            paints.forEach(paint => {
-                const isAssociated = associatedPaints.has(paint.id);
-                const paintElement = document.createElement('div');
-                paintElement.className = 'col-md-6 col-lg-4';
-                
-                paintElement.innerHTML = `
-                    <div class="paint-item ${isAssociated ? 'associated' : ''}" onclick="togglePaintSelection(${paint.id})">
-                        <div class="d-flex align-items-center mb-2">
-                            <div class="paint-color-circle" style="background-color: ${paint.color_preview || '#cccccc'}"></div>
-                            <div class="flex-grow-1">
-                                <strong>${paint.name}</strong>
-                                <div class="small text-muted">${paint.brand} - ${paint.color_code || 'Sin código'}</div>
-                            </div>
-                            <div class="form-check">
-                                <input class="form-check-input" type="checkbox" ${isAssociated ? 'checked' : ''} id="paint_${paint.id}">
-                            </div>
-                        </div>
-                        <div class="small">
-                            <span class="badge bg-secondary">${paint.color_type || 'Sin tipo'}</span>
-                            ${paint.color_family ? `<span class="badge bg-light text-dark">${paint.color_family}</span>` : ''}
-                        </div>
-                        ${paint.description ? `<div class="small text-muted mt-2">${paint.description}</div>` : ''}
-                    </div>
-                `;
-                
-                container.appendChild(paintElement);
-            });
-        }
-
-        // Función para mostrar pinturas asociadas
-        function displayAssociatedPaints(paints) {
-            const container = document.getElementById('associatedPaintsList');
-            const counter = document.getElementById('associatedPaintsCount');
-            
-            counter.textContent = paints.length;
-            
-            if (paints.length === 0) {
-                container.innerHTML = '<span class="text-muted">Ninguna pintura asociada</span>';
-                return;
-            }
-            
-            container.innerHTML = '';
-            paints.forEach(paint => {
-                const chip = document.createElement('span');
-                chip.className = 'associated-paint-chip';
-                chip.innerHTML = `
-                    ${paint.name} (${paint.brand})
-                    <span class="remove-paint" onclick="removePaintAssociation(${paint.id})">&times;</span>
-                `;
-                container.appendChild(chip);
-            });
-        }
-
-        // Función para alternar selección de pintura
-        function togglePaintSelection(paintId) {
-            const checkbox = document.getElementById(`paint_${paintId}`);
-            const paintItem = checkbox.closest('.paint-item');
-            
-            if (associatedPaints.has(paintId)) {
-                associatedPaints.delete(paintId);
-                checkbox.checked = false;
-                paintItem.classList.remove('associated');
-            } else {
-                associatedPaints.add(paintId);
-                checkbox.checked = true;
-                paintItem.classList.add('associated');
-            }
-            
-            updateAssociatedPaintsDisplay();
-        }
-
-        // Función para quitar asociación de pintura
-        function removePaintAssociation(paintId) {
-            associatedPaints.delete(paintId);
-            const checkbox = document.getElementById(`paint_${paintId}`);
-            if (checkbox) {
-                checkbox.checked = false;
-                checkbox.closest('.paint-item').classList.remove('associated');
-            }
-            updateAssociatedPaintsDisplay();
-        }
-
-        // Función para actualizar la visualización de pinturas asociadas
-        function updateAssociatedPaintsDisplay() {
-            const associatedPaintsList = Array.from(associatedPaints).map(id => 
-                allPaintsModal.find(paint => paint.id === id)
-            ).filter(paint => paint);
-            
-            displayAssociatedPaints(associatedPaintsList);
-        }
-
-        // Función para buscar pinturas en el modal
-        function searchPaintsInModal() {
-            const searchTerm = document.getElementById('searchPaintsInput').value.toLowerCase();
-            const brand = document.getElementById('filterPaintsBrand').value;
-            
-            let filteredPaints = allPaintsModal.filter(paint => {
-                const matchesSearch = !searchTerm || 
-                    paint.name.toLowerCase().includes(searchTerm) ||
-                    paint.brand.toLowerCase().includes(searchTerm) ||
-                    (paint.color_code && paint.color_code.toLowerCase().includes(searchTerm));
-                
-                const matchesBrand = !brand || paint.brand === brand;
-                
-                return matchesSearch && matchesBrand;
-            });
-            
-            displayPaintsInModal(filteredPaints);
-        }
-
-        // Función para filtrar pinturas por marca
-        function filterPaintsInModal() {
-            searchPaintsInModal();
-        }
-
-        // Función para guardar las asociaciones
-        async function savePaintAssociations() {
-            try {
-                const paintIds = Array.from(associatedPaints);
-                
-                const response = await fetch(`/api/videos/${currentVideoId}/paints`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({ paint_ids: paintIds })
-                });
-                
-                if (!response.ok) {
-                    throw new Error('Error al guardar las asociaciones');
-                }
-                
-                alert('Asociaciones de pinturas guardadas correctamente');
-                paintsModal.hide();
-                
-            } catch (error) {
-                console.error('Error al guardar asociaciones:', error);
-                alert(`Error al guardar: ${error.message}`);
-            }
-        }
-
-        // Función para ir a gestión de pinturas
-        function goToPaintsManagement() {
-            if (currentPreviewVideoId) {
-                // Opción 1: Redirigir a la página de pinturas
-                window.location.href = `/admin/paints?video_id=${currentPreviewVideoId}`;
-                
-                // Opción 2: Si prefieres cerrar el modal y hacer algo más
-                // previewModal.hide();
-                // Tu código aquí...
-            }
-        }
+        // Modificar la función saveVideo (ya está correcta en el código original)
+        
+        // Modificar la función editVideo (ya está correcta en el código original)
     </script>
     <!-- Script para ApexCharts necesario para las estadísticas -->
     <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
 </body>
-</html> = document.getElementById('filterHasTechniques').checked;
-            const filterNoTechniques
+</html>
