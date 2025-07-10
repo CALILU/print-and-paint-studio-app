@@ -1371,7 +1371,7 @@ def save_to_db():
 # ====================================================
 
 # Configuración API Key para Android
-API_KEY = os.environ.get('API_KEY', 'paint_scanner_api_key_2025')
+API_KEY = os.environ.get('API_KEY', 'print_and_paint_secret_key_2025')
 
 # ⭐ ENDPOINT CRÍTICO - POST /api/paints para Android
 @app.route('/api/paints', methods=['POST'])
