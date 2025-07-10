@@ -1364,8 +1364,186 @@ def save_to_db():
         return jsonify({"success": True})
         
     except Exception as e:
-        return jsonify({"success": False, "error": f"Error al guardar en la base de datos: {str(e)}"})    
-    
+        return jsonify({"success": False, "error": f"Error al guardar en la base de datos: {str(e)}"})
+
+# ====================================================
+# PAINT MANAGEMENT ENDPOINTS FOR ANDROID APP
+# ====================================================
+
+# Configuración API Key para Android
+API_KEY = os.environ.get('API_KEY', 'paint_scanner_api_key_2025')
+
+# ⭐ ENDPOINT CRÍTICO - POST /api/paints para Android
+@app.route('/api/paints', methods=['POST'])
+def create_paint_android():
+    """Create paint from Android app - CRITICAL ENDPOINT"""
+    try:
+        # Verificar API key
+        api_key = request.headers.get('X-API-Key')
+        if not api_key or api_key != API_KEY:
+            return jsonify({
+                "success": False,
+                "data": None,
+                "message": "Invalid or missing API key"
+            }), 401
+        
+        # Validar datos JSON
+        if not request.is_json:
+            return jsonify({
+                "success": False,
+                "data": None,
+                "message": "Content-Type must be application/json"
+            }), 400
+        
+        data = request.get_json()
+        
+        # Validar campos requeridos
+        required_fields = ['name', 'brand', 'color_code']
+        missing_fields = [field for field in required_fields if not data.get(field)]
+        
+        if missing_fields:
+            return jsonify({
+                "success": False,
+                "data": None,
+                "message": f"Missing required fields: {', '.join(missing_fields)}"
+            }), 400
+        
+        # Verificar si ya existe una pintura con ese código
+        existing_paint = Paint.query.filter_by(color_code=data['color_code']).first()
+        if existing_paint:
+            return jsonify({
+                "success": False,
+                "data": {
+                    "id": existing_paint.id,
+                    "name": existing_paint.name,
+                    "brand": existing_paint.brand,
+                    "color_code": existing_paint.color_code
+                },
+                "message": f"Paint with code {data['color_code']} already exists"
+            }), 409
+        
+        # Crear nueva pintura
+        new_paint = Paint(
+            name=data['name'],
+            brand=data['brand'],
+            color_code=data['color_code'],
+            color_type=data.get('color_type', 'Acrílica'),
+            color_family=data.get('color_family', 'Base'),
+            description=data.get('description', ''),
+            stock=data.get('stock', 1),
+            price=data.get('price', 0.0),
+            color_preview=data.get('color_preview', '#757575'),
+            image_url=data.get('image_url', ''),
+            created_at=datetime.utcnow()
+        )
+        
+        # Guardar en base de datos
+        db.session.add(new_paint)
+        db.session.commit()
+        
+        # Retornar respuesta para Android
+        return jsonify({
+            "success": True,
+            "data": {
+                "id": new_paint.id,
+                "color_code": new_paint.color_code,
+                "name": new_paint.name,
+                "brand": new_paint.brand,
+                "remote_id": new_paint.id  # Para sincronización Android
+            },
+            "message": f"Paint {new_paint.color_code} created successfully"
+        }), 201
+        
+    except Exception as e:
+        print(f"Error en create_paint_android(): {str(e)}")
+        db.session.rollback()
+        return jsonify({
+            "success": False,
+            "data": None,
+            "message": f"Error creating paint: {str(e)}"
+        }), 500
+
+# Endpoint para búsqueda por código específico
+@app.route('/api/paints/<color_code>', methods=['GET'])
+def get_paint_by_code_android(color_code):
+    """Get specific paint by color code for Android"""
+    try:
+        # Verificar API key
+        api_key = request.headers.get('X-API-Key')
+        if not api_key or api_key != API_KEY:
+            return jsonify({
+                "success": False,
+                "data": None,
+                "message": "Invalid or missing API key"
+            }), 401
+        
+        paint = Paint.query.filter_by(color_code=color_code).first()
+        
+        if paint:
+            paint_data = {
+                'id': paint.id,
+                'name': paint.name,
+                'brand': paint.brand,
+                'color_code': paint.color_code,
+                'color_type': paint.color_type,
+                'color_family': paint.color_family,
+                'description': paint.description,
+                'stock': paint.stock,
+                'price': paint.price,
+                'color_preview': paint.color_preview,
+                'image_url': paint.image_url,
+                'created_at': paint.created_at.isoformat() if paint.created_at else None
+            }
+            return jsonify({
+                "success": True,
+                "data": paint_data,
+                "message": f"Paint {color_code} found"
+            }), 200
+        else:
+            return jsonify({
+                "success": False,
+                "data": None,
+                "message": f"Paint with code {color_code} not found"
+            }), 404
+            
+    except Exception as e:
+        print(f"Error en get_paint_by_code_android(): {str(e)}")
+        return jsonify({
+            "success": False,
+            "data": None,
+            "message": f"Error retrieving paint: {str(e)}"
+        }), 500
+
+# Health check específico para Android
+@app.route('/api/health', methods=['GET'])
+def health_check_android():
+    """Health check endpoint for Android app"""
+    return jsonify({
+        "success": True,
+        "data": "OK",
+        "message": "API is healthy",
+        "timestamp": datetime.utcnow().isoformat()
+    }), 200
+
+# Endpoint de test para verificar POST
+@app.route('/api/test-paint', methods=['POST'])
+def test_paint_creation():
+    """Test endpoint to verify POST functionality"""
+    try:
+        data = request.get_json()
+        return jsonify({
+            "success": True,
+            "data": data,
+            "message": "POST /api/paints endpoint is working",
+            "timestamp": datetime.utcnow().isoformat()
+        }), 200
+    except Exception as e:
+        return jsonify({
+            "success": False,
+            "data": None,
+            "message": f"Test error: {str(e)}"
+        }), 500
+
 if __name__ == '__main__':
     # Este bloque solo se ejecuta en desarrollo local
     with app.app_context():
