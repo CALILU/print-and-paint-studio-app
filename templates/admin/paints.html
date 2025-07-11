@@ -726,6 +726,16 @@
             
             // Configurar vista previa en tiempo real
             setupLivePreview();
+            
+            // 🔄 AUTO-REFRESH: Actualizar datos cada 15 segundos
+            setInterval(() => {
+                console.log('🔄 Auto-refreshing paint data...');
+                fetchPaints().then(() => {
+                    console.log('✅ Paint data refreshed successfully');
+                }).catch(error => {
+                    console.error('❌ Auto-refresh failed:', error);
+                });
+            }, 15000); // 15 segundos
         });
         
         // Función para inicializar los filtros
