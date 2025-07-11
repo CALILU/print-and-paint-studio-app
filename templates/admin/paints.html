@@ -924,16 +924,23 @@
                         badge.textContent = 'MODIFICADO';
                         element.appendChild(badge);
                         
-                        // Quitar el resaltado después de 30 segundos
-                        setTimeout(() => {
-                            element.classList.remove('paint-modified');
-                            if (badge.parentNode) {
-                                badge.remove();
-                            }
-                        }, 30000); // 30 segundos
+                        // No remover automáticamente - se quitará al hacer clic para ver/editar
                     });
                 }, 100);
             });
+        }
+        
+        // Función para quitar el resaltado de modificación
+        function clearModifiedHighlight(paintId) {
+            const paintElements = document.querySelectorAll(`[data-paint-id="${paintId}"]`);
+            paintElements.forEach(element => {
+                element.classList.remove('paint-modified');
+                const badge = element.querySelector('.modified-badge');
+                if (badge) {
+                    badge.remove();
+                }
+            });
+            console.log(`🎯 Cleared modification highlight for paint ID: ${paintId}`);
         }
         
         // Función para obtener todas las pinturas
@@ -1264,6 +1271,9 @@
         // Función para ver detalles de una pintura
         async function viewPaint(id) {
             try {
+                // Quitar resaltado de modificación al ver detalles
+                clearModifiedHighlight(id);
+                
                 const response = await fetch(`/admin/paints/${id}`);
                 
                 if (!response.ok) {
@@ -1304,6 +1314,9 @@
         // Función para editar una pintura
         async function editPaint(id) {
             try {
+                // Quitar resaltado de modificación al editar
+                clearModifiedHighlight(id);
+                
                 const response = await fetch(`/admin/paints/${id}`);
                 
                 if (!response.ok) {
