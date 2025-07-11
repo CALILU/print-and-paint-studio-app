@@ -1463,6 +1463,106 @@ def create_paint_android():
             "message": f"Error creating paint: {str(e)}"
         }), 500
 
+# ⭐ ENDPOINT CRÍTICO - PUT /api/paints/{id} para Android
+@app.route('/api/paints/<int:id>', methods=['PUT'])
+def update_paint_android(id):
+    """Update existing paint from Android app - CRITICAL ENDPOINT"""
+    try:
+        # Verificar API key
+        api_key = request.headers.get('X-API-Key')
+        if not api_key or api_key != API_KEY:
+            return jsonify({
+                "success": False,
+                "data": None,
+                "message": "Invalid or missing API key"
+            }), 401
+        
+        # Validar datos JSON
+        if not request.is_json:
+            return jsonify({
+                "success": False,
+                "data": None,
+                "message": "Content-Type must be application/json"
+            }), 400
+        
+        data = request.get_json()
+        
+        # Buscar la pintura existente
+        paint = Paint.query.get(id)
+        if not paint:
+            return jsonify({
+                "success": False,
+                "data": None,
+                "message": f"Paint with id {id} not found"
+            }), 404
+        
+        # Actualizar campos enviados
+        if 'name' in data:
+            paint.name = data['name']
+        if 'brand' in data:
+            paint.brand = data['brand']
+        if 'color_code' in data:
+            # Verificar que no exista otro paint con el mismo código
+            existing = Paint.query.filter(Paint.color_code == data['color_code'], Paint.id != id).first()
+            if existing:
+                return jsonify({
+                    "success": False,
+                    "data": None,
+                    "message": f"Another paint with code {data['color_code']} already exists"
+                }), 409
+            paint.color_code = data['color_code']
+        if 'color_type' in data:
+            paint.color_type = data['color_type']
+        if 'color_family' in data:
+            paint.color_family = data['color_family']
+        if 'description' in data:
+            paint.description = data['description']
+        if 'stock' in data:
+            paint.stock = data['stock']
+        if 'price' in data:
+            paint.price = data['price']
+        if 'color_preview' in data:
+            paint.color_preview = data['color_preview']
+        if 'image_url' in data:
+            paint.image_url = data['image_url']
+        
+        # Actualizar fecha de modificación
+        paint.updated_at = datetime.utcnow()
+        
+        # Guardar cambios
+        db.session.commit()
+        
+        # Retornar respuesta para Android
+        return jsonify({
+            "success": True,
+            "data": {
+                "id": paint.id,
+                "name": paint.name,
+                "brand": paint.brand,
+                "color_code": paint.color_code,
+                "color_type": paint.color_type,
+                "color_family": paint.color_family,
+                "image_url": paint.image_url,
+                "stock": paint.stock,
+                "price": paint.price,
+                "description": paint.description,
+                "color_preview": paint.color_preview,
+                "created_at": paint.created_at.isoformat() if paint.created_at else None,
+                "updated_at": paint.updated_at.isoformat() if paint.updated_at else None,
+                "remote_id": paint.id  # Para sincronización Android
+            },
+            "message": f"Paint {paint.color_code} updated successfully"
+        }), 200
+        
+    except Exception as e:
+        print(f"Error en update_paint_android(): {str(e)}")
+        db.session.rollback()
+        return jsonify({
+            "success": False,
+            "data": None,
+            "message": f"Error updating paint: {str(e)}"
+        }), 500
+
 # Endpoint para búsqueda por código específico
 @app.route('/api/paints/<color_code>', methods=['GET'])
 def get_paint_by_code_android(color_code):
