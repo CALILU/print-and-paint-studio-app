@@ -727,13 +727,13 @@
             // Configurar vista previa en tiempo real
             setupLivePreview();
             
-            // 🔄 AUTO-REFRESH: Actualizar datos cada 15 segundos
+            // 🔄 AUTO-REFRESH: Actualizar datos cada 15 segundos (sin parpadeo visual)
             setInterval(() => {
-                console.log('🔄 Auto-refreshing paint data...');
-                fetchPaints().then(() => {
-                    console.log('✅ Paint data refreshed successfully');
+                console.log('🔄 Auto-refreshing paint data silently...');
+                silentRefresh().then(() => {
+                    console.log('✅ Paint data refreshed silently');
                 }).catch(error => {
-                    console.error('❌ Auto-refresh failed:', error);
+                    console.error('❌ Silent refresh failed:', error);
                 });
             }, 15000); // 15 segundos
         });
@@ -814,6 +814,44 @@
             
             // Actualizar la vista previa inicialmente
             updatePreview();
+        }
+        
+        // Función para actualización silenciosa (sin parpadeo visual)
+        async function silentRefresh() {
+            try {
+                const response = await fetch('/api/paints');
+                
+                if (!response.ok) {
+                    throw new Error(`Error HTTP: ${response.status}`);
+                }
+                
+                const newPaints = await response.json();
+                
+                // Solo actualizar si hay cambios reales
+                if (JSON.stringify(allPaints) !== JSON.stringify(newPaints)) {
+                    console.log(`🔄 Data changed: ${allPaints.length} → ${newPaints.length} paints`);
+                    
+                    // Actualizar datos globales
+                    allPaints = newPaints;
+                    
+                    // Actualizar contador silenciosamente
+                    document.getElementById('paintCount').textContent = newPaints.length;
+                    
+                    // Re-aplicar filtros actuales sin resetear la vista
+                    filterAndDisplayPaints();
+                    
+                    // Actualizar opciones de filtro si es necesario
+                    loadFilterOptions();
+                } else {
+                    console.log('📊 No data changes detected');
+                }
+                
+                return newPaints;
+                
+            } catch (error) {
+                console.error('Error in silent refresh:', error);
+                throw error;
+            }
         }
         
         // Función para obtener todas las pinturas
