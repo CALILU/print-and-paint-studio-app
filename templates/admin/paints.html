@@ -1113,7 +1113,7 @@
                     stockText = 'Sin stock';
                 }
                 
-                const imageUrl = paint.image_url || 'https://via.placeholder.com/150?text=No+Image';
+                const imageUrl = paint.image_url || paint.url_de_la_imagen || 'https://via.placeholder.com/150?text=No+Image';
                 
                 paintCard.innerHTML = `
                     <div class="stock-badge ${stockClass}">${stockText}</div>
@@ -1170,7 +1170,7 @@
                     stockText = 'Sin stock';
                 }
                 
-                const imageUrl = paint.image_url || 'https://via.placeholder.com/150?text=No+Image';
+                const imageUrl = paint.image_url || paint.url_de_la_imagen || 'https://via.placeholder.com/150?text=No+Image';
                 
                 const row = document.createElement('tr');
                 row.setAttribute('data-paint-id', paint.id);
@@ -1293,7 +1293,7 @@
                 document.getElementById('detailDescription').textContent = paint.description || 'Sin descripción';
                 
                 // Imagen
-                const imageUrl = paint.image_url || 'https://via.placeholder.com/300?text=No+Image';
+                const imageUrl = paint.image_url || paint.url_de_la_imagen || 'https://via.placeholder.com/300?text=No+Image';
                 document.getElementById('detailImage').src = imageUrl;
                 
                 // Color preview
@@ -1338,7 +1338,7 @@
                 document.getElementById('stock').value = paint.stock;
                 document.getElementById('price').value = paint.price || '';
                 document.getElementById('description').value = paint.description || '';
-                document.getElementById('image_url').value = paint.image_url || '';
+                document.getElementById('image_url').value = paint.image_url || paint.url_de_la_imagen || '';
                 document.getElementById('color_preview').value = paint.color_preview || '#cccccc';
                 
                 // Cambiar texto del formulario
