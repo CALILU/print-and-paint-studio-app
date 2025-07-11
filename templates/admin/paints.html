@@ -194,6 +194,28 @@
             border-radius: 4px;
             font-weight: bold;
         }
+        .paint-modified {
+            border: 3px solid #28a745 !important;
+            box-shadow: 0 0 15px rgba(40, 167, 69, 0.3) !important;
+            animation: pulse-green 2s infinite;
+        }
+        .modified-badge {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background-color: #28a745;
+            color: white;
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 0.7rem;
+            font-weight: bold;
+            z-index: 10;
+        }
+        @keyframes pulse-green {
+            0% { box-shadow: 0 0 15px rgba(40, 167, 69, 0.3); }
+            50% { box-shadow: 0 0 25px rgba(40, 167, 69, 0.6); }
+            100% { box-shadow: 0 0 15px rgba(40, 167, 69, 0.3); }
+        }
         .view-toggle-btn {
             display: inline-block;
             width: 40px;
@@ -673,6 +695,7 @@
     <script>
         // Variables globales
         let allPaints = [];
+        let previousPaints = []; // Para comparar cambios
         let currentSearchTerm = '';
         let filteredBrands = [];
         let filteredTypes = [];
@@ -816,6 +839,27 @@
             updatePreview();
         }
         
+        // Función para detectar pinturas modificadas
+        function getModifiedPaints(oldPaints, newPaints) {
+            const modifiedIds = [];
+            
+            newPaints.forEach(newPaint => {
+                const oldPaint = oldPaints.find(p => p.id === newPaint.id);
+                if (oldPaint) {
+                    // Comparar campos importantes (stock, precio, etc.)
+                    if (oldPaint.stock !== newPaint.stock || 
+                        oldPaint.price !== newPaint.price ||
+                        oldPaint.name !== newPaint.name ||
+                        oldPaint.updated_at !== newPaint.updated_at) {
+                        modifiedIds.push(newPaint.id);
+                        console.log(`🔄 Modified paint detected: ${newPaint.name} (ID: ${newPaint.id})`);
+                    }
+                }
+            });
+            
+            return modifiedIds;
+        }
+        
         // Función para actualización silenciosa (sin parpadeo visual)
         async function silentRefresh() {
             try {
@@ -831,8 +875,19 @@
                 if (JSON.stringify(allPaints) !== JSON.stringify(newPaints)) {
                     console.log(`🔄 Data changed: ${allPaints.length} → ${newPaints.length} paints`);
                     
+                    // Detectar pinturas modificadas
+                    const modifiedIds = getModifiedPaints(allPaints, newPaints);
+                    
+                    // Guardar estado anterior
+                    previousPaints = [...allPaints];
+                    
                     // Actualizar datos globales
                     allPaints = newPaints;
+                    
+                    // Marcar pinturas modificadas por 30 segundos
+                    if (modifiedIds.length > 0) {
+                        markModifiedPaints(modifiedIds);
+                    }
                     
                     // Actualizar contador silenciosamente
                     document.getElementById('paintCount').textContent = newPaints.length;
@@ -852,6 +907,33 @@
                 console.error('Error in silent refresh:', error);
                 throw error;
             }
+        }
+        
+        // Función para marcar pinturas modificadas visualmente
+        function markModifiedPaints(modifiedIds) {
+            modifiedIds.forEach(id => {
+                // Aplicar estilo inmediatamente
+                setTimeout(() => {
+                    const paintElements = document.querySelectorAll(`[data-paint-id="${id}"]`);
+                    paintElements.forEach(element => {
+                        element.classList.add('paint-modified');
+                        
+                        // Agregar badge de "MODIFICADO"
+                        const badge = document.createElement('div');
+                        badge.className = 'modified-badge';
+                        badge.textContent = 'MODIFICADO';
+                        element.appendChild(badge);
+                        
+                        // Quitar el resaltado después de 30 segundos
+                        setTimeout(() => {
+                            element.classList.remove('paint-modified');
+                            if (badge.parentNode) {
+                                badge.remove();
+                            }
+                        }, 30000); // 30 segundos
+                    });
+                }, 100);
+            });
         }
         
         // Función para obtener todas las pinturas
@@ -1009,6 +1091,7 @@
             paints.forEach(paint => {
                 const paintCard = document.createElement('div');
                 paintCard.className = 'paint-container';
+                paintCard.setAttribute('data-paint-id', paint.id);
                 
                 // Determinar clase de stock
                 let stockClass, stockText;
@@ -1083,6 +1166,7 @@
                 const imageUrl = paint.image_url || 'https://via.placeholder.com/150?text=No+Image';
                 
                 const row = document.createElement('tr');
+                row.setAttribute('data-paint-id', paint.id);
                 row.innerHTML = `
                     <td>
                         <img src="${imageUrl}" alt="${paint.name}" style="width: 50px; height: 50px; object-fit: contain;">
