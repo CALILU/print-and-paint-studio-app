@@ -103,7 +103,7 @@ class Paint(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.Text, nullable=False)
     brand = db.Column(db.Text, nullable=False)
-    color_code = db.Column(db.Text)
+    color_code = db.Column(db.Text)  # No unique constraint to avoid conflicts
     color_type = db.Column(db.Text)
     color_family = db.Column(db.Text)
     image_url = db.Column(db.Text)
@@ -111,7 +111,79 @@ class Paint(db.Model):
     price = db.Column(db.Float)
     description = db.Column(db.Text)
     color_preview = db.Column(db.Text)
+    # New fields for enhanced functionality
+    volume = db.Column(db.Integer, nullable=True)
+    hex_color = db.Column(db.String(6), default='000000')  # Hex color field
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     
+    def to_dict(self):
+        """Convert Paint object to dictionary for JSON serialization"""
+        return {
+            'id': self.id,
+            'name': self.name,
+            'brand': self.brand,
+            'color_code': self.color_code,
+            'color_type': self.color_type,
+            'color_family': self.color_family,
+            'description': self.description,
+            'stock': self.stock,
+            'price': self.price,
+            'color_preview': self.color_preview,
+            'image_url': self.image_url,
+            'volume': self.volume,
+            'hex_color': self.hex_color,
+            'created_at': self.created_at.isoformat() if self.created_at else None,
+            'updated_at': self.updated_at.isoformat() if self.updated_at else None
+        }
+    
     def __repr__(self):
-        return f'<Paint {self.brand} - {self.name}>'       
+        return f'<Paint {self.brand} - {self.name}>'
+
+class PaintBackup(db.Model):
+    __tablename__ = 'paints_backup'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    original_id = db.Column(db.Integer, nullable=False)  # ID original de la pintura
+    name = db.Column(db.Text, nullable=False)
+    brand = db.Column(db.Text, nullable=False)
+    color_code = db.Column(db.Text)
+    color_type = db.Column(db.Text)
+    color_family = db.Column(db.Text)
+    description = db.Column(db.Text)
+    stock = db.Column(db.Integer, default=0)
+    price = db.Column(db.Float)
+    color_preview = db.Column(db.Text)
+    image_url = db.Column(db.Text)
+    volume = db.Column(db.Integer, nullable=True)
+    hex_color = db.Column(db.String(6), default='000000')
+    original_created_at = db.Column(db.DateTime)  # Fecha original de creación
+    original_updated_at = db.Column(db.DateTime)  # Fecha original de actualización
+    backup_date = db.Column(db.DateTime, default=datetime.utcnow)  # Fecha del backup
+    backup_reason = db.Column(db.String(255), default='Manual backup')  # Razón del backup
+    
+    def to_dict(self):
+        """Convert PaintBackup object to dictionary for JSON serialization"""
+        return {
+            'id': self.id,
+            'original_id': self.original_id,
+            'name': self.name,
+            'brand': self.brand,
+            'color_code': self.color_code,
+            'color_type': self.color_type,
+            'color_family': self.color_family,
+            'description': self.description,
+            'stock': self.stock,
+            'price': self.price,
+            'color_preview': self.color_preview,
+            'image_url': self.image_url,
+            'volume': self.volume,
+            'hex_color': self.hex_color,
+            'original_created_at': self.original_created_at.isoformat() if self.original_created_at else None,
+            'original_updated_at': self.original_updated_at.isoformat() if self.original_updated_at else None,
+            'backup_date': self.backup_date.isoformat() if self.backup_date else None,
+            'backup_reason': self.backup_reason
+        }
+    
+    def __repr__(self):
+        return f'<PaintBackup {self.name} (Original ID: {self.original_id})>'
