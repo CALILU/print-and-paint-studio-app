@@ -1100,14 +1100,14 @@
                 paintCard.className = 'paint-container';
                 paintCard.setAttribute('data-paint-id', paint.id);
                 
-                // Determinar clase de stock
+                // Determinar clase de stock y texto más detallado
                 let stockClass, stockText;
                 if (paint.stock > 10) {
                     stockClass = 'in-stock';
-                    stockText = 'En stock';
+                    stockText = `${paint.stock} uds.`;
                 } else if (paint.stock > 0) {
                     stockClass = 'low-stock';
-                    stockText = 'Stock bajo';
+                    stockText = `${paint.stock} uds.`;
                 } else {
                     stockClass = 'out-of-stock';
                     stockText = 'Sin stock';
@@ -1129,6 +1129,7 @@
                     <div class="paint-brand mt-2">${paint.brand}</div>
                     <div class="paint-type mt-1">${paint.color_type || 'Sin tipo especificado'}</div>
                     <div class="paint-family">${paint.color_family ? `<span class="color-family-tag">${paint.color_family}</span>` : ''}</div>
+                    <div class="stock-info mt-2"><i class="bi bi-box-seam me-1"></i>Stock: <strong>${paint.stock} unidades</strong></div>
                     ${paint.price ? `<div class="price-tag">${paint.price}€</div>` : ''}
                 `;
                 
