@@ -1823,6 +1823,7 @@ def test_paint_creation():
 def create_backup():
     """Create a backup of all paints - Step 1: Basic backup endpoint"""
     try:
+        print(f"🔄 Backup creation started at {datetime.utcnow()}")
         # Get all paints
         paints = Paint.query.all()
         
@@ -1896,23 +1897,24 @@ def create_backup():
 def list_backups():
     """List all paint backups - Step 2: Improved backup listing with grouping"""
     try:
-        # Get unique backup sessions (grouped by backup_date and reason)
+        # Get unique backup sessions (grouped by backup_date truncated to second and reason)
         backup_sessions = db.session.query(
-            PaintBackup.backup_date,
+            db.func.date_trunc('second', PaintBackup.backup_date).label('backup_session'),
             PaintBackup.backup_reason,
-            db.func.count(PaintBackup.id).label('paint_count')
+            db.func.count(PaintBackup.id).label('paint_count'),
+            db.func.min(PaintBackup.backup_date).label('exact_date')
         ).group_by(
-            PaintBackup.backup_date,
+            db.func.date_trunc('second', PaintBackup.backup_date),
             PaintBackup.backup_reason
-        ).order_by(PaintBackup.backup_date.desc()).all()
+        ).order_by(db.func.min(PaintBackup.backup_date).desc()).all()
         
         backup_list = []
         for session in backup_sessions:
             backup_list.append({
-                'backup_date': session.backup_date.isoformat() if session.backup_date else None,
+                'backup_date': session.exact_date.isoformat() if session.exact_date else None,
                 'backup_reason': session.backup_reason,
                 'paint_count': session.paint_count,
-                'formatted_date': session.backup_date.strftime('%d/%m/%Y, %H:%M:%S') if session.backup_date else 'Unknown'
+                'formatted_date': session.exact_date.strftime('%d/%m/%Y, %H:%M:%S') if session.exact_date else 'Unknown'
             })
         
         return jsonify({

@@ -2442,6 +2442,12 @@
             const backupBtn = document.getElementById('backupBtn');
             const statusDiv = document.getElementById('backupStatus');
             
+            // Prevent double-clicks
+            if (backupBtn.disabled) {
+                console.log('Backup already in progress, ignoring click');
+                return;
+            }
+            
             try {
                 backupBtn.disabled = true;
                 backupBtn.innerHTML = '<i class="bi bi-hourglass-split me-2"></i> Creando backup...';
