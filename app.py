@@ -1944,6 +1944,113 @@ def init_backup_tables():
             "message": f"Error al inicializar tablas de backup: {str(e)}"
         }), 500
 
+@app.route('/admin/paints/clear', methods=['DELETE'])
+@admin_required
+def clear_paints():
+    """Clear all paints from main table - Step 3: Clear paints endpoint"""
+    try:
+        # Safety check: ensure there's a recent backup
+        recent_backup = PaintBackup.query.first()
+        if not recent_backup:
+            return jsonify({
+                "success": False,
+                "message": "No se puede limpiar: No existe ningún backup. Crea un backup primero."
+            }), 400
+        
+        # Get current paint count before deletion
+        paint_count = Paint.query.count()
+        
+        if paint_count == 0:
+            return jsonify({
+                "success": False,
+                "message": "No hay pinturas para eliminar"
+            }), 400
+        
+        # Delete all paints
+        deleted_count = Paint.query.delete()
+        db.session.commit()
+        
+        return jsonify({
+            "success": True,
+            "message": f"Se eliminaron {deleted_count} pinturas de la tabla principal",
+            "data": {
+                "deleted_count": deleted_count,
+                "backup_exists": True,
+                "clear_date": datetime.utcnow().isoformat()
+            }
+        }), 200
+        
+    except Exception as e:
+        print(f"Error clearing paints: {str(e)}")
+        db.session.rollback()
+        return jsonify({
+            "success": False,
+            "message": f"Error al limpiar pinturas: {str(e)}"
+        }), 500
+
+@app.route('/admin/paints/restore', methods=['POST'])
+@admin_required
+def restore_paints():
+    """Restore paints from backup - Step 4: Restore endpoint"""
+    try:
+        # Check if backup exists
+        backups = PaintBackup.query.all()
+        if not backups:
+            return jsonify({
+                "success": False,
+                "message": "No hay backups disponibles para restaurar"
+            }), 400
+        
+        # Check if main table already has data
+        existing_paints = Paint.query.count()
+        if existing_paints > 0:
+            return jsonify({
+                "success": False,
+                "message": f"La tabla principal ya tiene {existing_paints} pinturas. Limpia la tabla primero si quieres restaurar desde backup."
+            }), 400
+        
+        # Restore paints from backup
+        restored_count = 0
+        
+        for backup in backups:
+            # Create new paint from backup data
+            paint = Paint(
+                name=backup.name,
+                brand=backup.brand,
+                color_code=backup.color_code,
+                color_type=backup.color_type,
+                color_family=backup.color_family,
+                description=backup.description,
+                stock=backup.stock,
+                price=backup.price,
+                color_preview=backup.color_preview,
+                image_url=backup.image_url,
+                created_at=backup.original_created_at or backup.backup_date
+            )
+            
+            db.session.add(paint)
+            restored_count += 1
+        
+        db.session.commit()
+        
+        return jsonify({
+            "success": True,
+            "message": f"Restauración exitosa. {restored_count} pinturas restauradas desde backup",
+            "data": {
+                "restored_count": restored_count,
+                "total_backups": len(backups),
+                "restore_date": datetime.utcnow().isoformat()
+            }
+        }), 200
+        
+    except Exception as e:
+        print(f"Error restoring paints: {str(e)}")
+        db.session.rollback()
+        return jsonify({
+            "success": False,
+            "message": f"Error al restaurar pinturas: {str(e)}"
+        }), 500
+
 if __name__ == '__main__':
     # Este bloque solo se ejecuta en desarrollo local
     with app.app_context():
