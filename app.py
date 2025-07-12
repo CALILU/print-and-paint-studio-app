@@ -1914,6 +1914,36 @@ def list_backups():
             "message": f"Error al listar backups: {str(e)}"
         }), 500
 
+@app.route('/admin/init-backup-tables', methods=['POST'])
+@admin_required
+def init_backup_tables():
+    """Initialize backup tables - Step 2.5: Create backup table if not exists"""
+    try:
+        # Create all tables including PaintBackup
+        db.create_all()
+        
+        # Verify the table was created
+        result = db.engine.execute("SELECT to_regclass('paints_backup')")
+        table_exists = result.scalar() is not None
+        
+        if table_exists:
+            return jsonify({
+                "success": True,
+                "message": "Tabla paints_backup creada/verificada exitosamente"
+            }), 200
+        else:
+            return jsonify({
+                "success": False,
+                "message": "Error: No se pudo crear la tabla paints_backup"
+            }), 500
+        
+    except Exception as e:
+        print(f"Error initializing backup tables: {str(e)}")
+        return jsonify({
+            "success": False,
+            "message": f"Error al inicializar tablas de backup: {str(e)}"
+        }), 500
+
 if __name__ == '__main__':
     # Este bloque solo se ejecuta en desarrollo local
     with app.app_context():

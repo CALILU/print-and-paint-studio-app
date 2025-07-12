@@ -810,6 +810,9 @@
                                             <i class="bi bi-info-circle me-2"></i>
                                             <strong>¿Qué hace?</strong> Copia todos los datos de pinturas a una tabla de backup, preservando toda la información.
                                         </div>
+                                        <button class="btn btn-secondary me-2" onclick="initBackupTables()" id="initTablesBtn">
+                                            <i class="bi bi-database-add me-2"></i> Inicializar Tablas
+                                        </button>
                                         <button class="btn btn-warning" onclick="createBackup()" id="backupBtn">
                                             <i class="bi bi-download me-2"></i> Crear Backup
                                         </button>
@@ -2352,6 +2355,45 @@
         // ====================================================
         // BACKUP/RESTORE FUNCTIONS
         // ====================================================
+
+        // Initialize backup tables
+        async function initBackupTables() {
+            const initBtn = document.getElementById('initTablesBtn');
+            const statusDiv = document.getElementById('backupStatus');
+            
+            try {
+                initBtn.disabled = true;
+                initBtn.innerHTML = '<i class="bi bi-hourglass-split me-2"></i> Inicializando...';
+                
+                statusDiv.innerHTML = '<div class="alert alert-info"><i class="bi bi-hourglass-split me-2"></i> Creando tablas de backup...</div>';
+                
+                const response = await fetch('/admin/init-backup-tables', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    statusDiv.innerHTML = `<div class="alert alert-success">
+                        <i class="bi bi-check-circle me-2"></i> ${result.message}
+                    </div>`;
+                } else {
+                    throw new Error(result.message || 'Error al inicializar tablas');
+                }
+                
+            } catch (error) {
+                console.error('Error initializing backup tables:', error);
+                statusDiv.innerHTML = `<div class="alert alert-danger">
+                    <i class="bi bi-exclamation-triangle me-2"></i> Error al inicializar tablas: ${error.message}
+                </div>`;
+            } finally {
+                initBtn.disabled = false;
+                initBtn.innerHTML = '<i class="bi bi-database-add me-2"></i> Inicializar Tablas';
+            }
+        }
 
         // Create backup
         async function createBackup() {
