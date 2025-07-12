@@ -744,6 +744,14 @@
                                                         <input type="color" id="color_preview" class="form-control">
                                                     </div>
                                                 </div>
+                                                <div class="mb-3">
+                                                    <label for="hex_color" class="form-label">Código Hex del Color</label>
+                                                    <div class="input-group">
+                                                        <span class="input-group-text">#</span>
+                                                        <input type="text" class="form-control" id="hex_color" placeholder="FF0000" maxlength="6" pattern="[0-9A-Fa-f]{6}">
+                                                    </div>
+                                                    <div class="form-text">Ej: FF0000 (rojo), 00FF00 (verde), 0000FF (azul)</div>
+                                                </div>
                                                 <!-- Botón de búsqueda de imágenes eliminado -->
                                             </div>
                                         </div>
@@ -988,6 +996,9 @@
                 priceTag.textContent = price ? `${price}€` : 'Precio no disponible';
             };
             
+            // Configurar sincronización entre color picker y campo hex
+            setupColorSync();
+            
             // Añadir eventos de input a todos los campos
             document.getElementById('name').addEventListener('input', updatePreview);
             document.getElementById('brand').addEventListener('change', updatePreview);
@@ -997,9 +1008,67 @@
             document.getElementById('stock').addEventListener('input', updatePreview);
             document.getElementById('price').addEventListener('input', updatePreview);
             document.getElementById('color_preview').addEventListener('input', updatePreview);
+            document.getElementById('hex_color').addEventListener('input', updatePreview);
             
             // Actualizar la vista previa inicialmente
             updatePreview();
+        }
+        
+        // Función para sincronizar el color picker y el campo hex
+        function setupColorSync() {
+            const colorPicker = document.getElementById('color_preview');
+            const hexInput = document.getElementById('hex_color');
+            
+            // Cuando cambia el color picker, actualizar el campo hex
+            colorPicker.addEventListener('input', function() {
+                const hexValue = this.value.substring(1); // Quitar el #
+                hexInput.value = hexValue.toUpperCase();
+            });
+            
+            // Cuando cambia el campo hex, actualizar el color picker
+            hexInput.addEventListener('input', function() {
+                let hexValue = this.value.replace(/[^0-9A-Fa-f]/g, ''); // Solo caracteres hex válidos
+                
+                // Limitar a 6 caracteres
+                if (hexValue.length > 6) {
+                    hexValue = hexValue.substring(0, 6);
+                    this.value = hexValue;
+                }
+                
+                // Si tenemos 6 caracteres válidos, actualizar el color picker
+                if (hexValue.length === 6) {
+                    colorPicker.value = '#' + hexValue;
+                    
+                    // Disparar evento para actualizar la vista previa
+                    colorPicker.dispatchEvent(new Event('input'));
+                }
+            });
+            
+            // Validación adicional al salir del campo hex
+            hexInput.addEventListener('blur', function() {
+                let hexValue = this.value.replace(/[^0-9A-Fa-f]/g, '');
+                
+                if (hexValue.length === 3) {
+                    // Expandir formato de 3 caracteres a 6
+                    hexValue = hexValue.charAt(0) + hexValue.charAt(0) + 
+                              hexValue.charAt(1) + hexValue.charAt(1) + 
+                              hexValue.charAt(2) + hexValue.charAt(2);
+                }
+                
+                if (hexValue.length === 6) {
+                    this.value = hexValue.toUpperCase();
+                    colorPicker.value = '#' + hexValue;
+                } else if (hexValue.length > 0) {
+                    // Si no es válido, completar con ceros
+                    hexValue = (hexValue + '000000').substring(0, 6);
+                    this.value = hexValue.toUpperCase();
+                    colorPicker.value = '#' + hexValue;
+                }
+            });
+            
+            // Inicializar sincronización
+            const initialHex = colorPicker.value.substring(1);
+            hexInput.value = initialHex.toUpperCase();
         }
         
         // Función para detectar pinturas modificadas
@@ -1676,6 +1745,7 @@
                 document.getElementById('description').value = paint.description || '';
                 document.getElementById('image_url').value = paint.image_url || paint.url_de_la_imagen || '';
                 document.getElementById('color_preview').value = paint.color_preview || '#cccccc';
+                document.getElementById('hex_color').value = paint.hex_color || (paint.color_preview ? paint.color_preview.substring(1) : 'CCCCCC');
                 
                 // Cambiar texto del formulario
                 document.getElementById('form-title').textContent = 'Editar Pintura';
@@ -1780,7 +1850,8 @@
                 stock: parseInt(document.getElementById('stock').value) || 0,
                 price: parseFloat(document.getElementById('price').value) || null,
                 description: document.getElementById('description').value,
-                color_preview: document.getElementById('color_preview').value
+                color_preview: document.getElementById('color_preview').value,
+                hex_color: document.getElementById('hex_color').value
             };
             
             try {
@@ -1830,6 +1901,7 @@
             document.getElementById('form-title').textContent = 'Añadir Nueva Pintura';
             document.getElementById('submit-btn').textContent = 'Guardar Pintura';
             document.getElementById('color_preview').value = '#cccccc';
+            document.getElementById('hex_color').value = 'CCCCCC';
             
             // Resetear campos de marca personalizada
             const customBrandField = document.getElementById('customBrandField');
