@@ -1832,16 +1832,26 @@ def create_backup():
                 "message": "No hay pinturas para respaldar"
             }), 400
         
+        # Check if a backup already exists with the same timestamp (within 1 minute)
+        one_minute_ago = datetime.utcnow() - timedelta(minutes=1)
+        recent_backup = PaintBackup.query.filter(
+            PaintBackup.backup_date >= one_minute_ago
+        ).first()
+        
+        if recent_backup:
+            return jsonify({
+                "success": False,
+                "message": "Ya existe un backup reciente (creado hace menos de 1 minuto). Espera antes de crear otro."
+            }), 400
+
+        # Clear any existing backups first (keep only the most recent backup)
+        PaintBackup.query.delete()
+        
         # Create backup entries
         backup_count = 0
         backup_reason = request.json.get('reason', 'Manual backup') if request.is_json else 'Manual backup'
         
         for paint in paints:
-            # Check if backup already exists for this paint
-            existing_backup = PaintBackup.query.filter_by(original_id=paint.id).first()
-            if existing_backup:
-                continue  # Skip if backup already exists
-            
             backup = PaintBackup(
                 original_id=paint.id,
                 name=paint.name,
@@ -2049,6 +2059,40 @@ def restore_paints():
         return jsonify({
             "success": False,
             "message": f"Error al restaurar pinturas: {str(e)}"
+        }), 500
+
+@app.route('/admin/paints/clear-backups', methods=['DELETE'])
+@admin_required
+def clear_old_backups():
+    """Clear old backup entries - Clean up duplicate backups"""
+    try:
+        # Count current backups
+        backup_count = PaintBackup.query.count()
+        
+        if backup_count == 0:
+            return jsonify({
+                "success": False,
+                "message": "No hay backups para limpiar"
+            }), 400
+        
+        # Delete all backups
+        deleted_count = PaintBackup.query.delete()
+        db.session.commit()
+        
+        return jsonify({
+            "success": True,
+            "message": f"Se eliminaron {deleted_count} entradas de backup antiguas",
+            "data": {
+                "deleted_count": deleted_count
+            }
+        }), 200
+        
+    except Exception as e:
+        print(f"Error clearing old backups: {str(e)}")
+        db.session.rollback()
+        return jsonify({
+            "success": False,
+            "message": f"Error al limpiar backups antiguos: {str(e)}"
         }), 500
 
 if __name__ == '__main__':
