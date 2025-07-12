@@ -847,20 +847,34 @@ def get_paints():
         paints = Paint.query.all()
         result = []
         for paint in paints:
-            result.append({
-                'id': paint.id,
-                'name': paint.name,
-                'brand': paint.brand,
-                'color_code': paint.color_code,
-                'color_type': paint.color_type,
-                'color_family': paint.color_family,
-                'image_url': paint.image_url,
-                'stock': paint.stock,
-                'price': paint.price,
-                'description': paint.description,
-                'color_preview': paint.color_preview,
-                'created_at': paint.created_at.isoformat() if paint.created_at else None
-            })
+            try:
+                # Use the to_dict method if available, otherwise manual construction
+                if hasattr(paint, 'to_dict'):
+                    paint_dict = paint.to_dict()
+                else:
+                    # Fallback for backwards compatibility
+                    paint_dict = {
+                        'id': paint.id,
+                        'name': paint.name or '',
+                        'brand': paint.brand or '',
+                        'color_code': paint.color_code or '',
+                        'color_type': getattr(paint, 'color_type', '') or '',
+                        'color_family': getattr(paint, 'color_family', '') or '',
+                        'image_url': getattr(paint, 'image_url', '') or '',
+                        'stock': getattr(paint, 'stock', 0) or 0,
+                        'price': getattr(paint, 'price', 0.0) or 0.0,
+                        'description': getattr(paint, 'description', '') or '',
+                        'color_preview': getattr(paint, 'color_preview', '#000000') or '#000000',
+                        'volume': getattr(paint, 'volume', None),
+                        'hex_color': getattr(paint, 'hex_color', '000000') or '000000',
+                        'created_at': paint.created_at.isoformat() if paint.created_at else None,
+                        'updated_at': getattr(paint, 'updated_at', paint.created_at).isoformat() if getattr(paint, 'updated_at', paint.created_at) else None
+                    }
+                result.append(paint_dict)
+            except Exception as paint_error:
+                print(f"Error processing paint {paint.id}: {str(paint_error)}")
+                # Skip this paint but continue with others
+                continue
         return jsonify(result)
     except Exception as e:
         print(f"Error en get_paints(): {str(e)}")
@@ -2082,46 +2096,32 @@ def delete_backup(backup_date):
             "message": f"Error eliminando backup: {str(e)}"
         }), 500
 
-if __name__ == '__main__':
-    # Este bloque solo se ejecuta en desarrollo local
-    with app.app_context():
-        print("Verificando estado de la base de datos...")
-        try:
-            db.create_all()
-            print("Tablas creadas o verificadas correctamente")
-            
-            # Verificar si existe el usuario admin
-            admin = User.query.filter_by(username='admin').first()
-            if not admin:
-                print("Creando usuario administrador...")
-                admin = User(
-                    username='admin',
-                    email='admin@printandpaint.com',
-                    role='admin',
-                    experience_level='expert'
-                )
-                admin.set_password('admin123')
-                print(f"Hash de contraseña generado: {admin.password_hash}")
-                db.session.add(admin)
-                db.session.commit()
-                print("Usuario administrador creado correctamente")
-            else:
-                print(f"Usuario admin ya existe: {admin.username}, {admin.email}, role: {admin.role}")
-                print(f"Hash actual: {admin.password_hash}")
-                # Actualizar contraseña para depuración
-                admin.set_password('admin123')
-                print(f"Nuevo hash: {admin.password_hash}")
-                db.session.commit()
-                print("Contraseña de administrador actualizada para pruebas")
-        except Exception as e:
-            print(f"Error al inicializar la base de datos: {str(e)}")
-    
-    # Para Railway, siempre usar el puerto 5000 ya que es el que espera
-    port = 5000
-    if not os.environ.get('RAILWAY_ENVIRONMENT'):
-        # Solo en desarrollo local, usar la variable PORT
-        port = int(os.environ.get('PORT', 5000))
-    
-    debug_mode = os.environ.get('FLASK_ENV', '') != 'production'  
-    print(f"Iniciando servidor en puerto: {port}")
-    app.run(host='0.0.0.0', port=port, debug=debug_mode, use_reloader=False)
+# Migration endpoint to add missing columns
+@app.route('/admin/migrate', methods=['POST'])
+@admin_required  
+def migrate_database():
+    try:
+        # Add missing columns to paints table if they don't exist
+        with db.engine.connect() as conn:
+            # Check and add hex_color column
+            try:
+                conn.execute("ALTER TABLE paints ADD COLUMN hex_color VARCHAR(6) DEFAULT '000000'")
+                print("Added hex_color column")
+            except Exception as e:
+                print(f"hex_color column might already exist: {e}")
+                
+            # Check and add volume column
+            try:
+                conn.execute("ALTER TABLE paints ADD COLUMN volume INTEGER")
+                print("Added volume column")
+            except Exception as e:
+                print(f"volume column might already exist: {e}")
+                
+            # Check and add updated_at column
+            try:
+                conn.execute("ALTER TABLE paints ADD COLUMN updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP")
+                print("Added updated_at column")
+            except Exception as e:
+                print(f"updated_at column might already exist: {e}")
+                
+            conn.commit()
