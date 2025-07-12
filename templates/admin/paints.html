@@ -2345,7 +2345,7 @@
                 
                 statusDiv.innerHTML = '<div class="alert alert-info"><i class="bi bi-hourglass-split me-2"></i> Iniciando proceso de backup...</div>';
                 
-                const response = await fetch('/api/admin/paints/backup', {
+                const response = await fetch('/admin/paints/backup', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
@@ -2398,7 +2398,7 @@
                 
                 statusDiv.innerHTML = '<div class="alert alert-warning"><i class="bi bi-hourglass-split me-2"></i> Eliminando todas las pinturas...</div>';
                 
-                const response = await fetch('/api/admin/paints/clear', {
+                const response = await fetch('/admin/paints/clear', {
                     method: 'DELETE',
                     headers: {
                         'Content-Type': 'application/json'
@@ -2450,7 +2450,7 @@
                 
                 statusDiv.innerHTML = '<div class="alert alert-info"><i class="bi bi-hourglass-split me-2"></i> Restaurando pinturas desde backup...</div>';
                 
-                const response = await fetch('/api/admin/paints/restore', {
+                const response = await fetch('/admin/paints/restore', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
@@ -2499,7 +2499,7 @@
                 
                 historyDiv.innerHTML = '<div class="text-center"><div class="spinner-border text-primary" role="status"></div></div>';
                 
-                const response = await fetch('/api/admin/paints/backups');
+                const response = await fetch('/admin/paints/backups');
                 const result = await response.json();
                 
                 if (response.ok && result.success) {
@@ -2552,7 +2552,7 @@
             }
             
             try {
-                const response = await fetch(`/api/admin/paints/backup/${encodeURIComponent(backupDate)}`, {
+                const response = await fetch(`/admin/paints/backup/${encodeURIComponent(backupDate)}`, {
                     method: 'DELETE'
                 });
                 
@@ -2581,7 +2581,7 @@
                 document.getElementById('totalPaints').textContent = paints.length || 0;
                 
                 // Get backup info
-                const backupsResponse = await fetch('/api/admin/paints/backups');
+                const backupsResponse = await fetch('/admin/paints/backups');
                 const backupsResult = await backupsResponse.json();
                 
                 if (backupsResult.success) {
