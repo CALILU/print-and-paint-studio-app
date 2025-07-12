@@ -1,6 +1,5 @@
 from flask import Flask, render_template, request, jsonify, redirect, url_for, session, flash
-from models import db, User, Video, Favorite, Technique, Category, Paint
-# PaintBackup temporarily disabled
+from models import db, User, Video, Favorite, Technique, Category, Paint, PaintBackup
 from functools import wraps
 import os
 from datetime import datetime, timedelta
@@ -1815,6 +1814,104 @@ def test_paint_creation():
             "success": False,
             "data": None,
             "message": f"Test error: {str(e)}"
+        }), 500
+
+# ==================== BACKUP SYSTEM - STEP 1 ====================
+
+@app.route('/admin/paints/backup', methods=['POST'])
+@admin_required
+def create_backup():
+    """Create a backup of all paints - Step 1: Basic backup endpoint"""
+    try:
+        # Get all paints
+        paints = Paint.query.all()
+        
+        if not paints:
+            return jsonify({
+                "success": False,
+                "message": "No hay pinturas para respaldar"
+            }), 400
+        
+        # Create backup entries
+        backup_count = 0
+        backup_reason = request.json.get('reason', 'Manual backup') if request.is_json else 'Manual backup'
+        
+        for paint in paints:
+            # Check if backup already exists for this paint
+            existing_backup = PaintBackup.query.filter_by(original_id=paint.id).first()
+            if existing_backup:
+                continue  # Skip if backup already exists
+            
+            backup = PaintBackup(
+                original_id=paint.id,
+                name=paint.name,
+                brand=paint.brand,
+                color_code=paint.color_code,
+                color_type=paint.color_type,
+                color_family=paint.color_family,
+                description=paint.description,
+                stock=paint.stock,
+                price=paint.price,
+                color_preview=paint.color_preview,
+                image_url=paint.image_url,
+                original_created_at=paint.created_at,
+                backup_reason=backup_reason
+            )
+            
+            db.session.add(backup)
+            backup_count += 1
+        
+        db.session.commit()
+        
+        return jsonify({
+            "success": True,
+            "message": f"Backup creado exitosamente. {backup_count} pinturas respaldadas.",
+            "data": {
+                "backup_count": backup_count,
+                "total_paints": len(paints),
+                "backup_date": datetime.utcnow().isoformat()
+            }
+        }), 201
+        
+    except Exception as e:
+        print(f"Error creating backup: {str(e)}")
+        db.session.rollback()
+        return jsonify({
+            "success": False,
+            "message": f"Error al crear backup: {str(e)}"
+        }), 500
+
+@app.route('/admin/paints/backups', methods=['GET'])
+@admin_required
+def list_backups():
+    """List all paint backups - Step 2: Basic backup listing"""
+    try:
+        backups = PaintBackup.query.all()
+        
+        # Group backups by backup date for better organization
+        backup_list = []
+        for backup in backups:
+            backup_list.append({
+                'id': backup.id,
+                'original_id': backup.original_id,
+                'name': backup.name,
+                'brand': backup.brand,
+                'color_code': backup.color_code,
+                'backup_date': backup.backup_date.isoformat() if backup.backup_date else None,
+                'backup_reason': backup.backup_reason
+            })
+        
+        return jsonify({
+            "success": True,
+            "data": backup_list,
+            "message": f"Se encontraron {len(backup_list)} entradas de backup"
+        }), 200
+        
+    except Exception as e:
+        print(f"Error listing backups: {str(e)}")
+        return jsonify({
+            "success": False,
+            "message": f"Error al listar backups: {str(e)}"
         }), 500
 
 if __name__ == '__main__':
