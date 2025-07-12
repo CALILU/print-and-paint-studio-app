@@ -1539,13 +1539,21 @@ def update_paint_android(id):
         if 'description' in data:
             paint.description = data['description']
         if 'stock' in data:
-            # Sumar al stock existente en lugar de reemplazarlo
-            additional_stock = data['stock']
-            if paint.stock is None:
-                paint.stock = additional_stock
+            # Verificar si es un incremento o valor absoluto
+            stock_operation = data.get('stock_operation', 'add')  # 'add' o 'set'
+            stock_value = data['stock']
+            
+            if stock_operation == 'set':
+                # Establecer valor absoluto (para pinturas nuevas)
+                paint.stock = stock_value
+                print(f"Stock set to absolute value: {paint.stock}")
             else:
-                paint.stock += additional_stock
-            print(f"Stock updated: added {additional_stock}, new total: {paint.stock}")
+                # Sumar el stock de Android al stock existente en la web (default)
+                if paint.stock is None:
+                    paint.stock = stock_value
+                else:
+                    paint.stock += stock_value
+                print(f"Stock updated: added {stock_value}, new total: {paint.stock}")
         if 'price' in data:
             paint.price = data['price']
         if 'color_preview' in data:
