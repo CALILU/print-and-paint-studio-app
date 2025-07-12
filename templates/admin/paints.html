@@ -1054,11 +1054,7 @@
                 }
                 
                 // Mostrar pinturas
-                if (typeof filterAndDisplayPaints === 'function') {
-                    filterAndDisplayPaints();
-                } else {
-                    displayPaintsBasic(paints);
-                }
+                filterAndDisplayPaints();
                 
                 return paints;
                 
@@ -1078,24 +1074,6 @@
             }
         }
         
-        // Función básica para mostrar pinturas si no existe la avanzada
-        function displayPaintsBasic(paints) {
-            const container = document.getElementById('paints-container');
-            if (!container) return;
-            
-            if (paints.length === 0) {
-                container.innerHTML = '<div class="alert alert-info">No hay pinturas disponibles</div>';
-                return;
-            }
-            
-            container.innerHTML = paints.slice(0, 20).map(paint => `
-                <div class="paint-container">
-                    <div class="paint-title">${paint.name || 'Sin nombre'}</div>
-                    <div class="paint-brand">${paint.brand || 'Sin marca'}</div>
-                    <div class="paint-code">${paint.color_code || 'Sin código'}</div>
-                </div>
-            `).join('');
-        }
         
         // Variables para manejo de artículos nuevos
         let showOnlyNew = false;
@@ -1407,55 +1385,6 @@
             console.log(`🎯 Cleared modification highlight for paint ID: ${paintId}`);
         }
         
-        // Función para obtener todas las pinturas
-        // Función para obtener todas las pinturas
-        async function fetchPaints() {
-            const container = document.getElementById('paints-container');
-            container.innerHTML = `
-                <div class="empty-message">
-                    <div class="spinner-border text-primary" role="status">
-                        <span class="visually-hidden">Cargando...</span>
-                    </div>
-                    <p class="mt-3">Cargando pinturas...</p>
-                </div>
-            `;
-            
-            try {
-                const response = await fetch('/api/paints');
-                
-                if (!response.ok) {
-                    throw new Error(`Error HTTP: ${response.status}`);
-                }
-                
-                const paints = await response.json();
-                console.log(`Pinturas cargadas: ${paints.length}`);
-                
-                // Actualizar la variable global
-                allPaints = paints;
-                
-                // Actualizar contador
-                document.getElementById('paintCount').textContent = paints.length;
-                
-                // Mostrar pinturas
-                filterAndDisplayPaints();
-                
-                return paints;
-                
-            } catch (error) {
-                console.error('Error al cargar pinturas:', error);
-                container.innerHTML = `
-                    <div class="empty-message">
-                        <div class="alert alert-danger">
-                            <i class="bi bi-exclamation-triangle me-2"></i> Error al cargar las pinturas: ${error.message}
-                        </div>
-                        <button class="btn btn-primary mt-3" onclick="fetchPaints()">
-                            <i class="bi bi-arrow-clockwise me-2"></i> Intentar de nuevo
-                        </button>
-                    </div>
-                `;
-                throw error;
-            }
-        }
         
         // Función para establecer el modo de visualización
         function setViewMode(mode) {
