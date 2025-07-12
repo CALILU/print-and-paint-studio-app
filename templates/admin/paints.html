@@ -1011,10 +1011,8 @@
                 if (listBtn) listBtn.classList.add('active');
             }
             
-            // Volver a mostrar las pinturas con el nuevo modo si la función existe
-            if (typeof filterAndDisplayPaints === 'function') {
-                filterAndDisplayPaints();
-            }
+            // Volver a mostrar las pinturas con el nuevo modo
+            filterAndDisplayPaints();
         }
         
         // Función básica para cargar pinturas
@@ -1386,25 +1384,6 @@
         }
         
         
-        // Función para establecer el modo de visualización
-        function setViewMode(mode) {
-            viewMode = mode;
-            const container = document.getElementById('paints-container');
-            
-            document.getElementById('gridViewBtn').classList.remove('active');
-            document.getElementById('listViewBtn').classList.remove('active');
-            
-            if (mode === 'grid') {
-                container.className = 'paint-grid';
-                document.getElementById('gridViewBtn').classList.add('active');
-            } else {
-                container.className = 'paint-list-view';
-                document.getElementById('listViewBtn').classList.add('active');
-            }
-            
-            // Volver a mostrar las pinturas con el nuevo modo
-            filterAndDisplayPaints();
-        }
         
         // Funciones para manejo de artículos nuevos
         function isNewPaint(paint) {
@@ -2656,4 +2635,9 @@
 
         // Initialize backup tab when selected
         document.getElementById('backup-restore-tab').addEventListener('click', function() {
-       
+            updateSystemStatus();
+        });
+    </script>
+
+</body>
+</html>
