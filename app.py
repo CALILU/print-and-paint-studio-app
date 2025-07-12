@@ -1,6 +1,5 @@
 from flask import Flask, render_template, request, jsonify, redirect, url_for, session, flash
-from models import db, User, Video, Favorite, Technique, Category, Paint
-# PaintBackup temporarily disabled
+from models import db, User, Video, Favorite, Technique, Category, Paint, PaintBackup
 from functools import wraps
 import os
 from datetime import datetime, timedelta
@@ -1820,47 +1819,48 @@ def test_paint_creation():
             "message": f"Test error: {str(e)}"
         }), 500
 
+# ==================== BACKUP & RESTORE ENDPOINTS ====================
 
-if __name__ == '__main__':
-    # Este bloque solo se ejecuta en desarrollo local
-    with app.app_context():
-        print("Verificando estado de la base de datos...")
-        try:
-            db.create_all()
-            print("Tablas creadas o verificadas correctamente")
-            
-            # Verificar si existe el usuario admin
-            admin = User.query.filter_by(username='admin').first()
-            if not admin:
-                print("Creando usuario administrador...")
-                admin = User(
-                    username='admin',
-                    email='admin@printandpaint.com',
-                    role='admin',
-                    experience_level='expert'
-                )
-                admin.set_password('admin123')
-                print(f"Hash de contraseña generado: {admin.password_hash}")
-                db.session.add(admin)
-                db.session.commit()
-                print("Usuario administrador creado correctamente")
-            else:
-                print(f"Usuario admin ya existe: {admin.username}, {admin.email}, role: {admin.role}")
-                print(f"Hash actual: {admin.password_hash}")
-                # Actualizar contraseña para depuración
-                admin.set_password('admin123')
-                print(f"Nuevo hash: {admin.password_hash}")
-                db.session.commit()
-                print("Contraseña de administrador actualizada para pruebas")
-        except Exception as e:
-            print(f"Error al inicializar la base de datos: {str(e)}")
-    
-    # Para Railway, siempre usar el puerto 5000 ya que es el que espera
-    port = 5000
-    if not os.environ.get('RAILWAY_ENVIRONMENT'):
-        # Solo en desarrollo local, usar la variable PORT
-        port = int(os.environ.get('PORT', 5000))
-    
-    debug_mode = os.environ.get('FLASK_ENV', '') != 'production'  
-    print(f"Iniciando servidor en puerto: {port}")
-    app.run(host='0.0.0.0', port=port, debug=debug_mode, use_reloader=False)
+@app.route('/admin/paints/backups', methods=['GET'])
+@admin_required
+def list_backups():
+    """List all available backups"""
+    try:
+        # Obtener estadísticas de backups agrupadas por fecha
+        backups = db.session.query(
+            PaintBackup.backup_date,
+            PaintBackup.backup_reason,
+            db.func.count(PaintBackup.id).label('paint_count')
+        ).group_by(
+            PaintBackup.backup_date,
+            PaintBackup.backup_reason
+        ).order_by(PaintBackup.backup_date.desc()).all()
+        
+        backup_list = []
+        for backup in backups:
+            backup_list.append({
+                'backup_date': backup.backup_date.isoformat(),
+                'backup_reason': backup.backup_reason,
+                'paint_count': backup.paint_count
+            })
+        
+        return jsonify({
+            "success": True,
+            "data": backup_list,
+            "message": f"Se encontraron {len(backup_list)} backups"
+        }), 200
+        
+    except Exception as e:
+        return jsonify({
+            "success": False,
+            "message": f"Error obteniendo backups: {str(e)}"
+        }), 500
+
+@app.route('/admin/paints/backup', methods=['POST'])
+@admin_required
+def backup_paints():
+    """Create a backup of all paints before clearing the main table"""
+    try:
+        # Obtener todas las pinturas actuales
+        paints = Paint.query.all()
+        
