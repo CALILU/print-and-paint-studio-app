@@ -866,10 +866,7 @@ def get_paints():
                         'price': getattr(paint, 'price', 0.0) or 0.0,
                         'description': getattr(paint, 'description', '') or '',
                         'color_preview': getattr(paint, 'color_preview', '#000000') or '#000000',
-                        'volume': getattr(paint, 'volume', None),
-                        'hex_color': getattr(paint, 'hex_color', '000000') or '000000',
-                        'created_at': paint.created_at.isoformat() if paint.created_at else None,
-                        'updated_at': getattr(paint, 'updated_at', paint.created_at).isoformat() if getattr(paint, 'updated_at', paint.created_at) else None
+                        'created_at': paint.created_at.isoformat() if paint.created_at else None
                     }
                 result.append(paint_dict)
             except Exception as paint_error:
