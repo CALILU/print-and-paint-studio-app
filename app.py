@@ -9,6 +9,8 @@ import requests
 from PIL import Image
 from io import BytesIO
 import numpy as np
+from werkzeug.utils import secure_filename
+import time
 
 app = Flask(__name__)
 app.config['DEBUG'] = True
@@ -1502,15 +1504,23 @@ def update_paint_android(id):
         if 'brand' in data:
             paint.brand = data['brand']
         if 'color_code' in data:
-            # Verificar que no exista otro paint con el mismo código
-            existing = Paint.query.filter(Paint.color_code == data['color_code'], Paint.id != id).first()
-            if existing:
-                return jsonify({
-                    "success": False,
-                    "data": None,
-                    "message": f"Another paint with code {data['color_code']} already exists"
-                }), 409
-            paint.color_code = data['color_code']
+            new_color_code = data['color_code']
+            # Para actualizaciones desde Android, ignorar color_code si está vacío o es problemático
+            if not new_color_code or new_color_code.strip() == "" or new_color_code == "0":
+                print(f"⚠️ Ignoring invalid/empty color_code in update for paint {id}")
+            elif paint.color_code != new_color_code:
+                # Solo verificar duplicados si el código realmente está cambiando
+                existing = Paint.query.filter(Paint.color_code == new_color_code, Paint.id != id).first()
+                if existing:
+                    return jsonify({
+                        "success": False,
+                        "data": None,
+                        "message": f"Another paint with code {new_color_code} already exists"
+                    }), 409
+                paint.color_code = new_color_code
+                print(f"🔄 Color code updated for paint {id}: {paint.color_code} → {new_color_code}")
+            else:
+                print(f"✅ Color code unchanged for paint {id}: {paint.color_code}")
         if 'color_type' in data:
             paint.color_type = data['color_type']
         if 'color_family' in data:
@@ -1531,6 +1541,16 @@ def update_paint_android(id):
             paint.color_preview = data['color_preview']
         if 'image_url' in data:
             paint.image_url = data['image_url']
+        if 'volume' in data:
+            # Handle volume field (can be null)
+            volume_value = data['volume']
+            if volume_value is not None and volume_value != "":
+                try:
+                    paint.volume = int(volume_value)
+                except (ValueError, TypeError):
+                    print(f"Invalid volume value: {volume_value}, keeping existing")
+            else:
+                paint.volume = None  # Allow null volumes
         
         # Actualizar fecha de modificación
         paint.updated_at = datetime.utcnow()
@@ -1620,6 +1640,141 @@ def get_paint_by_code_android(color_code):
             "message": f"Error retrieving paint: {str(e)}"
         }), 500
 
+# Upload image endpoint for Android
+@app.route('/api/upload-image', methods=['POST'])
+def upload_image():
+    """Upload image file from Android app"""
+    try:
+        # Verify API key
+        api_key = request.headers.get('X-API-Key')
+        if api_key != 'print_and_paint_secret_key_2025':
+            return jsonify({
+                "success": False,
+                "data": None,
+                "message": "Invalid or missing API key"
+            }), 401
+        
+        # Check if file was uploaded
+        if 'image' not in request.files:
+            return jsonify({
+                "success": False,
+                "data": None,
+                "message": "No image file provided"
+            }), 400
+        
+        file = request.files['image']
+        paint_id = request.form.get('paint_id')
+        
+        if file.filename == '':
+            return jsonify({
+                "success": False,
+                "data": None,
+                "message": "No file selected"
+            }), 400
+        
+        if file and allowed_file(file.filename):
+            # Create uploads directory if it doesn't exist
+            upload_dir = os.path.join('static', 'uploads')
+            os.makedirs(upload_dir, exist_ok=True)
+            
+            # Generate unique filename
+            timestamp = int(time.time())
+            filename = f"paint_{paint_id}_{timestamp}_{secure_filename(file.filename)}"
+            filepath = os.path.join(upload_dir, filename)
+            
+            # Save file
+            file.save(filepath)
+            
+            # Generate URL for web access
+            image_url = f"/static/uploads/{filename}"
+            
+            # Update paint record if paint_id provided
+            if paint_id:
+                paint = Paint.query.get(paint_id)
+                if paint:
+                    paint.image_url = image_url
+                    paint.updated_at = datetime.utcnow()
+                    db.session.commit()
+            
+            return jsonify({
+                "success": True,
+                "data": {
+                    "image_url": image_url,
+                    "filename": filename
+                },
+                "message": "Image uploaded successfully"
+            }), 200
+        else:
+            return jsonify({
+                "success": False,
+                "data": None,
+                "message": "Invalid file type. Only JPG, PNG, GIF allowed"
+            }), 400
+            
+    except Exception as e:
+        print(f"Error in upload_image(): {str(e)}")
+        return jsonify({
+            "success": False,
+            "data": None,
+            "message": f"Error uploading image: {str(e)}"
+        }), 500
+
+def allowed_file(filename):
+    """Check if file extension is allowed"""
+    ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif'}
+    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+
+# Debug page for images
+@app.route('/debug/images')
+def debug_images_page():
+    """Debug page to visualize image URLs"""
+    return render_template('debug_images.html')
+
+# Debug endpoint to check image URLs
+@app.route('/api/debug/images', methods=['GET'])
+def debug_images():
+    """Debug endpoint to check which paints have image URLs"""
+    try:
+        paints = Paint.query.all()
+        
+        debug_data = []
+        for paint in paints:
+            debug_data.append({
+                "id": paint.id,
+                "name": paint.name,
+                "brand": paint.brand,
+                "color_code": paint.color_code,
+                "image_url": paint.image_url,
+                "has_image_url": paint.image_url is not None and paint.image_url != "",
+                "created_at": paint.created_at.isoformat() if paint.created_at else None
+            })
+        
+        # Estadísticas
+        total_paints = len(debug_data)
+        with_images = len([p for p in debug_data if p["has_image_url"]])
+        without_images = total_paints - with_images
+        
+        return jsonify({
+            "success": True,
+            "data": {
+                "paints": debug_data,
+                "stats": {
+                    "total_paints": total_paints,
+                    "with_images": with_images,
+                    "without_images": without_images,
+                    "percentage_with_images": round((with_images / total_paints * 100) if total_paints > 0 else 0, 2)
+                }
+            },
+            "message": f"Debug data for {total_paints} paints"
+        }), 200
+        
+    except Exception as e:
+        return jsonify({
+            "success": False,
+            "data": None,
+            "message": f"Error retrieving debug data: {str(e)}"
+        }), 500
+
 # Health check específico para Android
 @app.route('/api/health', methods=['GET'])
 def health_check_android():
@@ -1648,6 +1803,282 @@ def test_paint_creation():
             "success": False,
             "data": None,
             "message": f"Test error: {str(e)}"
+        }), 500
+
+# ==================== BACKUP & RESTORE ENDPOINTS ====================
+
+@app.route('/admin/paints/backup', methods=['POST'])
+@admin_required
+def backup_paints():
+    """Create a backup of all paints before clearing the main table"""
+    try:
+        
+        # Obtener todas las pinturas actuales
+        paints = Paint.query.all()
+        
+        if not paints:
+            return jsonify({
+                "success": False,
+                "message": "No hay pinturas para respaldar"
+            }), 400
+        
+        # Crear respaldo con información adicional
+        backup_reason = request.json.get('reason', 'Manual backup from admin interface')
+        backup_count = 0
+        
+        for paint in paints:
+            # Verificar si ya existe un backup de esta pintura (evitar duplicados)
+            existing_backup = PaintBackup.query.filter_by(
+                original_id=paint.id,
+                color_code=paint.color_code
+            ).first()
+            
+            if not existing_backup:
+                backup = PaintBackup(
+                    original_id=paint.id,
+                    name=paint.name,
+                    brand=paint.brand,
+                    color_code=paint.color_code,
+                    color_type=paint.color_type,
+                    color_family=paint.color_family,
+                    description=paint.description,
+                    stock=paint.stock,
+                    price=paint.price,
+                    color_preview=paint.color_preview,
+                    image_url=paint.image_url,
+                    volume=paint.volume,
+                    hex_color=getattr(paint, 'hex_color', '000000'),
+                    original_created_at=paint.created_at,
+                    original_updated_at=paint.updated_at,
+                    backup_reason=backup_reason
+                )
+                db.session.add(backup)
+                backup_count += 1
+        
+        db.session.commit()
+        
+        return jsonify({
+            "success": True,
+            "message": f"Backup creado exitosamente. {backup_count} pinturas respaldadas.",
+            "data": {
+                "backed_up_count": backup_count,
+                "total_paints": len(paints),
+                "backup_date": datetime.utcnow().isoformat(),
+                "reason": backup_reason
+            }
+        }), 200
+        
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({
+            "success": False,
+            "message": f"Error creando backup: {str(e)}"
+        }), 500
+
+@app.route('/admin/paints/clear', methods=['DELETE'])
+@admin_required
+def clear_paints():
+    """Clear all paints from the main table (after backup)"""
+    try:
+        
+        # Verificar que existe un backup reciente
+        recent_backup = PaintBackup.query.filter(
+            PaintBackup.backup_date >= datetime.utcnow() - timedelta(hours=24)
+        ).first()
+        
+        if not recent_backup:
+            return jsonify({
+                "success": False,
+                "message": "Debe crear un backup antes de borrar las pinturas"
+            }), 400
+        
+        # Contar pinturas antes de borrar
+        paint_count = Paint.query.count()
+        
+        # Borrar todas las pinturas
+        deleted = Paint.query.delete()
+        db.session.commit()
+        
+        return jsonify({
+            "success": True,
+            "message": f"Se borraron {deleted} pinturas exitosamente",
+            "data": {
+                "deleted_count": deleted,
+                "backup_available": True,
+                "latest_backup": recent_backup.backup_date.isoformat()
+            }
+        }), 200
+        
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({
+            "success": False,
+            "message": f"Error borrando pinturas: {str(e)}"
+        }), 500
+
+@app.route('/admin/paints/restore', methods=['POST'])
+@admin_required
+def restore_paints():
+    """Restore paints from backup"""
+    try:
+        
+        # Verificar si ya existen pinturas
+        existing_paints = Paint.query.count()
+        if existing_paints > 0:
+            replace_existing = request.json.get('replace_existing', False)
+            if not replace_existing:
+                return jsonify({
+                    "success": False,
+                    "message": f"Ya existen {existing_paints} pinturas. Use 'replace_existing': true para reemplazarlas."
+                }), 400
+            else:
+                # Borrar pinturas existentes
+                Paint.query.delete()
+        
+        # Obtener backup más reciente o específico
+        backup_date = request.json.get('backup_date')
+        if backup_date:
+            # Restaurar backup específico
+            backups = PaintBackup.query.filter(
+                PaintBackup.backup_date >= datetime.fromisoformat(backup_date.replace('Z', '+00:00'))
+            ).order_by(PaintBackup.original_id).all()
+        else:
+            # Restaurar backup más reciente
+            latest_backup_date = db.session.query(PaintBackup.backup_date).order_by(PaintBackup.backup_date.desc()).first()
+            if not latest_backup_date:
+                return jsonify({
+                    "success": False,
+                    "message": "No hay backups disponibles para restaurar"
+                }), 400
+            
+            backups = PaintBackup.query.filter_by(backup_date=latest_backup_date[0]).all()
+        
+        if not backups:
+            return jsonify({
+                "success": False,
+                "message": "No se encontraron backups para restaurar"
+            }), 400
+        
+        # Restaurar pinturas desde backup
+        restored_count = 0
+        for backup in backups:
+            # Verificar si ya existe una pintura con el mismo color_code
+            existing = Paint.query.filter_by(color_code=backup.color_code).first()
+            if not existing:
+                paint = Paint(
+                    name=backup.name,
+                    brand=backup.brand,
+                    color_code=backup.color_code,
+                    color_type=backup.color_type,
+                    color_family=backup.color_family,
+                    description=backup.description,
+                    stock=backup.stock,
+                    price=backup.price,
+                    color_preview=backup.color_preview,
+                    image_url=backup.image_url,
+                    volume=backup.volume,
+                    hex_color=backup.hex_color,
+                    created_at=backup.original_created_at,
+                    updated_at=backup.original_updated_at
+                )
+                db.session.add(paint)
+                restored_count += 1
+        
+        db.session.commit()
+        
+        return jsonify({
+            "success": True,
+            "message": f"Restauración exitosa. {restored_count} pinturas restauradas.",
+            "data": {
+                "restored_count": restored_count,
+                "total_backups": len(backups),
+                "backup_date": backups[0].backup_date.isoformat() if backups else None,
+                "restore_date": datetime.utcnow().isoformat()
+            }
+        }), 200
+        
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({
+            "success": False,
+            "message": f"Error restaurando pinturas: {str(e)}"
+        }), 500
+
+@app.route('/admin/paints/backups', methods=['GET'])
+@admin_required
+def list_backups():
+    """List all available backups"""
+    try:
+        # Obtener estadísticas de backups agrupadas por fecha
+        backups = db.session.query(
+            PaintBackup.backup_date,
+            PaintBackup.backup_reason,
+            db.func.count(PaintBackup.id).label('paint_count')
+        ).group_by(
+            PaintBackup.backup_date,
+            PaintBackup.backup_reason
+        ).order_by(PaintBackup.backup_date.desc()).all()
+        
+        backup_list = []
+        for backup in backups:
+            backup_list.append({
+                "backup_date": backup.backup_date.isoformat(),
+                "reason": backup.backup_reason,
+                "paint_count": backup.paint_count,
+                "formatted_date": backup.backup_date.strftime("%Y-%m-%d %H:%M:%S")
+            })
+        
+        # Estadísticas adicionales
+        total_backups = len(backup_list)
+        total_backup_records = PaintBackup.query.count()
+        current_paints = Paint.query.count()
+        
+        return jsonify({
+            "success": True,
+            "data": {
+                "backups": backup_list,
+                "statistics": {
+                    "total_backup_sessions": total_backups,
+                    "total_backup_records": total_backup_records,
+                    "current_paints_count": current_paints,
+                    "latest_backup": backup_list[0] if backup_list else None
+                }
+            }
+        }), 200
+        
+    except Exception as e:
+        return jsonify({
+            "success": False,
+            "message": f"Error obteniendo backups: {str(e)}"
+        }), 500
+
+@app.route('/admin/paints/backup/<backup_date>', methods=['DELETE'])
+@admin_required
+def delete_backup(backup_date):
+    """Delete a specific backup"""
+    try:
+        
+        # Convertir fecha
+        backup_datetime = datetime.fromisoformat(backup_date.replace('Z', '+00:00'))
+        
+        # Borrar backup específico
+        deleted = PaintBackup.query.filter_by(backup_date=backup_datetime).delete()
+        db.session.commit()
+        
+        return jsonify({
+            "success": True,
+            "message": f"Backup eliminado exitosamente. {deleted} registros borrados.",
+            "data": {
+                "deleted_count": deleted,
+                "backup_date": backup_date
+            }
+        }), 200
+        
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({
+            "success": False,
+            "message": f"Error eliminando backup: {str(e)}"
         }), 500
 
 if __name__ == '__main__':
