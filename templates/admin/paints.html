@@ -343,6 +343,39 @@
             color: #ffc107;
             font-weight: bold;
         }
+        
+        /* Estilos para el campo de marca personalizada */
+        #customBrandField {
+            border-left: 4px solid #17a2b8;
+            padding-left: 15px;
+            background-color: #f8f9fa;
+            border-radius: 8px;
+            transition: all 0.3s ease;
+        }
+        
+        #customBrandField.show {
+            animation: slideDown 0.3s ease;
+        }
+        
+        #customBrand {
+            border-color: #17a2b8;
+        }
+        
+        #customBrand:focus {
+            border-color: #138496;
+            box-shadow: 0 0 0 0.2rem rgba(23, 162, 184, 0.25);
+        }
+        
+        @keyframes slideDown {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
     </style>
 </head>
 <body>
@@ -583,7 +616,7 @@
                                                 </div>
                                                 
                                                 <div class="form-floating mb-3">
-                                                    <select class="form-select" id="brand" required>
+                                                    <select class="form-select" id="brand" required onchange="toggleCustomBrand()">
                                                         <option value="">Selecciona una marca</option>
                                                         <option value="Vallejo">Vallejo</option>
                                                         <option value="Citadel">Citadel</option>
@@ -591,9 +624,34 @@
                                                         <option value="AK Interactive">AK Interactive</option>
                                                         <option value="Scale75">Scale75</option>
                                                         <option value="Tamiya">Tamiya</option>
-                                                        <option value="Otro">Otro</option>
+                                                        <option value="Humbrol">Humbrol</option>
+                                                        <option value="Revell">Revell</option>
+                                                        <option value="Mr. Color">Mr. Color</option>
+                                                        <option value="Otro">Otra marca (personalizada)</option>
                                                     </select>
                                                     <label for="brand">Marca*</label>
+                                                </div>
+                                                
+                                                <!-- Campo para marca personalizada -->
+                                                <div class="form-floating mb-3" id="customBrandField" style="display: none;">
+                                                    <input type="text" class="form-control" id="customBrand" placeholder="Introduce la marca personalizada" list="brandSuggestions">
+                                                    <label for="customBrand">Marca personalizada*</label>
+                                                    <datalist id="brandSuggestions">
+                                                        <option value="Humbrol">
+                                                        <option value="Testors">
+                                                        <option value="Model Master">
+                                                        <option value="Createx">
+                                                        <option value="Badger">
+                                                        <option value="Lifecolor">
+                                                        <option value="Ammo">
+                                                        <option value="Alclad II">
+                                                        <option value="MRP (Mr. Paint)">
+                                                        <option value="SMS">
+                                                    </datalist>
+                                                    <div class="form-text">
+                                                        <i class="bi bi-lightbulb me-1"></i>
+                                                        Escribe el nombre de la marca. Puedes usar las sugerencias o escribir cualquier marca.
+                                                    </div>
                                                 </div>
                                                 
                                                 <div class="form-floating mb-3">
@@ -1589,7 +1647,27 @@
                 // Llenar formulario
                 document.getElementById('paint_id').value = paint.id;
                 document.getElementById('name').value = paint.name;
-                document.getElementById('brand').value = paint.brand;
+                
+                // Manejar marca (predefinida o personalizada)
+                const brandSelect = document.getElementById('brand');
+                const customBrandInput = document.getElementById('customBrand');
+                const customBrandField = document.getElementById('customBrandField');
+                
+                // Verificar si la marca está en la lista predefinida
+                const brandOptions = Array.from(brandSelect.options).map(option => option.value);
+                if (brandOptions.includes(paint.brand)) {
+                    // Marca predefinida
+                    brandSelect.value = paint.brand;
+                    customBrandField.style.display = 'none';
+                    customBrandInput.required = false;
+                } else {
+                    // Marca personalizada
+                    brandSelect.value = 'Otro';
+                    customBrandInput.value = paint.brand;
+                    customBrandField.style.display = 'block';
+                    customBrandInput.required = true;
+                }
+                
                 document.getElementById('color_code').value = paint.color_code || '';
                 document.getElementById('color_type').value = paint.color_type || '';
                 document.getElementById('color_family').value = paint.color_family || '';
@@ -1642,13 +1720,59 @@
         }
         
         // Función para guardar/actualizar pintura
+        // Función para mostrar/ocultar campo de marca personalizada
+        function toggleCustomBrand() {
+            const brandSelect = document.getElementById('brand');
+            const customBrandField = document.getElementById('customBrandField');
+            const customBrandInput = document.getElementById('customBrand');
+            
+            if (brandSelect.value === 'Otro') {
+                customBrandField.style.display = 'block';
+                customBrandField.classList.add('show');
+                customBrandInput.required = true;
+                
+                // Enfocar el campo con un pequeño delay para la animación
+                setTimeout(() => {
+                    customBrandInput.focus();
+                }, 200);
+                
+                console.log('ℹ️ Campo de marca personalizada activado');
+            } else {
+                customBrandField.style.display = 'none';
+                customBrandField.classList.remove('show');
+                customBrandInput.required = false;
+                customBrandInput.value = '';
+                
+                console.log('✓ Campo de marca personalizada desactivado');
+            }
+        }
+        
+        // Función para obtener la marca seleccionada (predefinida o personalizada)
+        function getSelectedBrand() {
+            const brandSelect = document.getElementById('brand');
+            const customBrandInput = document.getElementById('customBrand');
+            
+            if (brandSelect.value === 'Otro') {
+                return customBrandInput.value.trim();
+            } else {
+                return brandSelect.value;
+            }
+        }
+        
         async function savePaint() {
             const paintId = document.getElementById('paint_id').value;
             const isEdit = paintId !== '';
             
+            // Validar marca personalizada si es necesaria
+            const selectedBrand = getSelectedBrand();
+            if (!selectedBrand) {
+                alert('Por favor, selecciona una marca o introduce una marca personalizada.');
+                return;
+            }
+            
             const paintData = {
                 name: document.getElementById('name').value,
-                brand: document.getElementById('brand').value,
+                brand: selectedBrand,
                 color_code: document.getElementById('color_code').value,
                 color_type: document.getElementById('color_type').value,
                 color_family: document.getElementById('color_family').value,
@@ -1706,6 +1830,15 @@
             document.getElementById('form-title').textContent = 'Añadir Nueva Pintura';
             document.getElementById('submit-btn').textContent = 'Guardar Pintura';
             document.getElementById('color_preview').value = '#cccccc';
+            
+            // Resetear campos de marca personalizada
+            const customBrandField = document.getElementById('customBrandField');
+            const customBrandInput = document.getElementById('customBrand');
+            if (customBrandField && customBrandInput) {
+                customBrandField.style.display = 'none';
+                customBrandInput.required = false;
+                customBrandInput.value = '';
+            }
             
             // Disparar evento para actualizar la vista previa
             document.getElementById('name').dispatchEvent(new Event('input'));
