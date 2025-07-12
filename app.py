@@ -1,5 +1,6 @@
 from flask import Flask, render_template, request, jsonify, redirect, url_for, session, flash
-from models import db, User, Video, Favorite, Technique, Category, Paint, PaintBackup
+from models import db, User, Video, Favorite, Technique, Category, Paint
+# PaintBackup temporarily disabled
 from functools import wraps
 import os
 from datetime import datetime, timedelta
@@ -1819,309 +1820,47 @@ def test_paint_creation():
             "message": f"Test error: {str(e)}"
         }), 500
 
-# ==================== BACKUP & RESTORE ENDPOINTS ====================
 
-@app.route('/admin/paints/backup', methods=['POST'])
-@admin_required
-def backup_paints():
-    """Create a backup of all paints before clearing the main table"""
-    try:
-        
-        # Obtener todas las pinturas actuales
-        paints = Paint.query.all()
-        
-        if not paints:
-            return jsonify({
-                "success": False,
-                "message": "No hay pinturas para respaldar"
-            }), 400
-        
-        # Crear respaldo con información adicional
-        data = request.get_json() if request.is_json else {}
-        backup_reason = data.get('reason', 'Manual backup from admin interface')
-        backup_count = 0
-        
-        for paint in paints:
-            # Verificar si ya existe un backup de esta pintura (evitar duplicados)
-            existing_backup = PaintBackup.query.filter_by(
-                original_id=paint.id,
-                color_code=paint.color_code
-            ).first()
+if __name__ == '__main__':
+    # Este bloque solo se ejecuta en desarrollo local
+    with app.app_context():
+        print("Verificando estado de la base de datos...")
+        try:
+            db.create_all()
+            print("Tablas creadas o verificadas correctamente")
             
-            if not existing_backup:
-                backup = PaintBackup(
-                    original_id=paint.id,
-                    name=paint.name,
-                    brand=paint.brand,
-                    color_code=paint.color_code,
-                    color_type=paint.color_type,
-                    color_family=paint.color_family,
-                    description=paint.description,
-                    stock=paint.stock,
-                    price=paint.price,
-                    color_preview=paint.color_preview,
-                    image_url=paint.image_url,
-                    volume=paint.volume,
-                    hex_color=getattr(paint, 'hex_color', '000000'),
-                    original_created_at=paint.created_at,
-                    original_updated_at=paint.updated_at,
-                    backup_reason=backup_reason
+            # Verificar si existe el usuario admin
+            admin = User.query.filter_by(username='admin').first()
+            if not admin:
+                print("Creando usuario administrador...")
+                admin = User(
+                    username='admin',
+                    email='admin@printandpaint.com',
+                    role='admin',
+                    experience_level='expert'
                 )
-                db.session.add(backup)
-                backup_count += 1
-        
-        db.session.commit()
-        
-        return jsonify({
-            "success": True,
-            "message": f"Backup creado exitosamente. {backup_count} pinturas respaldadas.",
-            "data": {
-                "backed_up_count": backup_count,
-                "total_paints": len(paints),
-                "backup_date": datetime.utcnow().isoformat(),
-                "reason": backup_reason
-            }
-        }), 200
-        
-    except Exception as e:
-        db.session.rollback()
-        return jsonify({
-            "success": False,
-            "message": f"Error creando backup: {str(e)}"
-        }), 500
-
-@app.route('/admin/paints/clear', methods=['DELETE'])
-@admin_required
-def clear_paints():
-    """Clear all paints from the main table (after backup)"""
-    try:
-        
-        # Verificar que existe un backup reciente
-        recent_backup = PaintBackup.query.filter(
-            PaintBackup.backup_date >= datetime.utcnow() - timedelta(hours=24)
-        ).first()
-        
-        if not recent_backup:
-            return jsonify({
-                "success": False,
-                "message": "Debe crear un backup antes de borrar las pinturas"
-            }), 400
-        
-        # Contar pinturas antes de borrar
-        paint_count = Paint.query.count()
-        
-        # Borrar todas las pinturas
-        deleted = Paint.query.delete()
-        db.session.commit()
-        
-        return jsonify({
-            "success": True,
-            "message": f"Se borraron {deleted} pinturas exitosamente",
-            "data": {
-                "deleted_count": deleted,
-                "backup_available": True,
-                "latest_backup": recent_backup.backup_date.isoformat()
-            }
-        }), 200
-        
-    except Exception as e:
-        db.session.rollback()
-        return jsonify({
-            "success": False,
-            "message": f"Error borrando pinturas: {str(e)}"
-        }), 500
-
-@app.route('/admin/paints/restore', methods=['POST'])
-@admin_required
-def restore_paints():
-    """Restore paints from backup"""
-    try:
-        
-        # Verificar si ya existen pinturas
-        existing_paints = Paint.query.count()
-        if existing_paints > 0:
-            replace_existing = request.json.get('replace_existing', False)
-            if not replace_existing:
-                return jsonify({
-                    "success": False,
-                    "message": f"Ya existen {existing_paints} pinturas. Use 'replace_existing': true para reemplazarlas."
-                }), 400
+                admin.set_password('admin123')
+                print(f"Hash de contraseña generado: {admin.password_hash}")
+                db.session.add(admin)
+                db.session.commit()
+                print("Usuario administrador creado correctamente")
             else:
-                # Borrar pinturas existentes
-                Paint.query.delete()
-        
-        # Obtener backup más reciente o específico
-        backup_date = request.json.get('backup_date')
-        if backup_date:
-            # Restaurar backup específico
-            backups = PaintBackup.query.filter(
-                PaintBackup.backup_date >= datetime.fromisoformat(backup_date.replace('Z', '+00:00'))
-            ).order_by(PaintBackup.original_id).all()
-        else:
-            # Restaurar backup más reciente
-            latest_backup_date = db.session.query(PaintBackup.backup_date).order_by(PaintBackup.backup_date.desc()).first()
-            if not latest_backup_date:
-                return jsonify({
-                    "success": False,
-                    "message": "No hay backups disponibles para restaurar"
-                }), 400
-            
-            backups = PaintBackup.query.filter_by(backup_date=latest_backup_date[0]).all()
-        
-        if not backups:
-            return jsonify({
-                "success": False,
-                "message": "No se encontraron backups para restaurar"
-            }), 400
-        
-        # Restaurar pinturas desde backup
-        restored_count = 0
-        for backup in backups:
-            # Verificar si ya existe una pintura con el mismo color_code
-            existing = Paint.query.filter_by(color_code=backup.color_code).first()
-            if not existing:
-                paint = Paint(
-                    name=backup.name,
-                    brand=backup.brand,
-                    color_code=backup.color_code,
-                    color_type=backup.color_type,
-                    color_family=backup.color_family,
-                    description=backup.description,
-                    stock=backup.stock,
-                    price=backup.price,
-                    color_preview=backup.color_preview,
-                    image_url=backup.image_url,
-                    volume=backup.volume,
-                    hex_color=backup.hex_color,
-                    created_at=backup.original_created_at,
-                    updated_at=backup.original_updated_at
-                )
-                db.session.add(paint)
-                restored_count += 1
-        
-        db.session.commit()
-        
-        return jsonify({
-            "success": True,
-            "message": f"Restauración exitosa. {restored_count} pinturas restauradas.",
-            "data": {
-                "restored_count": restored_count,
-                "total_backups": len(backups),
-                "backup_date": backups[0].backup_date.isoformat() if backups else None,
-                "restore_date": datetime.utcnow().isoformat()
-            }
-        }), 200
-        
-    except Exception as e:
-        db.session.rollback()
-        return jsonify({
-            "success": False,
-            "message": f"Error restaurando pinturas: {str(e)}"
-        }), 500
-
-@app.route('/admin/paints/backups', methods=['GET'])
-@admin_required
-def list_backups():
-    """List all available backups"""
-    try:
-        # Obtener estadísticas de backups agrupadas por fecha
-        backups = db.session.query(
-            PaintBackup.backup_date,
-            PaintBackup.backup_reason,
-            db.func.count(PaintBackup.id).label('paint_count')
-        ).group_by(
-            PaintBackup.backup_date,
-            PaintBackup.backup_reason
-        ).order_by(PaintBackup.backup_date.desc()).all()
-        
-        backup_list = []
-        for backup in backups:
-            backup_list.append({
-                "backup_date": backup.backup_date.isoformat(),
-                "reason": backup.backup_reason,
-                "paint_count": backup.paint_count,
-                "formatted_date": backup.backup_date.strftime("%Y-%m-%d %H:%M:%S")
-            })
-        
-        # Estadísticas adicionales
-        total_backups = len(backup_list)
-        total_backup_records = PaintBackup.query.count()
-        current_paints = Paint.query.count()
-        
-        return jsonify({
-            "success": True,
-            "data": {
-                "backups": backup_list,
-                "statistics": {
-                    "total_backup_sessions": total_backups,
-                    "total_backup_records": total_backup_records,
-                    "current_paints_count": current_paints,
-                    "latest_backup": backup_list[0] if backup_list else None
-                }
-            }
-        }), 200
-        
-    except Exception as e:
-        return jsonify({
-            "success": False,
-            "message": f"Error obteniendo backups: {str(e)}"
-        }), 500
-
-@app.route('/admin/paints/backup/<backup_date>', methods=['DELETE'])
-@admin_required
-def delete_backup(backup_date):
-    """Delete a specific backup"""
-    try:
-        
-        # Convertir fecha
-        backup_datetime = datetime.fromisoformat(backup_date.replace('Z', '+00:00'))
-        
-        # Borrar backup específico
-        deleted = PaintBackup.query.filter_by(backup_date=backup_datetime).delete()
-        db.session.commit()
-        
-        return jsonify({
-            "success": True,
-            "message": f"Backup eliminado exitosamente. {deleted} registros borrados.",
-            "data": {
-                "deleted_count": deleted,
-                "backup_date": backup_date
-            }
-        }), 200
-        
-    except Exception as e:
-        db.session.rollback()
-        return jsonify({
-            "success": False,
-            "message": f"Error eliminando backup: {str(e)}"
-        }), 500
-
-# Migration endpoint to add missing columns
-@app.route('/admin/migrate', methods=['POST'])
-@admin_required  
-def migrate_database():
-    try:
-        # Add missing columns to paints table if they don't exist
-        with db.engine.connect() as conn:
-            # Check and add hex_color column
-            try:
-                conn.execute("ALTER TABLE paints ADD COLUMN hex_color VARCHAR(6) DEFAULT '000000'")
-                print("Added hex_color column")
-            except Exception as e:
-                print(f"hex_color column might already exist: {e}")
-                
-            # Check and add volume column
-            try:
-                conn.execute("ALTER TABLE paints ADD COLUMN volume INTEGER")
-                print("Added volume column")
-            except Exception as e:
-                print(f"volume column might already exist: {e}")
-                
-            # Check and add updated_at column
-            try:
-                conn.execute("ALTER TABLE paints ADD COLUMN updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP")
-                print("Added updated_at column")
-            except Exception as e:
-                print(f"updated_at column might already exist: {e}")
-                
-            conn.commit()
+                print(f"Usuario admin ya existe: {admin.username}, {admin.email}, role: {admin.role}")
+                print(f"Hash actual: {admin.password_hash}")
+                # Actualizar contraseña para depuración
+                admin.set_password('admin123')
+                print(f"Nuevo hash: {admin.password_hash}")
+                db.session.commit()
+                print("Contraseña de administrador actualizada para pruebas")
+        except Exception as e:
+            print(f"Error al inicializar la base de datos: {str(e)}")
+    
+    # Para Railway, siempre usar el puerto 5000 ya que es el que espera
+    port = 5000
+    if not os.environ.get('RAILWAY_ENVIRONMENT'):
+        # Solo en desarrollo local, usar la variable PORT
+        port = int(os.environ.get('PORT', 5000))
+    
+    debug_mode = os.environ.get('FLASK_ENV', '') != 'production'  
+    print(f"Iniciando servidor en puerto: {port}")
+    app.run(host='0.0.0.0', port=port, debug=debug_mode, use_reloader=False)
