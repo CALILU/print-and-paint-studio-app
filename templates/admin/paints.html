@@ -271,6 +271,78 @@
                 grid-template-columns: 1fr;
             }
         }
+        
+        /* ⚡ NUEVOS ESTILOS PARA ARTÍCULOS NUEVOS */
+        .new-paint-highlight {
+            border: 2px solid #ffc107 !important;
+            background: linear-gradient(135deg, #fff3cd 0%, #ffffff 50%, #fff3cd 100%) !important;
+            box-shadow: 0 0 20px rgba(255, 193, 7, 0.3) !important;
+            animation: pulse-new 2s ease-in-out infinite;
+        }
+        
+        .new-badge {
+            position: absolute;
+            top: -5px;
+            left: -5px;
+            background: linear-gradient(135deg, #ffc107, #ffb300);
+            color: #000;
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 0.65rem;
+            font-weight: bold;
+            z-index: 15;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+            animation: bounce-new 1s ease-in-out infinite;
+        }
+        
+        .mark-viewed-btn {
+            color: #ffc107 !important;
+            background-color: rgba(255, 193, 7, 0.1) !important;
+            border-radius: 50%;
+            padding: 4px !important;
+            margin-left: 4px;
+        }
+        
+        .mark-viewed-btn:hover {
+            background-color: rgba(255, 193, 7, 0.2) !important;
+            transform: scale(1.1);
+        }
+        
+        .creation-date {
+            position: absolute;
+            bottom: 5px;
+            right: 5px;
+            font-size: 0.6rem;
+            color: #6c757d;
+            background-color: rgba(255, 255, 255, 0.9);
+            padding: 2px 6px;
+            border-radius: 8px;
+            border: 1px solid #dee2e6;
+        }
+        
+        @keyframes pulse-new {
+            0% { box-shadow: 0 0 20px rgba(255, 193, 7, 0.3); }
+            50% { box-shadow: 0 0 30px rgba(255, 193, 7, 0.6); }
+            100% { box-shadow: 0 0 20px rgba(255, 193, 7, 0.3); }
+        }
+        
+        @keyframes bounce-new {
+            0%, 20%, 50%, 80%, 100% { transform: translateY(0); }
+            40% { transform: translateY(-3px); }
+            60% { transform: translateY(-2px); }
+        }
+        
+        /* Estilo para el contador con indicador de nuevos */
+        #paintCount {
+            font-weight: bold;
+        }
+        
+        /* Filtros de artículos nuevos */
+        #showOnlyNewFilter:checked + label,
+        #sortByRecentFilter:checked + label {
+            color: #ffc107;
+            font-weight: bold;
+        }
     </style>
 </head>
 <body>
@@ -417,7 +489,7 @@
                                     </div>
                                     
                                     <div class="row">
-                                        <div class="col-md-12 mb-3">
+                                        <div class="col-md-6 mb-3">
                                             <label class="form-label fw-bold">Filtrar por stock:</label>
                                             <div id="stockFilters" class="d-flex flex-wrap">
                                                 <div class="form-check form-check-inline">
@@ -432,6 +504,27 @@
                                                     <input class="form-check-input" type="checkbox" id="stockOut" value="out" checked>
                                                     <label class="form-check-label" for="stockOut">Sin stock</label>
                                                 </div>
+                                            </div>
+                                        </div>
+                                        
+                                        <div class="col-md-6 mb-3">
+                                            <label class="form-label fw-bold">⚡ Artículos nuevos:</label>
+                                            <div class="d-flex flex-wrap align-items-center">
+                                                <div class="form-check form-check-inline">
+                                                    <input class="form-check-input" type="checkbox" id="showOnlyNewFilter" onchange="toggleNewPaintsFilter()">
+                                                    <label class="form-check-label" for="showOnlyNewFilter">
+                                                        <i class="bi bi-clock me-1"></i> Solo nuevos (últimas 48h)
+                                                    </label>
+                                                </div>
+                                                <div class="form-check form-check-inline">
+                                                    <input class="form-check-input" type="checkbox" id="sortByRecentFilter" onchange="toggleSortByRecent()">
+                                                    <label class="form-check-label" for="sortByRecentFilter">
+                                                        <i class="bi bi-sort-down me-1"></i> Ordenar por fecha
+                                                    </label>
+                                                </div>
+                                                <button class="btn btn-sm btn-outline-info ms-2" onclick="markAllAsViewed()" title="Marcar todos como vistos">
+                                                    <i class="bi bi-eye-fill"></i>
+                                                </button>
                                             </div>
                                         </div>
                                     </div>
@@ -706,6 +799,12 @@
         let confirmDeleteModal;
         let viewPaintModal;
         
+        // Variables para manejo de artículos nuevos
+        let showOnlyNew = false;
+        let viewedPaints = JSON.parse(localStorage.getItem('viewedPaints') || '[]');
+        let sortByRecent = localStorage.getItem('sortByRecent') === 'true';
+        const NEW_PAINT_HOURS = 48; // Horas para considerar una pintura como "nueva"
+        
         document.addEventListener('DOMContentLoaded', () => {
             // Inicializar modales
             confirmDeleteModal = new bootstrap.Modal(document.getElementById('confirmDeleteModal'));
@@ -738,6 +837,12 @@
             
             // Inicializar filtros
             initializeFilters();
+            
+            // ⚡ NUEVO: Inicializar checkboxes de artículos nuevos
+            const sortByRecentCheckbox = document.getElementById('sortByRecentFilter');
+            if (sortByRecentCheckbox) {
+                sortByRecentCheckbox.checked = sortByRecent;
+            }
             
             // Cargar pinturas al inicio
             fetchPaints().then(() => {
@@ -1013,6 +1118,100 @@
             filterAndDisplayPaints();
         }
         
+        // Funciones para manejo de artículos nuevos
+        function isNewPaint(paint) {
+            if (!paint.created_at) return false;
+            
+            const createdDate = new Date(paint.created_at);
+            const now = new Date();
+            const hoursDiff = (now - createdDate) / (1000 * 60 * 60);
+            
+            return hoursDiff <= NEW_PAINT_HOURS;
+        }
+        
+        function isPaintViewed(paintId) {
+            return viewedPaints.includes(paintId);
+        }
+        
+        function markPaintAsViewed(paintId) {
+            if (!viewedPaints.includes(paintId)) {
+                viewedPaints.push(paintId);
+                localStorage.setItem('viewedPaints', JSON.stringify(viewedPaints));
+            }
+        }
+        
+        function markAllAsViewed() {
+            allPaints.forEach(paint => {
+                if (isNewPaint(paint)) {
+                    markPaintAsViewed(paint.id);
+                }
+            });
+            
+            // Actualizar la visualización
+            filterAndDisplayPaints();
+            
+            // Mostrar notificación
+            showNotification('✓ Todos los artículos marcados como vistos', 'success');
+        }
+        
+        function toggleNewPaintsFilter() {
+            showOnlyNew = document.getElementById('showOnlyNewFilter').checked;
+            filterAndDisplayPaints();
+        }
+        
+        function toggleSortByRecent() {
+            sortByRecent = document.getElementById('sortByRecentFilter').checked;
+            localStorage.setItem('sortByRecent', sortByRecent.toString());
+            filterAndDisplayPaints();
+        }
+        
+        function getNewPaintsCount() {
+            return allPaints.filter(paint => isNewPaint(paint) && !isPaintViewed(paint.id)).length;
+        }
+        
+        function showNotification(message, type = 'info') {
+            // Crear elemento de notificación
+            const notification = document.createElement('div');
+            notification.className = `alert alert-${type} alert-dismissible fade show position-fixed`;
+            notification.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 300px;';
+            notification.innerHTML = `
+                ${message}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            `;
+            
+            document.body.appendChild(notification);
+            
+            // Auto-eliminar después de 3 segundos
+            setTimeout(() => {
+                if (notification.parentNode) {
+                    notification.remove();
+                }
+            }, 3000);
+        }
+        
+        function markAsViewed(paintId) {
+            markPaintAsViewed(paintId);
+            
+            // Actualizar visualmente el elemento
+            const paintCard = document.querySelector(`[data-paint-id="${paintId}"]`);
+            if (paintCard) {
+                paintCard.classList.remove('new-paint-highlight');
+                
+                // Remover badge de nuevo
+                const newBadge = paintCard.querySelector('.new-badge');
+                if (newBadge) newBadge.remove();
+                
+                // Remover botón de marcar como visto
+                const markViewedBtn = paintCard.querySelector('.mark-viewed-btn');
+                if (markViewedBtn) markViewedBtn.remove();
+            }
+            
+            // Actualizar contador
+            filterAndDisplayPaints();
+            
+            showNotification('✓ Artículo marcado como visto', 'success');
+        }
+        
         // Función para filtrar y mostrar las pinturas
         function filterAndDisplayPaints() {
             let filteredPaints = [...allPaints];
@@ -1060,8 +1259,38 @@
                 });
             }
             
-            // Actualizar contador
-            document.getElementById('paintCount').textContent = filteredPaints.length;
+            // ⚡ NUEVO: Filtrar solo artículos nuevos
+            if (showOnlyNew) {
+                filteredPaints = filteredPaints.filter(paint => {
+                    return isNewPaint(paint) && !isPaintViewed(paint.id);
+                });
+            }
+            
+            // ⚡ NUEVO: Ordenar por fecha si está habilitado
+            if (sortByRecent) {
+                filteredPaints.sort((a, b) => {
+                    // Primero: artículos nuevos no vistos
+                    const aIsNewUnviewed = isNewPaint(a) && !isPaintViewed(a.id);
+                    const bIsNewUnviewed = isNewPaint(b) && !isPaintViewed(b.id);
+                    
+                    if (aIsNewUnviewed !== bIsNewUnviewed) {
+                        return bIsNewUnviewed ? 1 : -1;
+                    }
+                    
+                    // Segundo: por fecha de creación (más recientes primero)
+                    const dateA = new Date(a.created_at || 0);
+                    const dateB = new Date(b.created_at || 0);
+                    return dateB - dateA;
+                });
+            }
+            
+            // Actualizar contador con información de artículos nuevos
+            const newCount = getNewPaintsCount();
+            const countText = newCount > 0 ? 
+                `${filteredPaints.length} (${newCount} nuevos)` : 
+                filteredPaints.length.toString();
+            document.getElementById('paintCount').innerHTML = countText + 
+                (newCount > 0 ? ' <i class="bi bi-circle-fill text-success" style="font-size: 0.5rem;"></i>' : '');
             
             // Mostrar las pinturas filtradas
             displayPaints(filteredPaints);
@@ -1100,6 +1329,16 @@
                 paintCard.className = 'paint-container';
                 paintCard.setAttribute('data-paint-id', paint.id);
                 
+                // ⚡ NUEVO: Detectar si es un artículo nuevo
+                const isNew = isNewPaint(paint);
+                const isViewed = isPaintViewed(paint.id);
+                const isNewUnviewed = isNew && !isViewed;
+                
+                // Añadir clases CSS para artículos nuevos
+                if (isNewUnviewed) {
+                    paintCard.classList.add('new-paint-highlight');
+                }
+                
                 // Determinar clase de stock y texto más detallado
                 let stockClass, stockText;
                 if (paint.stock > 10) {
@@ -1115,12 +1354,22 @@
                 
                 const imageUrl = paint.image_url || paint.url_de_la_imagen || 'https://via.placeholder.com/150?text=No+Image';
                 
+                // ⚡ NUEVO: Badge para artículos nuevos
+                const newBadge = isNewUnviewed ? 
+                    `<div class="new-badge">⚡ NUEVO</div>` : '';
+                
+                // ⚡ NUEVO: Botón para marcar como visto
+                const markViewedBtn = isNewUnviewed ? 
+                    `<i class="bi bi-eye-slash action-icon mark-viewed-btn" onclick="markAsViewed(${paint.id})" title="Marcar como visto"></i>` : '';
+                
                 paintCard.innerHTML = `
                     <div class="stock-badge ${stockClass}">${stockText}</div>
+                    ${newBadge}
                     <div class="paint-actions">
                         <i class="bi bi-eye action-icon" onclick="viewPaint(${paint.id})" title="Ver detalles"></i>
                         <i class="bi bi-pencil action-icon" onclick="editPaint(${paint.id})" title="Editar"></i>
                         <i class="bi bi-trash action-icon" onclick="confirmDelete(${paint.id})" title="Eliminar"></i>
+                        ${markViewedBtn}
                     </div>
                     <img src="${imageUrl}" alt="${paint.name}" class="paint-image">
                     <div class="paint-color-preview" style="background-color: ${paint.color_preview || '#cccccc'}"></div>
@@ -1131,6 +1380,7 @@
                     <div class="paint-family">${paint.color_family ? `<span class="color-family-tag">${paint.color_family}</span>` : ''}</div>
                     <div class="stock-info mt-2"><i class="bi bi-box-seam me-1"></i>Stock: <strong>${paint.stock} unidades</strong></div>
                     ${paint.price ? `<div class="price-tag">${paint.price}€</div>` : ''}
+                    ${isNew ? `<div class="creation-date"><i class="bi bi-calendar-plus me-1"></i>${new Date(paint.created_at).toLocaleDateString()}</div>` : ''}
                 `;
                 
                 container.appendChild(paintCard);
@@ -1252,6 +1502,10 @@
             });
             filteredColorFamilies = Array.from(document.querySelectorAll('#colorFamilyFilters input[type="checkbox"]')).map(cb => cb.value);
             
+            // ⚡ NUEVO: Limpiar filtros de artículos nuevos
+            showOnlyNew = false;
+            document.getElementById('showOnlyNewFilter').checked = false;
+            
             // Actualizar la visualización
             filterAndDisplayPaints();
         }
@@ -1274,6 +1528,9 @@
             try {
                 // Quitar resaltado de modificación al ver detalles
                 clearModifiedHighlight(id);
+                
+                // ⚡ NUEVO: Marcar como visto automáticamente
+                markPaintAsViewed(id);
                 
                 const response = await fetch(`/admin/paints/${id}`);
                 
