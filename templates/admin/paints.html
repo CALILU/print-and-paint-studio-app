@@ -450,6 +450,11 @@
                             <i class="bi bi-plus-circle me-1"></i> Añadir Pintura
                         </button>
                     </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="backup-restore-tab" data-bs-toggle="pill" data-bs-target="#backup-restore" type="button" role="tab" aria-controls="backup-restore" aria-selected="false">
+                            <i class="bi bi-shield-check me-1"></i> Backup/Restore
+                        </button>
+                    </li>
                 </ul>
                 <!-- Tab Content -->
                 <div class="tab-content" id="adminPaintsTabsContent">
@@ -2611,9 +2616,4 @@
 
         // Initialize backup tab when selected
         document.getElementById('backup-restore-tab').addEventListener('click', function() {
-            updateSystemStatus();
-        });
-    </script>
-
-</body>
-</html>
+       
