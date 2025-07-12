@@ -1894,27 +1894,31 @@ def create_backup():
 @app.route('/admin/paints/backups', methods=['GET'])
 @admin_required
 def list_backups():
-    """List all paint backups - Step 2: Basic backup listing"""
+    """List all paint backups - Step 2: Improved backup listing with grouping"""
     try:
-        backups = PaintBackup.query.all()
+        # Get unique backup sessions (grouped by backup_date and reason)
+        backup_sessions = db.session.query(
+            PaintBackup.backup_date,
+            PaintBackup.backup_reason,
+            db.func.count(PaintBackup.id).label('paint_count')
+        ).group_by(
+            PaintBackup.backup_date,
+            PaintBackup.backup_reason
+        ).order_by(PaintBackup.backup_date.desc()).all()
         
-        # Group backups by backup date for better organization
         backup_list = []
-        for backup in backups:
+        for session in backup_sessions:
             backup_list.append({
-                'id': backup.id,
-                'original_id': backup.original_id,
-                'name': backup.name,
-                'brand': backup.brand,
-                'color_code': backup.color_code,
-                'backup_date': backup.backup_date.isoformat() if backup.backup_date else None,
-                'backup_reason': backup.backup_reason
+                'backup_date': session.backup_date.isoformat() if session.backup_date else None,
+                'backup_reason': session.backup_reason,
+                'paint_count': session.paint_count,
+                'formatted_date': session.backup_date.strftime('%d/%m/%Y, %H:%M:%S') if session.backup_date else 'Unknown'
             })
         
         return jsonify({
             "success": True,
             "data": backup_list,
-            "message": f"Se encontraron {len(backup_list)} entradas de backup"
+            "message": f"Se encontraron {len(backup_list)} sesiones de backup"
         }), 200
         
     except Exception as e:

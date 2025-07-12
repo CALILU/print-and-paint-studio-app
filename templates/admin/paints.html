@@ -2691,11 +2691,14 @@
                 const backupsResult = await backupsResponse.json();
                 
                 if (backupsResult.success) {
-                    const backups = backupsResult.data;
-                    document.getElementById('totalBackups').textContent = backups.length;
+                    const backupSessions = backupsResult.data;
                     
-                    if (backups.length > 0) {
-                        const lastBackup = new Date(backups[0].backup_date);
+                    // Count total backup entries across all sessions
+                    const totalBackupEntries = backupSessions.reduce((total, session) => total + session.paint_count, 0);
+                    document.getElementById('totalBackups').textContent = totalBackupEntries;
+                    
+                    if (backupSessions.length > 0) {
+                        const lastBackup = new Date(backupSessions[0].backup_date);
                         document.getElementById('lastBackupDate').textContent = lastBackup.toLocaleDateString();
                         
                         // Enable clear button if there's a recent backup (within 24 hours)
