@@ -1,8 +1,8 @@
 from flask import Flask, render_template, request, jsonify, redirect, url_for, session, flash
-from models import db, User, Video, Favorite, Technique, Category, Paint
+from models import db, User, Video, Favorite, Technique, Category, Paint, PaintBackup
 from functools import wraps
 import os
-from datetime import datetime
+from datetime import datetime, timedelta
 import random
 from duckduckgo_search import DDGS
 import requests
@@ -1823,7 +1823,8 @@ def backup_paints():
             }), 400
         
         # Crear respaldo con información adicional
-        backup_reason = request.json.get('reason', 'Manual backup from admin interface')
+        data = request.get_json() if request.is_json else {}
+        backup_reason = data.get('reason', 'Manual backup from admin interface')
         backup_count = 0
         
         for paint in paints:
