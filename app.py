@@ -1410,11 +1410,15 @@ def create_paint_android():
         
         data = request.get_json()
         
-        # Validar campos requeridos
+        # Log básico para debugging
+        print(f"📥 POST /api/paints - Received data from Android")
+        
+        # Validar campos requeridos (validación simple como antes)
         required_fields = ['name', 'brand', 'color_code']
         missing_fields = [field for field in required_fields if not data.get(field)]
         
         if missing_fields:
+            print(f"❌ Missing fields: {missing_fields}")
             return jsonify({
                 "success": False,
                 "data": None,
@@ -1539,21 +1543,13 @@ def update_paint_android(id):
         if 'description' in data:
             paint.description = data['description']
         if 'stock' in data:
-            # Verificar si es un incremento o valor absoluto
-            stock_operation = data.get('stock_operation', 'add')  # 'add' o 'set'
-            stock_value = data['stock']
-            
-            if stock_operation == 'set':
-                # Establecer valor absoluto (para pinturas nuevas)
-                paint.stock = stock_value
-                print(f"Stock set to absolute value: {paint.stock}")
+            # Sumar el stock de Android al stock existente en la web
+            additional_stock = data['stock']
+            if paint.stock is None:
+                paint.stock = additional_stock
             else:
-                # Sumar el stock de Android al stock existente en la web (default)
-                if paint.stock is None:
-                    paint.stock = stock_value
-                else:
-                    paint.stock += stock_value
-                print(f"Stock updated: added {stock_value}, new total: {paint.stock}")
+                paint.stock += additional_stock
+            print(f"Stock updated: added {additional_stock}, new total: {paint.stock}")
         if 'price' in data:
             paint.price = data['price']
         if 'color_preview' in data:
@@ -1804,6 +1800,50 @@ def health_check_android():
         "message": "API is healthy",
         "timestamp": datetime.utcnow().isoformat()
     }), 200
+
+@app.route('/api/test/android', methods=['POST'])
+def test_android_connection():
+    """Endpoint de diagnóstico para probar la conectividad desde Android"""
+    try:
+        # Verificar headers
+        api_key = request.headers.get('X-API-Key')
+        content_type = request.headers.get('Content-Type')
+        
+        print(f"🔍 Android test request:")
+        print(f"   - API Key: '{api_key}'")
+        print(f"   - Content-Type: '{content_type}'")
+        print(f"   - Valid API Key: {api_key == API_KEY}")
+        
+        # Verificar autenticación
+        if api_key != API_KEY:
+            return jsonify({
+                "success": False,
+                "message": f"Invalid API key. Expected: {API_KEY[:10]}..., Got: {api_key[:10] if api_key else 'None'}..."
+            }), 401
+        
+        # Verificar JSON
+        data = request.get_json()
+        if not data:
+            return jsonify({
+                "success": False,
+                "message": "No JSON data received"
+            }), 400
+        
+        return jsonify({
+            "success": True,
+            "message": "Android connection test successful",
+            "data": {
+                "received_fields": list(data.keys()),
+                "api_key_valid": True,
+                "content_type": content_type
+            }
+        })
+        
+    except Exception as e:
+        return jsonify({
+            "success": False,
+            "message": f"Test failed: {str(e)}"
+        }), 500
 
 # Endpoint de test para verificar POST
 @app.route('/api/test-paint', methods=['POST'])
