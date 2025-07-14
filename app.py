@@ -1,5 +1,5 @@
 from flask import Flask, render_template, request, jsonify, redirect, url_for, session, flash
-from models import db, User, Video, Favorite, Technique, Category, Paint, PaintBackup
+from models import db, User, Video, Favorite, Technique, Category, Paint, PaintBackup, PaintImage
 from functools import wraps
 import os
 from datetime import datetime, timedelta
@@ -1862,6 +1862,226 @@ def test_paint_creation():
             "success": False,
             "data": None,
             "message": f"Test error: {str(e)}"
+        }), 500
+
+# ==================== PAINT IMAGES SEARCH - NUEVO ENDPOINT ====================
+
+@app.route('/api/paint-images/search', methods=['GET'])
+def search_paint_images():
+    """
+    Buscar imágenes de pinturas por marca y código
+    
+    Parámetros de consulta:
+    - marca: Marca de la pintura (VALLEJO, AK, GAMES WORKSHOP, etc.)
+    - codigo: Código de la pintura
+    - nombre: Búsqueda por nombre (opcional)
+    - limit: Límite de resultados (default: 50)
+    
+    Respuesta:
+    {
+        "success": true,
+        "data": [
+            {
+                "id": 1,
+                "marca": "VALLEJO",
+                "codigo": "70951",
+                "nombre": "Blanco",
+                "imagen_url": "https://...",
+                "categoria": "Model Color"
+            }
+        ],
+        "total": 1,
+        "message": "Búsqueda completada exitosamente"
+    }
+    """
+    try:
+        # Obtener parámetros de consulta
+        marca = request.args.get('marca', '').strip().upper()
+        codigo = request.args.get('codigo', '').strip()
+        nombre = request.args.get('nombre', '').strip()
+        limit = min(int(request.args.get('limit', 50)), 200)  # Máximo 200 resultados
+        
+        print(f"🔍 Paint image search - marca: '{marca}', codigo: '{codigo}', nombre: '{nombre}'")
+        
+        # Construir consulta base
+        query = PaintImage.query
+        
+        # Filtrar por marca si se especifica
+        if marca:
+            query = query.filter(PaintImage.marca == marca)
+        
+        # Filtrar por código si se especifica
+        if codigo:
+            query = query.filter(PaintImage.codigo.ilike(f'%{codigo}%'))
+        
+        # Filtrar por nombre si se especifica
+        if nombre:
+            query = query.filter(PaintImage.nombre.ilike(f'%{nombre}%'))
+        
+        # Aplicar límite y ordenar
+        results = query.order_by(PaintImage.marca, PaintImage.codigo).limit(limit).all()
+        
+        # Convertir a diccionario
+        paint_images = [paint_image.to_dict() for paint_image in results]
+        
+        print(f"📊 Found {len(paint_images)} paint images")
+        
+        return jsonify({
+            "success": True,
+            "data": paint_images,
+            "total": len(paint_images),
+            "message": f"Búsqueda completada exitosamente - {len(paint_images)} resultados"
+        })
+        
+    except Exception as e:
+        print(f"❌ Error searching paint images: {str(e)}")
+        return jsonify({
+            "success": False,
+            "data": [],
+            "total": 0,
+            "message": f"Error en la búsqueda: {str(e)}"
+        }), 500
+
+@app.route('/api/paint-images/<marca>/<codigo>', methods=['GET'])
+def get_paint_image_by_marca_codigo(marca, codigo):
+    """
+    Obtener imagen específica de pintura por marca y código
+    
+    Parámetros:
+    - marca: Marca de la pintura
+    - codigo: Código de la pintura
+    
+    Respuesta:
+    {
+        "success": true,
+        "data": {
+            "id": 1,
+            "marca": "VALLEJO",
+            "codigo": "70951",
+            "nombre": "Blanco",
+            "imagen_url": "https://...",
+            "categoria": "Model Color"
+        },
+        "message": "Imagen encontrada exitosamente"
+    }
+    """
+    try:
+        marca = marca.strip().upper()
+        codigo = codigo.strip()
+        
+        print(f"🔍 Searching specific paint image - marca: '{marca}', codigo: '{codigo}'")
+        
+        # Buscar la imagen específica
+        paint_image = PaintImage.query.filter_by(marca=marca, codigo=codigo).first()
+        
+        if not paint_image:
+            return jsonify({
+                "success": False,
+                "data": None,
+                "message": f"No se encontró imagen para {marca} {codigo}"
+            }), 404
+        
+        print(f"✅ Found paint image: {paint_image.nombre}")
+        
+        return jsonify({
+            "success": True,
+            "data": paint_image.to_dict(),
+            "message": "Imagen encontrada exitosamente"
+        })
+        
+    except Exception as e:
+        print(f"❌ Error getting paint image: {str(e)}")
+        return jsonify({
+            "success": False,
+            "data": None,
+            "message": f"Error obteniendo imagen: {str(e)}"
+        }), 500
+
+@app.route('/api/paint-images/brands', methods=['GET'])
+def get_paint_brands():
+    """
+    Obtener lista de marcas disponibles
+    
+    Respuesta:
+    {
+        "success": true,
+        "data": ["VALLEJO", "AK", "GAMES WORKSHOP", "SCALE", "TAMIYA"],
+        "message": "Marcas obtenidas exitosamente"
+    }
+    """
+    try:
+        # Obtener marcas únicas
+        brands = db.session.query(PaintImage.marca).distinct().order_by(PaintImage.marca).all()
+        brand_list = [brand[0] for brand in brands]
+        
+        print(f"📊 Found {len(brand_list)} paint brands")
+        
+        return jsonify({
+            "success": True,
+            "data": brand_list,
+            "message": f"Marcas obtenidas exitosamente - {len(brand_list)} marcas"
+        })
+        
+    except Exception as e:
+        print(f"❌ Error getting paint brands: {str(e)}")
+        return jsonify({
+            "success": False,
+            "data": [],
+            "message": f"Error obteniendo marcas: {str(e)}"
+        }), 500
+
+@app.route('/api/paint-images/stats', methods=['GET'])
+def get_paint_images_stats():
+    """
+    Obtener estadísticas de la base de datos de imágenes
+    
+    Respuesta:
+    {
+        "success": true,
+        "data": {
+            "total_images": 3277,
+            "brands": {
+                "VALLEJO": 2500,
+                "AK": 400,
+                "GAMES WORKSHOP": 300,
+                "SCALE": 50,
+                "TAMIYA": 27
+            }
+        },
+        "message": "Estadísticas obtenidas exitosamente"
+    }
+    """
+    try:
+        # Obtener total de imágenes
+        total_images = PaintImage.query.count()
+        
+        # Obtener conteo por marca
+        brands_count = db.session.query(
+            PaintImage.marca,
+            db.func.count(PaintImage.id).label('count')
+        ).group_by(PaintImage.marca).order_by(db.func.count(PaintImage.id).desc()).all()
+        
+        brands_dict = {brand: count for brand, count in brands_count}
+        
+        stats = {
+            "total_images": total_images,
+            "brands": brands_dict
+        }
+        
+        print(f"📊 Paint images stats - Total: {total_images}, Brands: {len(brands_dict)}")
+        
+        return jsonify({
+            "success": True,
+            "data": stats,
+            "message": "Estadísticas obtenidas exitosamente"
+        })
+        
+    except Exception as e:
+        print(f"❌ Error getting paint images stats: {str(e)}")
+        return jsonify({
+            "success": False,
+            "data": None,
+            "message": f"Error obteniendo estadísticas: {str(e)}"
         }), 500
 
 # ==================== BACKUP SYSTEM - STEP 1 ====================
