@@ -187,3 +187,34 @@ class PaintBackup(db.Model):
     
     def __repr__(self):
         return f'<PaintBackup {self.name} (Original ID: {self.original_id})>'
+
+class PaintImage(db.Model):
+    __tablename__ = 'paint_images'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    marca = db.Column(db.String(50), nullable=False)
+    codigo = db.Column(db.String(50), nullable=False)
+    nombre = db.Column(db.String(255), nullable=False)
+    imagen_url = db.Column(db.Text, nullable=False)
+    categoria = db.Column(db.String(100))
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    # Constraint unique para evitar duplicados
+    __table_args__ = (db.UniqueConstraint('marca', 'codigo', name='unique_marca_codigo'),)
+    
+    def to_dict(self):
+        """Convert PaintImage object to dictionary for JSON serialization"""
+        return {
+            'id': self.id,
+            'marca': self.marca,
+            'codigo': self.codigo,
+            'nombre': self.nombre,
+            'imagen_url': self.imagen_url,
+            'categoria': self.categoria,
+            'created_at': self.created_at.isoformat() if self.created_at else None,
+            'updated_at': self.updated_at.isoformat() if self.updated_at else None
+        }
+    
+    def __repr__(self):
+        return f'<PaintImage {self.marca} - {self.codigo} - {self.nombre}>'
