@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="referrer" content="no-referrer">
     <title>Print and Paint Studio - Gestión de Pinturas</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css" rel="stylesheet">
@@ -1646,7 +1647,7 @@
                         <i class="bi bi-trash action-icon" onclick="confirmDelete(${paint.id})" title="Eliminar"></i>
                         ${markViewedBtn}
                     </div>
-                    <img src="${imageUrl}" alt="${paint.name}" class="paint-image">
+                    <img src="${imageUrl}" alt="${paint.name}" class="paint-image" referrerpolicy="no-referrer" onerror="handleImageError(this)">
                     <div class="paint-color-preview" style="background-color: ${paint.color_preview || '#cccccc'}"></div>
                     <div class="paint-title">${paint.name}</div>
                     <div class="paint-code">${paint.color_code || ''}</div>
@@ -1702,7 +1703,7 @@
                 row.setAttribute('data-paint-id', paint.id);
                 row.innerHTML = `
                     <td>
-                        <img src="${imageUrl}" alt="${paint.name}" style="width: 50px; height: 50px; object-fit: contain;">
+                        <img src="${imageUrl}" alt="${paint.name}" style="width: 50px; height: 50px; object-fit: contain;" referrerpolicy="no-referrer" onerror="handleImageError(this)">
                         <div style="width: 25px; height: 25px; background-color: ${paint.color_preview || '#cccccc'}; display: inline-block; border-radius: 50%; border: 1px solid #ddd; vertical-align: middle;"></div>
                     </td>
                     <td>
@@ -2730,6 +2731,140 @@
         document.getElementById('backup-restore-tab').addEventListener('click', function() {
             updateSystemStatus();
         });
+
+        // ⚡ FUNCIONES PARA MANEJAR HOTLINKING DE IMÁGENES
+        
+        /**
+         * Maneja errores de carga de imagen aplicando soluciones anti-hotlinking
+         */
+        function handleImageError(img) {
+            console.log('Error loading image:', img.src);
+            
+            // Si ya hemos intentado con iframe, usar placeholder
+            if (img.dataset.attempted) {
+                img.src = 'https://via.placeholder.com/150x150/cccccc/666666?text=No+Image';
+                return;
+            }
+            
+            // Marcar como intentado
+            img.dataset.attempted = 'true';
+            
+            // Solución 1: Crear iframe sandbox para cargar la imagen
+            const originalSrc = img.src;
+            const container = img.parentElement;
+            
+            // Crear iframe con sandbox
+            const iframe = document.createElement('iframe');
+            iframe.style.width = img.offsetWidth + 'px' || '150px';
+            iframe.style.height = img.offsetHeight + 'px' || '150px';
+            iframe.style.border = 'none';
+            iframe.style.display = 'block';
+            iframe.sandbox = 'allow-same-origin';
+            
+            // Contenido del iframe sin referrer
+            const iframeContent = `
+                <!DOCTYPE html>
+                <html>
+                <head>
+                    <meta name="referrer" content="no-referrer">
+                    <style>
+                        body { margin: 0; padding: 0; }
+                        img { 
+                            width: 100%; 
+                            height: 100%; 
+                            object-fit: contain;
+                            display: block;
+                        }
+                    </style>
+                </head>
+                <body>
+                    <img src="${originalSrc}" alt="${img.alt}" onerror="this.src='https://via.placeholder.com/150x150/cccccc/666666?text=No+Image';">
+                </body>
+                </html>
+            `;
+            
+            iframe.src = 'data:text/html;charset=utf-8,' + encodeURIComponent(iframeContent);
+            
+            // Reemplazar imagen con iframe
+            container.replaceChild(iframe, img);
+        }
+        
+        /**
+         * Carga imagen usando JavaScript sin referrer
+         */
+        function loadImageWithoutReferrer(originalSrc, container, alt = '') {
+            const img = new Image();
+            img.crossOrigin = "anonymous";
+            img.referrerPolicy = "no-referrer";
+            
+            img.onload = function() {
+                // Imagen cargada exitosamente
+                const displayImg = document.createElement('img');
+                displayImg.src = originalSrc;
+                displayImg.alt = alt;
+                displayImg.className = 'paint-image';
+                displayImg.referrerPolicy = 'no-referrer';
+                container.innerHTML = '';
+                container.appendChild(displayImg);
+            };
+            
+            img.onerror = function() {
+                // Si falla, usar placeholder
+                const displayImg = document.createElement('img');
+                displayImg.src = 'https://via.placeholder.com/150x150/cccccc/666666?text=No+Image';
+                displayImg.alt = alt;
+                displayImg.className = 'paint-image';
+                container.innerHTML = '';
+                container.appendChild(displayImg);
+            };
+            
+            img.src = originalSrc;
+        }
+        
+        /**
+         * Detecta si una URL es problemática para hotlinking
+         */
+        function isProblematicImageUrl(url) {
+            const problematicDomains = [
+                'scale75.com',
+                'goblintrader.com',
+                'prestashop.com',
+                'shopify.com'
+            ];
+            
+            return problematicDomains.some(domain => url.includes(domain));
+        }
+        
+        /**
+         * Mejora la carga de imágenes aplicando soluciones preventivas
+         */
+        function enhanceImageLoading() {
+            const images = document.querySelectorAll('img[src*="scale75.com"], img[src*="goblintrader.com"]');
+            
+            images.forEach(img => {
+                if (!img.hasAttribute('referrerpolicy')) {
+                    img.setAttribute('referrerpolicy', 'no-referrer');
+                }
+                
+                if (!img.hasAttribute('onerror')) {
+                    img.setAttribute('onerror', 'handleImageError(this)');
+                }
+            });
+        }
+        
+        // Aplicar mejoras cada vez que se actualice la lista de pinturas
+        const originalDisplayPaints = displayPaints;
+        displayPaints = function(paints) {
+            originalDisplayPaints(paints);
+            // Aplicar mejoras después de renderizar
+            setTimeout(enhanceImageLoading, 100);
+        };
+        
+        // Aplicar mejoras al cargar la página
+        document.addEventListener('DOMContentLoaded', function() {
+            enhanceImageLoading();
+        });
+        
     </script>
 
 </body>
