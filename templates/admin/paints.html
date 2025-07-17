@@ -1629,7 +1629,7 @@
                 }
                 
                 const originalImageUrl = paint.image_url || paint.url_de_la_imagen || 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTUwIiBoZWlnaHQ9IjE1MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTUwIiBoZWlnaHQ9IjE1MCIgZmlsbD0iI2NjY2NjYyIvPjx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBmb250LXNpemU9IjE0IiBmaWxsPSIjNjY2NjY2IiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBkeT0iLjNlbSI+Tm8gSW1hZ2U8L3RleHQ+PC9zdmc+'; 
-                const imageUrl = getProxyUrl(originalImageUrl);
+                const imageUrl = tryDirectFirst(originalImageUrl);
                 
                 // ⚡ NUEVO: Badge para artículos nuevos
                 const newBadge = isNewUnviewed ? 
@@ -1699,7 +1699,7 @@
                 }
                 
                 const originalImageUrl = paint.image_url || paint.url_de_la_imagen || 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTUwIiBoZWlnaHQ9IjE1MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTUwIiBoZWlnaHQ9IjE1MCIgZmlsbD0iI2NjY2NjYyIvPjx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBmb250LXNpemU9IjE0IiBmaWxsPSIjNjY2NjY2IiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBkeT0iLjNlbSI+Tm8gSW1hZ2U8L3RleHQ+PC9zdmc+'; 
-                const imageUrl = getProxyUrl(originalImageUrl);
+                const imageUrl = tryDirectFirst(originalImageUrl);
                 
                 const row = document.createElement('tr');
                 row.setAttribute('data-paint-id', paint.id);
@@ -2815,6 +2815,13 @@
         }
         
         /**
+         * Intenta cargar imagen directamente primero, luego proxy
+         */
+        function tryDirectFirst(originalUrl) {
+            return originalUrl; // Intentar directo primero
+        }
+        
+        /**
          * Mejora la carga de imágenes aplicando soluciones preventivas
          */
         function enhanceImageLoading() {
@@ -2849,10 +2856,25 @@
                 const testImg = new Image();
                 testImg.onload = () => resolve(true);
                 testImg.onerror = () => resolve(false);
+                testImg.src = url; // Probar URL directa primero
+                
+                // Timeout después de 8 segundos
+                setTimeout(() => resolve(false), 8000);
+            });
+        }
+        
+        /**
+         * Verifica imagen con proxy como fallback
+         */
+        function verifyImageWithProxy(url) {
+            return new Promise((resolve) => {
+                const testImg = new Image();
+                testImg.onload = () => resolve(true);
+                testImg.onerror = () => resolve(false);
                 testImg.src = getProxyUrl(url);
                 
-                // Timeout después de 5 segundos
-                setTimeout(() => resolve(false), 5000);
+                // Timeout después de 10 segundos
+                setTimeout(() => resolve(false), 10000);
             });
         }
         
@@ -2867,13 +2889,25 @@
                 img.dataset.preloaded = 'true';
                 
                 const originalSrc = img.src;
-                const isAvailable = await verifyScale75Image(originalSrc);
                 
-                if (!isAvailable) {
-                    console.log('Preload failed for:', originalSrc);
-                    // La imagen fallará, pero ya tenemos el manejo de error configurado
+                // Primero intentar URL directa
+                const isDirectAvailable = await verifyScale75Image(originalSrc);
+                
+                if (isDirectAvailable) {
+                    console.log('Direct URL works for:', originalSrc);
+                    return;
+                }
+                
+                // Si falla directo, intentar con proxy
+                const isProxyAvailable = await verifyImageWithProxy(originalSrc);
+                
+                if (isProxyAvailable) {
+                    console.log('Proxy works for:', originalSrc);
+                    // Cambiar la imagen a usar proxy
+                    img.src = getProxyUrl(originalSrc);
                 } else {
-                    console.log('Preload successful for:', originalSrc);
+                    console.log('Both direct and proxy failed for:', originalSrc);
+                    // La imagen fallará, pero ya tenemos el manejo de error configurado
                 }
             });
         }
@@ -2893,7 +2927,37 @@
         document.addEventListener('DOMContentLoaded', function() {
             enhanceImageLoading();
             setTimeout(preloadProblematicImages, 500);
+            
+            // Análisis estadístico después de 10 segundos
+            setTimeout(analyzeImageLoadingStats, 10000);
         });
+        
+        /**
+         * Analiza estadísticas de carga de imágenes
+         */
+        function analyzeImageLoadingStats() {
+            const allImages = document.querySelectorAll('img');
+            const scale75Images = document.querySelectorAll('img[src*="scale75.com"]');
+            const proxyImages = document.querySelectorAll('img[src*="/proxy/image"]');
+            const placeholderImages = document.querySelectorAll('img[src*="data:image/svg+xml"]');
+            
+            console.log('📊 IMAGE LOADING STATISTICS:');
+            console.log(`Total images: ${allImages.length}`);
+            console.log(`Scale75 direct: ${scale75Images.length}`);
+            console.log(`Using proxy: ${proxyImages.length}`);
+            console.log(`Using placeholder: ${placeholderImages.length}`);
+            
+            // Analizar imágenes que fallaron
+            let failedImages = 0;
+            allImages.forEach(img => {
+                if (img.dataset.attempts && parseInt(img.dataset.attempts) > 0) {
+                    failedImages++;
+                }
+            });
+            
+            console.log(`Images that failed initially: ${failedImages}`);
+            console.log(`Success rate: ${((allImages.length - failedImages) / allImages.length * 100).toFixed(1)}%`);
+        }
         
     </script>
 

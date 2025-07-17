@@ -116,9 +116,38 @@ def proxy_image():
     import random
     selected_ua = random.choice(user_agents)
     
-    # Intentar múltiples estrategias
+    # Intentar múltiples estrategias con diferentes enfoques
     strategies = [
-        # Estrategia 1: Headers básicos de navegador
+        # Estrategia 1: Simular navegación directa a la imagen
+        {
+            'User-Agent': selected_ua,
+            'Accept': 'image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8',
+            'Accept-Language': 'en-US,en;q=0.9',
+            'Accept-Encoding': 'gzip, deflate, br',
+            'Referer': 'https://scale75.com/',
+            'Origin': 'https://scale75.com',
+            'Sec-Fetch-Dest': 'image',
+            'Sec-Fetch-Mode': 'no-cors',
+            'Sec-Fetch-Site': 'same-origin',
+            'Connection': 'keep-alive',
+            'Upgrade-Insecure-Requests': '1',
+        },
+        # Estrategia 2: Simular visita desde buscador
+        {
+            'User-Agent': selected_ua,
+            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8',
+            'Accept-Language': 'en-US,en;q=0.9',
+            'Accept-Encoding': 'gzip, deflate, br',
+            'Referer': 'https://www.google.com/',
+            'Cache-Control': 'no-cache',
+            'Pragma': 'no-cache',
+            'Sec-Fetch-Dest': 'document',
+            'Sec-Fetch-Mode': 'navigate',
+            'Sec-Fetch-Site': 'cross-site',
+            'Sec-Fetch-User': '?1',
+            'Upgrade-Insecure-Requests': '1',
+        },
+        # Estrategia 3: Headers básicos de navegador
         {
             'User-Agent': selected_ua,
             'Accept': 'image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8',
@@ -128,23 +157,14 @@ def proxy_image():
             'Connection': 'keep-alive',
             'Upgrade-Insecure-Requests': '1',
         },
-        # Estrategia 2: Simular visita directa
+        # Estrategia 4: Headers mínimos
         {
             'User-Agent': selected_ua,
-            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8',
-            'Accept-Language': 'en-US,en;q=0.9',
-            'Accept-Encoding': 'gzip, deflate, br',
-            'Cache-Control': 'no-cache',
-            'Pragma': 'no-cache',
-            'Sec-Fetch-Dest': 'document',
-            'Sec-Fetch-Mode': 'navigate',
-            'Sec-Fetch-Site': 'none',
-            'Sec-Fetch-User': '?1',
-            'Upgrade-Insecure-Requests': '1',
+            'Accept': '*/*',
         },
-        # Estrategia 3: Headers mínimos
+        # Estrategia 5: Curl-like headers
         {
-            'User-Agent': selected_ua,
+            'User-Agent': 'curl/7.68.0',
             'Accept': '*/*',
         }
     ]
@@ -153,14 +173,31 @@ def proxy_image():
         try:
             print(f"Trying strategy {i+1} for {url}")
             
+            # Delay entre intentos para evitar rate limiting
+            if i > 0:
+                time.sleep(1)
+            
             # Configurar sesión con timeout extendido
             session = requests.Session()
             session.headers.update(headers)
             
+            # Configurar adaptador con reintentos
+            from requests.adapters import HTTPAdapter
+            from urllib3.util.retry import Retry
+            
+            retry_strategy = Retry(
+                total=3,
+                backoff_factor=1,
+                status_forcelist=[429, 500, 502, 503, 504],
+            )
+            adapter = HTTPAdapter(max_retries=retry_strategy)
+            session.mount("http://", adapter)
+            session.mount("https://", adapter)
+            
             # Hacer la petición
             response = session.get(
                 url, 
-                timeout=15, 
+                timeout=20, 
                 stream=True,
                 allow_redirects=True,
                 verify=True
