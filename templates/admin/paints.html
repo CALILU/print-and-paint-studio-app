@@ -1628,7 +1628,8 @@
                     stockText = 'Sin stock';
                 }
                 
-                const imageUrl = paint.image_url || paint.url_de_la_imagen || 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTUwIiBoZWlnaHQ9IjE1MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTUwIiBoZWlnaHQ9IjE1MCIgZmlsbD0iI2NjY2NjYyIvPjx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBmb250LXNpemU9IjE0IiBmaWxsPSIjNjY2NjY2IiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBkeT0iLjNlbSI+Tm8gSW1hZ2U8L3RleHQ+PC9zdmc+';
+                const originalImageUrl = paint.image_url || paint.url_de_la_imagen || 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTUwIiBoZWlnaHQ9IjE1MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTUwIiBoZWlnaHQ9IjE1MCIgZmlsbD0iI2NjY2NjYyIvPjx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBmb250LXNpemU9IjE0IiBmaWxsPSIjNjY2NjY2IiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBkeT0iLjNlbSI+Tm8gSW1hZ2U8L3RleHQ+PC9zdmc+'; 
+                const imageUrl = getProxyUrl(originalImageUrl);
                 
                 // ⚡ NUEVO: Badge para artículos nuevos
                 const newBadge = isNewUnviewed ? 
@@ -1697,7 +1698,8 @@
                     stockText = 'Sin stock';
                 }
                 
-                const imageUrl = paint.image_url || paint.url_de_la_imagen || 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTUwIiBoZWlnaHQ9IjE1MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTUwIiBoZWlnaHQ9IjE1MCIgZmlsbD0iI2NjY2NjYyIvPjx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBmb250LXNpemU9IjE0IiBmaWxsPSIjNjY2NjY2IiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBkeT0iLjNlbSI+Tm8gSW1hZ2U8L3RleHQ+PC9zdmc+';
+                const originalImageUrl = paint.image_url || paint.url_de_la_imagen || 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTUwIiBoZWlnaHQ9IjE1MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTUwIiBoZWlnaHQ9IjE1MCIgZmlsbD0iI2NjY2NjYyIvPjx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBmb250LXNpemU9IjE0IiBmaWxsPSIjNjY2NjY2IiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBkeT0iLjNlbSI+Tm8gSW1hZ2U8L3RleHQ+PC9zdmc+'; 
+                const imageUrl = getProxyUrl(originalImageUrl);
                 
                 const row = document.createElement('tr');
                 row.setAttribute('data-paint-id', paint.id);
@@ -2740,130 +2742,30 @@
         function handleImageError(img) {
             console.log('Error loading image:', img.src);
             
-            // Si ya hemos intentado múltiples soluciones, usar placeholder SVG final
-            if (img.dataset.attempted >= 2) {
-                img.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTUwIiBoZWlnaHQ9IjE1MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTUwIiBoZWlnaHQ9IjE1MCIgZmlsbD0iI2NjY2NjYyIvPjx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBmb250LXNpemU9IjE0IiBmaWxsPSIjNjY2NjY2IiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBkeT0iLjNlbSI+Tm8gSW1hZ2U8L3RleHQ+PC9zdmc+';
+            // Si ya hemos intentado, usar placeholder SVG final
+            if (img.dataset.attempted) {
+                img.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTUwIiBoZWlnaHQ9IjE1MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTUwIiBoZWlnaHQ9IjE1MCIgZmlsbD0iI2NjY2NjYyIvPjx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBmb250LXNpemU9IjE0IiBmaWxsPSIjNjY2NjY2IiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBkeT0iLjNlbSI+RXJyb3IgSW1hZ2U8L3RleHQ+PC9zdmc+';
                 return;
             }
             
-            // Incrementar contador de intentos
-            img.dataset.attempted = (parseInt(img.dataset.attempted) || 0) + 1;
+            // Marcar como intentado
+            img.dataset.attempted = 'true';
             
-            const originalSrc = img.src;
-            
-            // Solución 1: Intentar cargar con fetch API (sin referrer)
-            if (img.dataset.attempted == 1) {
-                tryLoadWithFetch(originalSrc, img);
-                return;
+            // Si no está usando el proxy, intentar con el proxy
+            if (!img.src.includes('/proxy/image')) {
+                const originalUrl = img.src;
+                if (isProblematicImageUrl(originalUrl)) {
+                    console.log('Trying proxy for:', originalUrl);
+                    img.src = getProxyUrl(originalUrl);
+                    return;
+                }
             }
             
-            // Solución 2: Crear iframe sandbox para cargar la imagen
-            if (img.dataset.attempted == 2) {
-                const container = img.parentElement;
-                
-                // Crear iframe con sandbox y permisos necesarios
-                const iframe = document.createElement('iframe');
-                iframe.style.width = img.offsetWidth + 'px' || '150px';
-                iframe.style.height = img.offsetHeight + 'px' || '150px';
-                iframe.style.border = 'none';
-                iframe.style.display = 'block';
-                iframe.sandbox = 'allow-same-origin allow-scripts';
-                
-                // Contenido del iframe sin referrer y con placeholder SVG
-                const svgPlaceholder = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTUwIiBoZWlnaHQ9IjE1MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTUwIiBoZWlnaHQ9IjE1MCIgZmlsbD0iI2NjY2NjYyIvPjx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBmb250LXNpemU9IjE0IiBmaWxsPSIjNjY2NjY2IiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBkeT0iLjNlbSI+Tm8gSW1hZ2U8L3RleHQ+PC9zdmc+';
-                
-                const iframeContent = `
-                    <!DOCTYPE html>
-                    <html>
-                    <head>
-                        <meta name="referrer" content="no-referrer">
-                        <style>
-                            body { margin: 0; padding: 0; }
-                            img { 
-                                width: 100%; 
-                                height: 100%; 
-                                object-fit: contain;
-                                display: block;
-                            }
-                        </style>
-                    </head>
-                    <body>
-                        <img src="${originalSrc}" alt="${img.alt}" onerror="this.src='${svgPlaceholder}';">
-                    </body>
-                    </html>
-                `;
-                
-                iframe.src = 'data:text/html;charset=utf-8,' + encodeURIComponent(iframeContent);
-                
-                // Reemplazar imagen con iframe
-                container.replaceChild(iframe, img);
-            }
+            // Si ya estamos usando el proxy y falló, usar placeholder
+            console.log('Proxy also failed, using placeholder for:', img.src);
+            img.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTUwIiBoZWlnaHQ9IjE1MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTUwIiBoZWlnaHQ9IjE1MCIgZmlsbD0iI2NjY2NjYyIvPjx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBmb250LXNpemU9IjE0IiBmaWxsPSIjNjY2NjY2IiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBkeT0iLjNlbSI+RXJyb3IgSW1hZ2U8L3RleHQ+PC9zdmc+';
         }
         
-        /**
-         * Intenta cargar la imagen usando fetch API sin referrer
-         */
-        function tryLoadWithFetch(url, img) {
-            fetch(url, {
-                method: 'GET',
-                mode: 'no-cors',
-                referrerPolicy: 'no-referrer'
-            })
-            .then(response => {
-                // Si llegamos aquí, la imagen probablemente se puede cargar
-                const newImg = new Image();
-                newImg.referrerPolicy = 'no-referrer';
-                newImg.crossOrigin = 'anonymous';
-                
-                newImg.onload = function() {
-                    img.src = url;
-                    img.dataset.attempted = '0'; // Reset si funciona
-                };
-                
-                newImg.onerror = function() {
-                    // Si falla, intentar la siguiente solución
-                    handleImageError(img);
-                };
-                
-                newImg.src = url;
-            })
-            .catch(error => {
-                console.log('Fetch failed, trying iframe method:', error);
-                handleImageError(img);
-            });
-        }
-        
-        /**
-         * Carga imagen usando JavaScript sin referrer
-         */
-        function loadImageWithoutReferrer(originalSrc, container, alt = '') {
-            const img = new Image();
-            img.crossOrigin = "anonymous";
-            img.referrerPolicy = "no-referrer";
-            
-            img.onload = function() {
-                // Imagen cargada exitosamente
-                const displayImg = document.createElement('img');
-                displayImg.src = originalSrc;
-                displayImg.alt = alt;
-                displayImg.className = 'paint-image';
-                displayImg.referrerPolicy = 'no-referrer';
-                container.innerHTML = '';
-                container.appendChild(displayImg);
-            };
-            
-            img.onerror = function() {
-                // Si falla, usar placeholder SVG
-                const displayImg = document.createElement('img');
-                displayImg.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTUwIiBoZWlnaHQ9IjE1MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTUwIiBoZWlnaHQ9IjE1MCIgZmlsbD0iI2NjY2NjYyIvPjx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBmb250LXNpemU9IjE0IiBmaWxsPSIjNjY2NjY2IiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBkeT0iLjNlbSI+Tm8gSW1hZ2U8L3RleHQ+PC9zdmc+';
-                displayImg.alt = alt;
-                displayImg.className = 'paint-image';
-                container.innerHTML = '';
-                container.appendChild(displayImg);
-            };
-            
-            img.src = originalSrc;
-        }
         
         /**
          * Detecta si una URL es problemática para hotlinking
@@ -2880,16 +2782,31 @@
         }
         
         /**
+         * Convierte una URL problemática a una URL de proxy
+         */
+        function getProxyUrl(originalUrl) {
+            if (isProblematicImageUrl(originalUrl)) {
+                return `/proxy/image?url=${encodeURIComponent(originalUrl)}`;
+            }
+            return originalUrl;
+        }
+        
+        /**
          * Mejora la carga de imágenes aplicando soluciones preventivas
          */
         function enhanceImageLoading() {
-            const images = document.querySelectorAll('img[src*="scale75.com"], img[src*="goblintrader.com"]');
+            const images = document.querySelectorAll('img:not([data-enhanced])');
             
             images.forEach(img => {
+                // Marcar como mejorada para evitar procesamiento duplicado
+                img.dataset.enhanced = 'true';
+                
+                // Aplicar referrerpolicy si no lo tiene
                 if (!img.hasAttribute('referrerpolicy')) {
                     img.setAttribute('referrerpolicy', 'no-referrer');
                 }
                 
+                // Aplicar onerror si no lo tiene
                 if (!img.hasAttribute('onerror')) {
                     img.setAttribute('onerror', 'handleImageError(this)');
                 }

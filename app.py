@@ -91,6 +91,67 @@ def index():
 def health_check():
     return 'OK', 200
 
+@app.route('/proxy/image')
+def proxy_image():
+    """Proxy para imágenes externas que bloquean hotlinking"""
+    url = request.args.get('url')
+    if not url:
+        return 'URL parameter is required', 400
+    
+    # Validar dominios permitidos para evitar abuso
+    allowed_domains = ['scale75.com', 'goblintrader.com', 'vallejo.es']
+    if not any(domain in url for domain in allowed_domains):
+        return 'Domain not allowed', 403
+    
+    try:
+        # Headers para simular navegador y evitar detección
+        headers = {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
+            'Accept': 'image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8',
+            'Accept-Language': 'en-US,en;q=0.9',
+            'Accept-Encoding': 'gzip, deflate, br',
+            'DNT': '1',
+            'Connection': 'keep-alive',
+            'Upgrade-Insecure-Requests': '1',
+        }
+        
+        # Hacer la petición sin referrer
+        response = requests.get(url, headers=headers, timeout=10, stream=True)
+        response.raise_for_status()
+        
+        # Obtener el tipo de contenido
+        content_type = response.headers.get('content-type', 'image/jpeg')
+        
+        # Crear respuesta con la imagen
+        def generate():
+            for chunk in response.iter_content(chunk_size=8192):
+                yield chunk
+        
+        return app.response_class(
+            generate(),
+            mimetype=content_type,
+            headers={
+                'Cache-Control': 'public, max-age=3600',  # Cache por 1 hora
+                'Access-Control-Allow-Origin': '*',
+                'Access-Control-Allow-Methods': 'GET',
+                'Access-Control-Allow-Headers': 'Content-Type'
+            }
+        )
+        
+    except requests.exceptions.RequestException as e:
+        print(f"Error al obtener imagen: {e}")
+        # Devolver una imagen placeholder SVG
+        placeholder_svg = """
+        <svg width="150" height="150" xmlns="http://www.w3.org/2000/svg">
+            <rect width="150" height="150" fill="#cccccc"/>
+            <text x="50%" y="50%" font-size="14" fill="#666666" text-anchor="middle" dy=".3em">No Image</text>
+        </svg>
+        """
+        return placeholder_svg, 200, {'Content-Type': 'image/svg+xml'}
+    except Exception as e:
+        print(f"Error inesperado: {e}")
+        return 'Internal Server Error', 500
+
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     if request.method == 'POST':
