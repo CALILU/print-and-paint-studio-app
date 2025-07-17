@@ -250,6 +250,154 @@ def proxy_image():
     
     return placeholder_svg, 200, {'Content-Type': 'image/svg+xml'}
 
+@app.route('/proxy/aggressive')
+def proxy_aggressive():
+    """Proxy agresivo que simula navegación completa"""
+    url = request.args.get('url')
+    if not url:
+        return 'URL parameter is required', 400
+    
+    # Validar dominios permitidos
+    allowed_domains = ['scale75.com', 'goblintrader.com', 'vallejo.es']
+    if not any(domain in url for domain in allowed_domains):
+        return 'Domain not allowed', 403
+    
+    print(f"Aggressive proxy request for: {url}")
+    
+    try:
+        # Crear sesión persistente
+        session = requests.Session()
+        
+        # Headers que imitan navegación real
+        session.headers.update({
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+            'Accept-Language': 'en-US,en;q=0.9,es;q=0.8',
+            'Accept-Encoding': 'gzip, deflate, br',
+            'DNT': '1',
+            'Connection': 'keep-alive',
+            'Upgrade-Insecure-Requests': '1',
+            'Sec-Fetch-Dest': 'document',
+            'Sec-Fetch-Mode': 'navigate',
+            'Sec-Fetch-Site': 'none',
+            'Sec-Fetch-User': '?1',
+            'Cache-Control': 'max-age=0',
+        })
+        
+        # Paso 1: Visitar la página principal para establecer cookies
+        print("Step 1: Visiting main page to establish session")
+        base_url = 'https://scale75.com/'
+        main_response = session.get(base_url, timeout=10)
+        print(f"Main page response: {main_response.status_code}")
+        
+        # Paso 2: Simular navegación a una página de producto
+        print("Step 2: Simulating product page navigation")
+        session.headers.update({
+            'Referer': base_url,
+            'Sec-Fetch-Site': 'same-origin',
+        })
+        
+        # Extraer ID del producto de la URL
+        import re
+        product_match = re.search(r'/(\d+)-', url)
+        if product_match:
+            product_id = product_match.group(1)
+            # Simular visita a página del producto
+            product_url = f"https://scale75.com/en/shop/{product_id}-product.html"
+            try:
+                product_response = session.get(product_url, timeout=10)
+                print(f"Product page response: {product_response.status_code}")
+            except:
+                print("Product page visit failed, continuing...")
+        
+        # Paso 3: Solicitar la imagen con contexto completo
+        print("Step 3: Requesting image with full context")
+        session.headers.update({
+            'Accept': 'image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8',
+            'Sec-Fetch-Dest': 'image',
+            'Sec-Fetch-Mode': 'no-cors',
+            'Referer': base_url,
+        })
+        
+        # Petición final de la imagen
+        response = session.get(url, timeout=15, stream=True)
+        print(f"Image response: {response.status_code}")
+        response.raise_for_status()
+        
+        # Verificar que es una imagen
+        content_type = response.headers.get('content-type', '')
+        if not content_type.startswith('image/'):
+            raise ValueError(f"Not an image: {content_type}")
+        
+        # Devolver imagen
+        def generate():
+            for chunk in response.iter_content(chunk_size=8192):
+                if chunk:
+                    yield chunk
+        
+        print(f"Successfully proxied image with aggressive method: {url}")
+        return app.response_class(
+            generate(),
+            mimetype=content_type,
+            headers={
+                'Cache-Control': 'public, max-age=7200',  # Cache por 2 horas
+                'Access-Control-Allow-Origin': '*',
+                'Access-Control-Allow-Methods': 'GET',
+                'Access-Control-Allow-Headers': 'Content-Type'
+            }
+        )
+        
+    except Exception as e:
+        print(f"Aggressive proxy failed: {e}")
+        # Devolver placeholder
+        placeholder_svg = f"""<svg width="150" height="150" xmlns="http://www.w3.org/2000/svg">
+            <rect width="150" height="150" fill="#fff3cd" stroke="#ffeaa7"/>
+            <text x="50%" y="40%" font-size="12" fill="#856404" text-anchor="middle" dy=".3em">Aggressive Failed</text>
+            <text x="50%" y="60%" font-size="10" fill="#856404" text-anchor="middle" dy=".3em">Scale75</text>
+        </svg>"""
+        return placeholder_svg, 200, {'Content-Type': 'image/svg+xml'}
+
+@app.route('/proxy/head')
+def proxy_head():
+    """Hace una petición HEAD para verificar si la imagen existe"""
+    url = request.args.get('url')
+    if not url:
+        return jsonify({'error': 'URL parameter is required'}), 400
+    
+    # Validar dominios permitidos
+    allowed_domains = ['scale75.com', 'goblintrader.com', 'vallejo.es']
+    if not any(domain in url for domain in allowed_domains):
+        return jsonify({'error': 'Domain not allowed'}), 403
+    
+    try:
+        # Headers básicos para petición HEAD
+        headers = {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+            'Accept': 'image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8',
+            'Accept-Language': 'en-US,en;q=0.9',
+            'Referer': 'https://scale75.com/',
+            'DNT': '1',
+            'Connection': 'keep-alive',
+        }
+        
+        # Petición HEAD rápida
+        response = requests.head(url, headers=headers, timeout=5, allow_redirects=True)
+        
+        return jsonify({
+            'url': url,
+            'status_code': response.status_code,
+            'headers': dict(response.headers),
+            'accessible': response.status_code == 200,
+            'content_type': response.headers.get('content-type', 'unknown'),
+            'content_length': response.headers.get('content-length', 'unknown')
+        })
+        
+    except Exception as e:
+        return jsonify({
+            'url': url,
+            'error': str(e),
+            'accessible': False
+        })
+
 @app.route('/proxy/test')
 def test_proxy():
     """Endpoint para probar URLs específicas y ver qué está pasando"""

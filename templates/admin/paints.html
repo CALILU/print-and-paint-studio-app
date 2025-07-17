@@ -2773,13 +2773,13 @@
                 return;
             }
             
-            // Estrategia 3: Intentar URL directa como último recurso
+            // Estrategia 3: Intentar proxy agresivo
             if (attempts == 2) {
                 const urlMatch = img.src.match(/url=([^&]+)/);
                 if (urlMatch) {
                     const originalUrl = decodeURIComponent(urlMatch[1]);
-                    console.log(`Attempt ${attempts + 1}: Trying direct URL as last resort:`, originalUrl);
-                    img.src = originalUrl;
+                    console.log(`Attempt ${attempts + 1}: Trying aggressive proxy:`, originalUrl);
+                    img.src = getAggressiveProxyUrl(originalUrl);
                     return;
                 }
             }
@@ -2810,6 +2810,16 @@
         function getProxyUrl(originalUrl) {
             if (isProblematicImageUrl(originalUrl)) {
                 return `/proxy/image?url=${encodeURIComponent(originalUrl)}`;
+            }
+            return originalUrl;
+        }
+        
+        /**
+         * Convierte una URL a proxy agresivo (último recurso)
+         */
+        function getAggressiveProxyUrl(originalUrl) {
+            if (isProblematicImageUrl(originalUrl)) {
+                return `/proxy/aggressive?url=${encodeURIComponent(originalUrl)}`;
             }
             return originalUrl;
         }
@@ -2939,12 +2949,14 @@
             const allImages = document.querySelectorAll('img');
             const scale75Images = document.querySelectorAll('img[src*="scale75.com"]');
             const proxyImages = document.querySelectorAll('img[src*="/proxy/image"]');
+            const aggressiveProxyImages = document.querySelectorAll('img[src*="/proxy/aggressive"]');
             const placeholderImages = document.querySelectorAll('img[src*="data:image/svg+xml"]');
             
             console.log('📊 IMAGE LOADING STATISTICS:');
             console.log(`Total images: ${allImages.length}`);
             console.log(`Scale75 direct: ${scale75Images.length}`);
             console.log(`Using proxy: ${proxyImages.length}`);
+            console.log(`Using aggressive proxy: ${aggressiveProxyImages.length}`);
             console.log(`Using placeholder: ${placeholderImages.length}`);
             
             // Analizar imágenes que fallaron
@@ -2957,6 +2969,35 @@
             
             console.log(`Images that failed initially: ${failedImages}`);
             console.log(`Success rate: ${((allImages.length - failedImages) / allImages.length * 100).toFixed(1)}%`);
+        }
+        
+        /**
+         * Función para probar una URL específica con todos los métodos
+         */
+        function testImageUrl(url) {
+            console.log(`🧪 Testing URL: ${url}`);
+            
+            // Test 1: URL directa
+            const directTest = new Image();
+            directTest.onload = () => console.log('✅ Direct URL works');
+            directTest.onerror = () => {
+                console.log('❌ Direct URL failed');
+                
+                // Test 2: Proxy normal
+                const proxyTest = new Image();
+                proxyTest.onload = () => console.log('✅ Normal proxy works');
+                proxyTest.onerror = () => {
+                    console.log('❌ Normal proxy failed');
+                    
+                    // Test 3: Proxy agresivo
+                    const aggressiveTest = new Image();
+                    aggressiveTest.onload = () => console.log('✅ Aggressive proxy works');
+                    aggressiveTest.onerror = () => console.log('❌ All methods failed');
+                    aggressiveTest.src = getAggressiveProxyUrl(url);
+                };
+                proxyTest.src = getProxyUrl(url);
+            };
+            directTest.src = url;
         }
         
     </script>
