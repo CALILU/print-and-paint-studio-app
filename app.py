@@ -103,54 +103,146 @@ def proxy_image():
     if not any(domain in url for domain in allowed_domains):
         return 'Domain not allowed', 403
     
-    try:
-        # Headers para simular navegador y evitar detección
-        headers = {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
+    print(f"Proxy request for: {url}")
+    
+    # Lista de User-Agents para rotar
+    user_agents = [
+        'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:109.0) Gecko/20100101 Firefox/121.0',
+        'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+    ]
+    
+    import random
+    selected_ua = random.choice(user_agents)
+    
+    # Intentar múltiples estrategias
+    strategies = [
+        # Estrategia 1: Headers básicos de navegador
+        {
+            'User-Agent': selected_ua,
             'Accept': 'image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8',
             'Accept-Language': 'en-US,en;q=0.9',
             'Accept-Encoding': 'gzip, deflate, br',
             'DNT': '1',
             'Connection': 'keep-alive',
             'Upgrade-Insecure-Requests': '1',
+        },
+        # Estrategia 2: Simular visita directa
+        {
+            'User-Agent': selected_ua,
+            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8',
+            'Accept-Language': 'en-US,en;q=0.9',
+            'Accept-Encoding': 'gzip, deflate, br',
+            'Cache-Control': 'no-cache',
+            'Pragma': 'no-cache',
+            'Sec-Fetch-Dest': 'document',
+            'Sec-Fetch-Mode': 'navigate',
+            'Sec-Fetch-Site': 'none',
+            'Sec-Fetch-User': '?1',
+            'Upgrade-Insecure-Requests': '1',
+        },
+        # Estrategia 3: Headers mínimos
+        {
+            'User-Agent': selected_ua,
+            'Accept': '*/*',
+        }
+    ]
+    
+    for i, headers in enumerate(strategies):
+        try:
+            print(f"Trying strategy {i+1} for {url}")
+            
+            # Configurar sesión con timeout extendido
+            session = requests.Session()
+            session.headers.update(headers)
+            
+            # Hacer la petición
+            response = session.get(
+                url, 
+                timeout=15, 
+                stream=True,
+                allow_redirects=True,
+                verify=True
+            )
+            
+            print(f"Response status: {response.status_code}")
+            response.raise_for_status()
+            
+            # Obtener el tipo de contenido
+            content_type = response.headers.get('content-type', 'image/jpeg')
+            print(f"Content-Type: {content_type}")
+            
+            # Verificar que es realmente una imagen
+            if not content_type.startswith('image/'):
+                print(f"Not an image, Content-Type: {content_type}")
+                continue
+            
+            # Crear respuesta con la imagen
+            def generate():
+                for chunk in response.iter_content(chunk_size=8192):
+                    if chunk:
+                        yield chunk
+            
+            print(f"Successfully proxied image from {url}")
+            return app.response_class(
+                generate(),
+                mimetype=content_type,
+                headers={
+                    'Cache-Control': 'public, max-age=3600',  # Cache por 1 hora
+                    'Access-Control-Allow-Origin': '*',
+                    'Access-Control-Allow-Methods': 'GET',
+                    'Access-Control-Allow-Headers': 'Content-Type'
+                }
+            )
+            
+        except requests.exceptions.RequestException as e:
+            print(f"Strategy {i+1} failed: {e}")
+            continue
+        except Exception as e:
+            print(f"Strategy {i+1} unexpected error: {e}")
+            continue
+    
+    # Si todas las estrategias fallan, devolver placeholder
+    print(f"All strategies failed for {url}")
+    placeholder_svg = f"""<svg width="150" height="150" xmlns="http://www.w3.org/2000/svg">
+        <rect width="150" height="150" fill="#f8f9fa" stroke="#dee2e6"/>
+        <text x="50%" y="40%" font-size="12" fill="#6c757d" text-anchor="middle" dy=".3em">Image Error</text>
+        <text x="50%" y="60%" font-size="10" fill="#6c757d" text-anchor="middle" dy=".3em">Scale75</text>
+    </svg>"""
+    
+    return placeholder_svg, 200, {'Content-Type': 'image/svg+xml'}
+
+@app.route('/proxy/test')
+def test_proxy():
+    """Endpoint para probar URLs específicas y ver qué está pasando"""
+    url = request.args.get('url')
+    if not url:
+        return 'URL parameter is required', 400
+    
+    print(f"Testing URL: {url}")
+    
+    try:
+        # Hacer una petición simple para ver la respuesta
+        response = requests.get(url, timeout=10)
+        
+        result = {
+            'url': url,
+            'status_code': response.status_code,
+            'headers': dict(response.headers),
+            'content_type': response.headers.get('content-type', 'unknown'),
+            'content_length': len(response.content),
+            'accessible': response.status_code == 200
         }
         
-        # Hacer la petición sin referrer
-        response = requests.get(url, headers=headers, timeout=10, stream=True)
-        response.raise_for_status()
+        return jsonify(result)
         
-        # Obtener el tipo de contenido
-        content_type = response.headers.get('content-type', 'image/jpeg')
-        
-        # Crear respuesta con la imagen
-        def generate():
-            for chunk in response.iter_content(chunk_size=8192):
-                yield chunk
-        
-        return app.response_class(
-            generate(),
-            mimetype=content_type,
-            headers={
-                'Cache-Control': 'public, max-age=3600',  # Cache por 1 hora
-                'Access-Control-Allow-Origin': '*',
-                'Access-Control-Allow-Methods': 'GET',
-                'Access-Control-Allow-Headers': 'Content-Type'
-            }
-        )
-        
-    except requests.exceptions.RequestException as e:
-        print(f"Error al obtener imagen: {e}")
-        # Devolver una imagen placeholder SVG
-        placeholder_svg = """
-        <svg width="150" height="150" xmlns="http://www.w3.org/2000/svg">
-            <rect width="150" height="150" fill="#cccccc"/>
-            <text x="50%" y="50%" font-size="14" fill="#666666" text-anchor="middle" dy=".3em">No Image</text>
-        </svg>
-        """
-        return placeholder_svg, 200, {'Content-Type': 'image/svg+xml'}
     except Exception as e:
-        print(f"Error inesperado: {e}")
-        return 'Internal Server Error', 500
+        return jsonify({
+            'url': url,
+            'error': str(e),
+            'accessible': False
+        })
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():

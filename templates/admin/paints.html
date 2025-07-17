@@ -2742,28 +2742,51 @@
         function handleImageError(img) {
             console.log('Error loading image:', img.src);
             
-            // Si ya hemos intentado, usar placeholder SVG final
-            if (img.dataset.attempted) {
-                img.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTUwIiBoZWlnaHQ9IjE1MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTUwIiBoZWlnaHQ9IjE1MCIgZmlsbD0iI2NjY2NjYyIvPjx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBmb250LXNpemU9IjE0IiBmaWxsPSIjNjY2NjY2IiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBkeT0iLjNlbSI+RXJyb3IgSW1hZ2U8L3RleHQ+PC9zdmc+';
+            const attempts = parseInt(img.dataset.attempts) || 0;
+            img.dataset.attempts = attempts + 1;
+            
+            // Si ya hemos intentado múltiples veces, usar placeholder final
+            if (attempts >= 3) {
+                console.log('Max attempts reached, using final placeholder');
+                img.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTUwIiBoZWlnaHQ9IjE1MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTUwIiBoZWlnaHQ9IjE1MCIgZmlsbD0iI2Y4ZjlmYSIgc3Ryb2tlPSIjZGVlMmU2Ii8+PHRleHQgeD0iNTAlIiB5PSI0MCUiIGZvbnQtc2l6ZT0iMTIiIGZpbGw9IiM2Yzc1N2QiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGR5PSIuM2VtIj5JbWFnZSBFcnJvcjwvdGV4dD48dGV4dCB4PSI1MCUiIHk9IjYwJSIgZm9udC1zaXplPSIxMCIgZmlsbD0iIzZjNzU3ZCIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZHk9Ii4zZW0iPlNjYWxlNzU8L3RleHQ+PC9zdmc+';
                 return;
             }
             
-            // Marcar como intentado
-            img.dataset.attempted = 'true';
-            
-            // Si no está usando el proxy, intentar con el proxy
+            // Estrategia 1: Si no está usando el proxy, intentar con el proxy
             if (!img.src.includes('/proxy/image')) {
                 const originalUrl = img.src;
                 if (isProblematicImageUrl(originalUrl)) {
-                    console.log('Trying proxy for:', originalUrl);
+                    console.log(`Attempt ${attempts + 1}: Trying proxy for:`, originalUrl);
                     img.src = getProxyUrl(originalUrl);
                     return;
                 }
             }
             
-            // Si ya estamos usando el proxy y falló, usar placeholder
-            console.log('Proxy also failed, using placeholder for:', img.src);
-            img.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTUwIiBoZWlnaHQ9IjE1MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTUwIiBoZWlnaHQ9IjE1MCIgZmlsbD0iI2NjY2NjYyIvPjx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBmb250LXNpemU9IjE0IiBmaWxsPSIjNjY2NjY2IiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBkeT0iLjNlbSI+RXJyb3IgSW1hZ2U8L3RleHQ+PC9zdmc+';
+            // Estrategia 2: Si el proxy falló, intentar con retry después de delay
+            if (img.src.includes('/proxy/image') && attempts < 2) {
+                console.log(`Attempt ${attempts + 1}: Retrying proxy after delay:`, img.src);
+                setTimeout(() => {
+                    // Agregar timestamp para forzar nueva petición
+                    const separator = img.src.includes('?') ? '&' : '?';
+                    img.src = img.src + separator + '_retry=' + Date.now();
+                }, 1000 * attempts); // Delay incremental
+                return;
+            }
+            
+            // Estrategia 3: Intentar URL directa como último recurso
+            if (attempts == 2) {
+                const urlMatch = img.src.match(/url=([^&]+)/);
+                if (urlMatch) {
+                    const originalUrl = decodeURIComponent(urlMatch[1]);
+                    console.log(`Attempt ${attempts + 1}: Trying direct URL as last resort:`, originalUrl);
+                    img.src = originalUrl;
+                    return;
+                }
+            }
+            
+            // Si llegamos aquí, usar placeholder final
+            console.log('All strategies failed, using placeholder for:', img.src);
+            img.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTUwIiBoZWlnaHQ9IjE1MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTUwIiBoZWlnaHQ9IjE1MCIgZmlsbD0iI2Y4ZjlmYSIgc3Ryb2tlPSIjZGVlMmU2Ii8+PHRleHQgeD0iNTAlIiB5PSI0MCUiIGZvbnQtc2l6ZT0iMTIiIGZpbGw9IiM2Yzc1N2QiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGR5PSIuM2VtIj5JbWFnZSBFcnJvcjwvdGV4dD48dGV4dCB4PSI1MCUiIHk9IjYwJSIgZm9udC1zaXplPSIxMCIgZmlsbD0iIzZjNzU3ZCIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZHk9Ii4zZW0iPlNjYWxlNzU8L3RleHQ+PC9zdmc+';
         }
         
         
@@ -2810,6 +2833,48 @@
                 if (!img.hasAttribute('onerror')) {
                     img.setAttribute('onerror', 'handleImageError(this)');
                 }
+                
+                // Agregar loading="lazy" para mejor rendimiento
+                if (!img.hasAttribute('loading')) {
+                    img.setAttribute('loading', 'lazy');
+                }
+            });
+        }
+        
+        /**
+         * Verifica si una imagen de Scale75 está disponible
+         */
+        function verifyScale75Image(url) {
+            return new Promise((resolve) => {
+                const testImg = new Image();
+                testImg.onload = () => resolve(true);
+                testImg.onerror = () => resolve(false);
+                testImg.src = getProxyUrl(url);
+                
+                // Timeout después de 5 segundos
+                setTimeout(() => resolve(false), 5000);
+            });
+        }
+        
+        /**
+         * Precarga imágenes problemáticas para verificar disponibilidad
+         */
+        function preloadProblematicImages() {
+            const problematicImages = document.querySelectorAll('img[src*="scale75.com"], img[src*="goblintrader.com"]');
+            
+            problematicImages.forEach(async (img) => {
+                if (img.dataset.preloaded) return;
+                img.dataset.preloaded = 'true';
+                
+                const originalSrc = img.src;
+                const isAvailable = await verifyScale75Image(originalSrc);
+                
+                if (!isAvailable) {
+                    console.log('Preload failed for:', originalSrc);
+                    // La imagen fallará, pero ya tenemos el manejo de error configurado
+                } else {
+                    console.log('Preload successful for:', originalSrc);
+                }
             });
         }
         
@@ -2818,12 +2883,16 @@
         displayPaints = function(paints) {
             originalDisplayPaints(paints);
             // Aplicar mejoras después de renderizar
-            setTimeout(enhanceImageLoading, 100);
+            setTimeout(() => {
+                enhanceImageLoading();
+                preloadProblematicImages();
+            }, 100);
         };
         
         // Aplicar mejoras al cargar la página
         document.addEventListener('DOMContentLoaded', function() {
             enhanceImageLoading();
+            setTimeout(preloadProblematicImages, 500);
         });
         
     </script>
