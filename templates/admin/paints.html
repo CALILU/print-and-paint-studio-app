@@ -1628,7 +1628,7 @@
                     stockText = 'Sin stock';
                 }
                 
-                const imageUrl = paint.image_url || paint.url_de_la_imagen || 'https://via.placeholder.com/150?text=No+Image';
+                const imageUrl = paint.image_url || paint.url_de_la_imagen || 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTUwIiBoZWlnaHQ9IjE1MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTUwIiBoZWlnaHQ9IjE1MCIgZmlsbD0iI2NjY2NjYyIvPjx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBmb250LXNpemU9IjE0IiBmaWxsPSIjNjY2NjY2IiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBkeT0iLjNlbSI+Tm8gSW1hZ2U8L3RleHQ+PC9zdmc+';
                 
                 // ⚡ NUEVO: Badge para artículos nuevos
                 const newBadge = isNewUnviewed ? 
@@ -1697,7 +1697,7 @@
                     stockText = 'Sin stock';
                 }
                 
-                const imageUrl = paint.image_url || paint.url_de_la_imagen || 'https://via.placeholder.com/150?text=No+Image';
+                const imageUrl = paint.image_url || paint.url_de_la_imagen || 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTUwIiBoZWlnaHQ9IjE1MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTUwIiBoZWlnaHQ9IjE1MCIgZmlsbD0iI2NjY2NjYyIvPjx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBmb250LXNpemU9IjE0IiBmaWxsPSIjNjY2NjY2IiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBkeT0iLjNlbSI+Tm8gSW1hZ2U8L3RleHQ+PC9zdmc+';
                 
                 const row = document.createElement('tr');
                 row.setAttribute('data-paint-id', paint.id);
@@ -2740,53 +2740,97 @@
         function handleImageError(img) {
             console.log('Error loading image:', img.src);
             
-            // Si ya hemos intentado con iframe, usar placeholder
-            if (img.dataset.attempted) {
-                img.src = 'https://via.placeholder.com/150x150/cccccc/666666?text=No+Image';
+            // Si ya hemos intentado múltiples soluciones, usar placeholder SVG final
+            if (img.dataset.attempted >= 2) {
+                img.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTUwIiBoZWlnaHQ9IjE1MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTUwIiBoZWlnaHQ9IjE1MCIgZmlsbD0iI2NjY2NjYyIvPjx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBmb250LXNpemU9IjE0IiBmaWxsPSIjNjY2NjY2IiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBkeT0iLjNlbSI+Tm8gSW1hZ2U8L3RleHQ+PC9zdmc+';
                 return;
             }
             
-            // Marcar como intentado
-            img.dataset.attempted = 'true';
+            // Incrementar contador de intentos
+            img.dataset.attempted = (parseInt(img.dataset.attempted) || 0) + 1;
             
-            // Solución 1: Crear iframe sandbox para cargar la imagen
             const originalSrc = img.src;
-            const container = img.parentElement;
             
-            // Crear iframe con sandbox
-            const iframe = document.createElement('iframe');
-            iframe.style.width = img.offsetWidth + 'px' || '150px';
-            iframe.style.height = img.offsetHeight + 'px' || '150px';
-            iframe.style.border = 'none';
-            iframe.style.display = 'block';
-            iframe.sandbox = 'allow-same-origin';
+            // Solución 1: Intentar cargar con fetch API (sin referrer)
+            if (img.dataset.attempted == 1) {
+                tryLoadWithFetch(originalSrc, img);
+                return;
+            }
             
-            // Contenido del iframe sin referrer
-            const iframeContent = `
-                <!DOCTYPE html>
-                <html>
-                <head>
-                    <meta name="referrer" content="no-referrer">
-                    <style>
-                        body { margin: 0; padding: 0; }
-                        img { 
-                            width: 100%; 
-                            height: 100%; 
-                            object-fit: contain;
-                            display: block;
-                        }
-                    </style>
-                </head>
-                <body>
-                    <img src="${originalSrc}" alt="${img.alt}" onerror="this.src='https://via.placeholder.com/150x150/cccccc/666666?text=No+Image';">
-                </body>
-                </html>
-            `;
-            
-            iframe.src = 'data:text/html;charset=utf-8,' + encodeURIComponent(iframeContent);
-            
-            // Reemplazar imagen con iframe
-            container.replaceChild(iframe, img);
+            // Solución 2: Crear iframe sandbox para cargar la imagen
+            if (img.dataset.attempted == 2) {
+                const container = img.parentElement;
+                
+                // Crear iframe con sandbox y permisos necesarios
+                const iframe = document.createElement('iframe');
+                iframe.style.width = img.offsetWidth + 'px' || '150px';
+                iframe.style.height = img.offsetHeight + 'px' || '150px';
+                iframe.style.border = 'none';
+                iframe.style.display = 'block';
+                iframe.sandbox = 'allow-same-origin allow-scripts';
+                
+                // Contenido del iframe sin referrer y con placeholder SVG
+                const svgPlaceholder = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTUwIiBoZWlnaHQ9IjE1MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTUwIiBoZWlnaHQ9IjE1MCIgZmlsbD0iI2NjY2NjYyIvPjx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBmb250LXNpemU9IjE0IiBmaWxsPSIjNjY2NjY2IiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBkeT0iLjNlbSI+Tm8gSW1hZ2U8L3RleHQ+PC9zdmc+';
+                
+                const iframeContent = `
+                    <!DOCTYPE html>
+                    <html>
+                    <head>
+                        <meta name="referrer" content="no-referrer">
+                        <style>
+                            body { margin: 0; padding: 0; }
+                            img { 
+                                width: 100%; 
+                                height: 100%; 
+                                object-fit: contain;
+                                display: block;
+                            }
+                        </style>
+                    </head>
+                    <body>
+                        <img src="${originalSrc}" alt="${img.alt}" onerror="this.src='${svgPlaceholder}';">
+                    </body>
+                    </html>
+                `;
+                
+                iframe.src = 'data:text/html;charset=utf-8,' + encodeURIComponent(iframeContent);
+                
+                // Reemplazar imagen con iframe
+                container.replaceChild(iframe, img);
+            }
+        }
+        
+        /**
+         * Intenta cargar la imagen usando fetch API sin referrer
+         */
+        function tryLoadWithFetch(url, img) {
+            fetch(url, {
+                method: 'GET',
+                mode: 'no-cors',
+                referrerPolicy: 'no-referrer'
+            })
+            .then(response => {
+                // Si llegamos aquí, la imagen probablemente se puede cargar
+                const newImg = new Image();
+                newImg.referrerPolicy = 'no-referrer';
+                newImg.crossOrigin = 'anonymous';
+                
+                newImg.onload = function() {
+                    img.src = url;
+                    img.dataset.attempted = '0'; // Reset si funciona
+                };
+                
+                newImg.onerror = function() {
+                    // Si falla, intentar la siguiente solución
+                    handleImageError(img);
+                };
+                
+                newImg.src = url;
+            })
+            .catch(error => {
+                console.log('Fetch failed, trying iframe method:', error);
+                handleImageError(img);
+            });
         }
         
         /**
@@ -2809,9 +2853,9 @@
             };
             
             img.onerror = function() {
-                // Si falla, usar placeholder
+                // Si falla, usar placeholder SVG
                 const displayImg = document.createElement('img');
-                displayImg.src = 'https://via.placeholder.com/150x150/cccccc/666666?text=No+Image';
+                displayImg.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTUwIiBoZWlnaHQ9IjE1MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTUwIiBoZWlnaHQ9IjE1MCIgZmlsbD0iI2NjY2NjYyIvPjx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBmb250LXNpemU9IjE0IiBmaWxsPSIjNjY2NjY2IiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBkeT0iLjNlbSI+Tm8gSW1hZ2U8L3RleHQ+PC9zdmc+';
                 displayImg.alt = alt;
                 displayImg.className = 'paint-image';
                 container.innerHTML = '';
