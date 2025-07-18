@@ -1138,20 +1138,31 @@
             // Configurar vista previa en tiempo real
             setupLivePreview();
             
-            // 🔄 AUTO-REFRESH TEMPORALMENTE DESACTIVADO PARA DEBUGGING
-            // Problema: Múltiples consultas concurrentes pueden sobrecargar Railway DB
-            console.log('⏸️ Auto-refresh desactivado temporalmente para diagnosticar problema de timeouts');
+            // 🔄 AUTO-REFRESH OPTIMIZADO: Intervalo más largo y con detección de actividad
+            let lastUserActivity = Date.now();
+            let refreshInterval = 60000; // 60 segundos en lugar de 15
             
-            /* COMENTADO TEMPORALMENTE
+            // Detectar actividad del usuario para pausar auto-refresh innecesario
+            ['click', 'keydown', 'mousemove', 'scroll'].forEach(event => {
+                document.addEventListener(event, () => {
+                    lastUserActivity = Date.now();
+                }, { passive: true });
+            });
+            
             setInterval(() => {
-                console.log('🔄 Auto-refreshing paint data silently...');
-                silentRefresh().then(() => {
-                    console.log('✅ Paint data refreshed silently');
-                }).catch(error => {
-                    console.error('❌ Silent refresh failed:', error);
-                });
-            }, 15000); // 15 segundos
-            */
+                // Solo refrescar si no ha habido actividad reciente (evitar interferir con el usuario)
+                const timeSinceActivity = Date.now() - lastUserActivity;
+                if (timeSinceActivity > 30000) { // 30 segundos sin actividad
+                    console.log('🔄 Auto-refreshing paint data (user inactive)...');
+                    silentRefresh().then(() => {
+                        console.log('✅ Paint data refreshed silently');
+                    }).catch(error => {
+                        console.error('❌ Silent refresh failed:', error);
+                    });
+                } else {
+                    console.log('⏸️ Skipping refresh - user is active');
+                }
+            }, refreshInterval);
         });
         
         // Función para inicializar los filtros

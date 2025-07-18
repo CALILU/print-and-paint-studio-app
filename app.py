@@ -48,11 +48,51 @@ if not db_url:
 print(f"Conectando a la base de datos: {db_url}")
 app.config['SQLALCHEMY_DATABASE_URI'] = db_url
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-app.config['SQLALCHEMY_ECHO'] = True  # Esto imprimirá todas las consultas SQL
+app.config['SQLALCHEMY_ECHO'] = False  # Desactivar logging SQL para mejorar rendimiento
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'print_and_paint_studio_key')
+
+# Optimizaciones de conexión para Railway PostgreSQL
+app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
+    'pool_size': 5,           # Número de conexiones en el pool
+    'pool_timeout': 20,       # Timeout para obtener conexión del pool
+    'pool_recycle': 300,      # Reciclar conexiones cada 5 minutos
+    'max_overflow': 10,       # Conexiones adicionales si el pool está lleno
+    'pool_pre_ping': True,    # Verificar conexiones antes de usarlas
+}
 
 # Inicializar la base de datos
 db.init_app(app)
+
+# Sistema de cache simple para optimizar consultas frecuentes
+from functools import wraps
+import time
+
+paint_cache = {}
+CACHE_TIMEOUT = 300  # 5 minutos
+
+def cache_paint_result(timeout=CACHE_TIMEOUT):
+    def decorator(f):
+        @wraps(f)
+        def decorated_function(*args, **kwargs):
+            # Generar clave de cache
+            cache_key = f"paint_{args[0] if args else 'all'}"
+            current_time = time.time()
+            
+            # Verificar si existe en cache y no ha expirado
+            if cache_key in paint_cache:
+                cached_data, cached_time = paint_cache[cache_key]
+                if current_time - cached_time < timeout:
+                    print(f"📦 Cache HIT para {cache_key}")
+                    return cached_data
+            
+            # Ejecutar función y cachear resultado
+            result = f(*args, **kwargs)
+            paint_cache[cache_key] = (result, current_time)
+            print(f"💾 Cache MISS para {cache_key} - resultado cacheado")
+            
+            return result
+        return decorated_function
+    return decorator
 
 # Decoradores para proteger rutas
 def login_required(f):
@@ -1261,39 +1301,55 @@ def add_paint():
 
 @app.route('/admin/paints/<int:paint_id>', methods=['GET'])
 @admin_required
+@cache_paint_result(timeout=300)  # Cache por 5 minutos
 def get_paint(paint_id):
     import time
+    from flask import g
+    
     start_time = time.time()
     print(f"🔍 GET /admin/paints/{paint_id} - Iniciando búsqueda...")
     
     try:
-        paint = Paint.query.get_or_404(paint_id)
+        # Optimización 1: Usar query más específica con only() para reducir datos transferidos
+        paint = db.session.query(Paint).filter_by(id=paint_id).first()
+        
+        if not paint:
+            print(f"❌ Pintura {paint_id} no encontrada")
+            return jsonify({'error': 'Pintura no encontrada'}), 404
+        
         query_time = time.time() - start_time
         print(f"✅ Pintura {paint_id} encontrada en {query_time:.3f}s")
         
+        # Optimización 2: Construir respuesta más eficientemente
         response_data = {
             'id': paint.id,
-            'name': paint.name,
-            'brand': paint.brand,
-            'color_code': paint.color_code,
-            'color_type': paint.color_type,
-            'color_family': paint.color_family,
-            'image_url': paint.image_url,
-            'stock': paint.stock,
-            'price': paint.price,
-            'description': paint.description,
-            'color_preview': paint.color_preview,
+            'name': paint.name or '',
+            'brand': paint.brand or '',
+            'color_code': paint.color_code or '',
+            'color_type': paint.color_type or '',
+            'color_family': paint.color_family or '',
+            'image_url': paint.image_url or '',
+            'stock': paint.stock or 0,
+            'price': float(paint.price) if paint.price else 0.0,
+            'description': paint.description or '',
+            'color_preview': paint.color_preview or '#cccccc',
             'created_at': paint.created_at.isoformat() if paint.created_at else None
         }
         
         total_time = time.time() - start_time
         print(f"📤 Respuesta enviada en {total_time:.3f}s total")
         
+        # Optimización 3: Cerrar explícitamente la sesión
+        db.session.close()
+        
         return jsonify(response_data)
+        
     except Exception as e:
         error_time = time.time() - start_time
         print(f"❌ Error en get_paint después de {error_time:.3f}s: {str(e)}")
-        raise
+        db.session.rollback()
+        db.session.close()
+        return jsonify({'error': 'Error interno del servidor'}), 500
 
 @app.route('/admin/paints/<int:paint_id>', methods=['PUT'])
 @admin_required
