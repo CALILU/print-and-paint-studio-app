@@ -1975,28 +1975,51 @@
         
         // 🔧 FUNCIÓN DE DIAGNÓSTICO TEMPORAL
         async function testPaintEndpoint(id) {
-            console.log('🧪 INICIANDO PRUEBA DE ENDPOINT');
+            console.log('🧪 INICIANDO PRUEBA RÁPIDA DE ENDPOINTS');
             
-            try {
-                // Primero, verificamos si estamos autenticados probando el endpoint de API general
-                console.log('🧪 Probando endpoint general de pinturas...');
-                const generalResponse = await fetch('/api/paints');
-                console.log(`🧪 API general: ${generalResponse.status} ${generalResponse.statusText}`);
+            // Función helper para fetch con timeout
+            async function fetchWithTimeout(url, timeout = 5000) {
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), timeout);
                 
-                // Luego probamos el endpoint específico de admin
-                console.log(`🧪 Probando endpoint específico: /admin/paints/${id}`);
-                const adminResponse = await fetch(`/admin/paints/${id}`);
-                console.log(`🧪 Admin específico: ${adminResponse.status} ${adminResponse.statusText}`);
-                
-                if (adminResponse.status === 302) {
-                    console.log('🧪 ¡REDIRECCIÓN DETECTADA! Probablemente problema de autenticación');
+                try {
+                    const response = await fetch(url, { 
+                        signal: controller.signal,
+                        credentials: 'same-origin'
+                    });
+                    clearTimeout(timeoutId);
+                    return { success: true, response };
+                } catch (error) {
+                    clearTimeout(timeoutId);
+                    return { success: false, error: error.name === 'AbortError' ? 'TIMEOUT' : error.message };
                 }
-                
-                const responseText = await adminResponse.text();
-                console.log('🧪 Contenido de respuesta:', responseText.substring(0, 200) + '...');
-                
-            } catch (error) {
-                console.error('🧪 Error en prueba:', error);
+            }
+            
+            // Test 1: Ping básico (si existe)
+            console.log('🧪 Test 1: Ping básico al servidor...');
+            const pingResult = await fetchWithTimeout('/api/paints', 5000);
+            console.log('🧪 Ping resultado:', pingResult);
+            
+            // Test 2: Endpoint específico
+            console.log(`🧪 Test 2: Endpoint específico /admin/paints/${id}...`);
+            const adminResult = await fetchWithTimeout(`/admin/paints/${id}`, 10000);
+            console.log('🧪 Admin resultado:', adminResult);
+            
+            // Test 3: Estado del servidor
+            console.log('🧪 Test 3: Verificando si el servidor responde...');
+            const homeResult = await fetchWithTimeout('/', 3000);
+            console.log('🧪 Home resultado:', homeResult);
+            
+            // Resumen
+            console.log('🧪 RESUMEN DE DIAGNÓSTICO:');
+            console.log(`  API general: ${pingResult.success ? '✅ OK' : '❌ ' + pingResult.error}`);
+            console.log(`  Admin endpoint: ${adminResult.success ? '✅ OK' : '❌ ' + adminResult.error}`);
+            console.log(`  Servidor general: ${homeResult.success ? '✅ OK' : '❌ ' + homeResult.error}`);
+            
+            if (!pingResult.success && !adminResult.success && !homeResult.success) {
+                console.log('🚨 PROBLEMA CRÍTICO: El servidor no responde en absoluto');
+            } else if (pingResult.success && !adminResult.success) {
+                console.log('🚨 PROBLEMA ESPECÍFICO: Solo el endpoint de admin está fallando');
             }
         }
         
