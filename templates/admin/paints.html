@@ -1138,7 +1138,11 @@
             // Configurar vista previa en tiempo real
             setupLivePreview();
             
-            // 🔄 AUTO-REFRESH: Actualizar datos cada 15 segundos (sin parpadeo visual)
+            // 🔄 AUTO-REFRESH TEMPORALMENTE DESACTIVADO PARA DEBUGGING
+            // Problema: Múltiples consultas concurrentes pueden sobrecargar Railway DB
+            console.log('⏸️ Auto-refresh desactivado temporalmente para diagnosticar problema de timeouts');
+            
+            /* COMENTADO TEMPORALMENTE
             setInterval(() => {
                 console.log('🔄 Auto-refreshing paint data silently...');
                 silentRefresh().then(() => {
@@ -1147,6 +1151,7 @@
                     console.error('❌ Silent refresh failed:', error);
                 });
             }, 15000); // 15 segundos
+            */
         });
         
         // Función para inicializar los filtros
