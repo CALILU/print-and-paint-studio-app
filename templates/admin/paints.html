@@ -1807,13 +1807,22 @@
                 console.log(`👁️ Iniciando visualización de pintura ID: ${id}`);
                 console.log(`🌐 Realizando fetch a: /admin/paints/${id}`);
                 
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => {
+                    console.log(`⏰ Timeout alcanzado para viewPaint(${id})`);
+                    controller.abort();
+                }, 10000); // 10 segundos timeout
+                
                 const response = await fetch(`/admin/paints/${id}`, {
                     method: 'GET',
                     credentials: 'same-origin',
                     headers: {
                         'Content-Type': 'application/json'
-                    }
+                    },
+                    signal: controller.signal
                 });
+                
+                clearTimeout(timeoutId);
                 
                 console.log(`📡 Respuesta del servidor: ${response.status} ${response.statusText}`);
                 
@@ -1857,7 +1866,13 @@
                 if (error.stack) {
                     console.error('❌ Stack trace:', error.stack);
                 }
-                alert(`Error al cargar detalles de la pintura: ${error.message}`);
+                
+                let errorMessage = error.message;
+                if (error.name === 'AbortError') {
+                    errorMessage = 'La solicitud tardó demasiado tiempo (timeout)';
+                }
+                
+                alert(`Error al cargar detalles de la pintura: ${errorMessage}`);
             }
         }
         
@@ -1867,13 +1882,22 @@
                 console.log(`🔧 Iniciando edición de pintura ID: ${id}`);
                 console.log(`🌐 Realizando fetch a: /admin/paints/${id}`);
                 
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => {
+                    console.log(`⏰ Timeout alcanzado para editPaint(${id})`);
+                    controller.abort();
+                }, 10000); // 10 segundos timeout
+                
                 const response = await fetch(`/admin/paints/${id}`, {
                     method: 'GET',
                     credentials: 'same-origin',
                     headers: {
                         'Content-Type': 'application/json'
-                    }
+                    },
+                    signal: controller.signal
                 });
+                
+                clearTimeout(timeoutId);
                 
                 console.log(`📡 Respuesta del servidor: ${response.status} ${response.statusText}`);
                 
@@ -1939,10 +1963,46 @@
                 if (error.stack) {
                     console.error('❌ Stack trace:', error.stack);
                 }
-                alert(`Error al cargar datos de la pintura: ${error.message}`);
+                
+                let errorMessage = error.message;
+                if (error.name === 'AbortError') {
+                    errorMessage = 'La solicitud tardó demasiado tiempo (timeout)';
+                }
+                
+                alert(`Error al cargar datos de la pintura: ${errorMessage}`);
             }
         }
         
+        // 🔧 FUNCIÓN DE DIAGNÓSTICO TEMPORAL
+        async function testPaintEndpoint(id) {
+            console.log('🧪 INICIANDO PRUEBA DE ENDPOINT');
+            
+            try {
+                // Primero, verificamos si estamos autenticados probando el endpoint de API general
+                console.log('🧪 Probando endpoint general de pinturas...');
+                const generalResponse = await fetch('/api/paints');
+                console.log(`🧪 API general: ${generalResponse.status} ${generalResponse.statusText}`);
+                
+                // Luego probamos el endpoint específico de admin
+                console.log(`🧪 Probando endpoint específico: /admin/paints/${id}`);
+                const adminResponse = await fetch(`/admin/paints/${id}`);
+                console.log(`🧪 Admin específico: ${adminResponse.status} ${adminResponse.statusText}`);
+                
+                if (adminResponse.status === 302) {
+                    console.log('🧪 ¡REDIRECCIÓN DETECTADA! Probablemente problema de autenticación');
+                }
+                
+                const responseText = await adminResponse.text();
+                console.log('🧪 Contenido de respuesta:', responseText.substring(0, 200) + '...');
+                
+            } catch (error) {
+                console.error('🧪 Error en prueba:', error);
+            }
+        }
+        
+        // Llamar a esta función desde la consola: testPaintEndpoint(4767)
+        window.testPaintEndpoint = testPaintEndpoint;
+
         // Función para confirmar eliminación 
         function confirmDelete(id) {
             paintToDelete = id;
