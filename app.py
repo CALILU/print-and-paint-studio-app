@@ -70,13 +70,27 @@ import time
 paint_cache = {}
 CACHE_TIMEOUT = 300  # 5 minutos
 
+def clear_paint_cache(paint_id=None):
+    """Limpiar caché de pintura específica o todo el caché"""
+    if paint_id:
+        cache_key = f"paint_{paint_id}"
+        if cache_key in paint_cache:
+            del paint_cache[cache_key]
+            print(f"🗑️ Cache cleared para paint_id: {paint_id}")
+    else:
+        paint_cache.clear()
+        print("🗑️ Cache completamente limpiado")
+
 def cache_paint_result(timeout=CACHE_TIMEOUT):
     def decorator(f):
         @wraps(f)
         def decorated_function(*args, **kwargs):
-            # Generar clave de cache
-            cache_key = f"paint_{args[0] if args else 'all'}"
+            # Generar clave de cache - obtener paint_id de kwargs si está disponible
+            paint_id = kwargs.get('paint_id') or (args[0] if args else 'all')
+            cache_key = f"paint_{paint_id}"
             current_time = time.time()
+            
+            print(f"🔍 Cache check para paint_id: {paint_id}, cache_key: {cache_key}")
             
             # Verificar si existe en cache y no ha expirado
             if cache_key in paint_cache:
@@ -86,9 +100,10 @@ def cache_paint_result(timeout=CACHE_TIMEOUT):
                     return cached_data
             
             # Ejecutar función y cachear resultado
+            print(f"💾 Cache MISS para {cache_key} - ejecutando función")
             result = f(*args, **kwargs)
             paint_cache[cache_key] = (result, current_time)
-            print(f"💾 Cache MISS para {cache_key} - resultado cacheado")
+            print(f"💾 Resultado cacheado para {cache_key}")
             
             return result
         return decorated_function
@@ -1300,8 +1315,8 @@ def add_paint():
         return jsonify({'error': str(e)}), 500
 
 @app.route('/admin/paints/<int:paint_id>', methods=['GET'])
-@admin_required
 @cache_paint_result(timeout=300)  # Cache por 5 minutos
+@admin_required
 def get_paint(paint_id):
     import time
     from flask import g
@@ -1350,6 +1365,13 @@ def get_paint(paint_id):
         db.session.rollback()
         db.session.close()
         return jsonify({'error': 'Error interno del servidor'}), 500
+
+# Endpoint para limpiar caché (útil para debugging)
+@app.route('/admin/clear-cache/<int:paint_id>', methods=['POST'])
+@admin_required
+def clear_cache_endpoint(paint_id):
+    clear_paint_cache(paint_id)
+    return jsonify({'status': 'success', 'message': f'Cache cleared for paint {paint_id}'})
 
 @app.route('/admin/paints/<int:paint_id>', methods=['PUT'])
 @admin_required

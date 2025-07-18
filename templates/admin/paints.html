@@ -1966,6 +1966,21 @@
         async function editPaint(id) {
             try {
                 console.log(`🔧 Iniciando edición de pintura ID: ${id}`);
+                
+                // Limpiar caché antes de cargar para asegurar datos frescos
+                try {
+                    await fetch(`/admin/clear-cache/${id}`, {
+                        method: 'POST',
+                        credentials: 'same-origin',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        }
+                    });
+                    console.log(`🗑️ Cache limpiado para pintura ID: ${id}`);
+                } catch (cacheError) {
+                    console.warn(`⚠️ No se pudo limpiar el cache: ${cacheError.message}`);
+                }
+                
                 console.log(`🌐 Realizando fetch a: /admin/paints/${id}`);
                 
                 const controller = new AbortController();
