@@ -1643,7 +1643,7 @@
                     <div class="stock-badge ${stockClass}">${stockText}</div>
                     ${newBadge}
                     <div class="paint-actions">
-                        <i class="bi bi-eye action-icon" onclick="viewPaint(${paint.id})" title="Ver detalles"></i>
+                        <i class="bi bi-eye action-icon" onclick="console.log('👁️ Click en ver pintura:', ${paint.id}); viewPaint(${paint.id})" title="Ver detalles"></i>
                         <i class="bi bi-pencil action-icon" onclick="console.log('🖱️ Click en editar pintura:', ${paint.id}); editPaint(${paint.id})" title="Editar"></i>
                         <i class="bi bi-trash action-icon" onclick="confirmDelete(${paint.id})" title="Eliminar"></i>
                         ${markViewedBtn}
@@ -1723,7 +1723,7 @@
                     <td>${paint.price ? `${paint.price}€` : '-'}</td>
                     <td>
                         <div class="btn-group">
-                            <button class="btn btn-sm btn-outline-primary" onclick="viewPaint(${paint.id})" title="Ver detalles">
+                            <button class="btn btn-sm btn-outline-primary" onclick="console.log('👁️ Click en ver pintura (lista):', ${paint.id}); viewPaint(${paint.id})" title="Ver detalles">
                                 <i class="bi bi-eye"></i>
                             </button>
                             <button class="btn btn-sm btn-outline-success" onclick="console.log('🖱️ Click en editar pintura (lista):', ${paint.id}); editPaint(${paint.id})" title="Editar">
@@ -1804,17 +1804,26 @@
         // Función para ver detalles de una pintura
         async function viewPaint(id) {
             try {
-                // Quitar resaltado de modificación al ver detalles
-                clearModifiedHighlight(id);
+                console.log(`👁️ Iniciando visualización de pintura ID: ${id}`);
+                console.log(`🌐 Realizando fetch a: /admin/paints/${id}`);
                 
-                // ⚡ NUEVO: Marcar como visto automáticamente
-                markPaintAsViewed(id);
+                const response = await fetch(`/admin/paints/${id}`, {
+                    method: 'GET',
+                    credentials: 'same-origin',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
                 
-                const response = await fetch(`/admin/paints/${id}`);
+                console.log(`📡 Respuesta del servidor: ${response.status} ${response.statusText}`);
                 
                 if (!response.ok) {
-                    throw new Error('Error al cargar datos de la pintura');
+                    throw new Error(`Error al cargar datos de la pintura (${response.status}: ${response.statusText})`);
                 }
+                
+                // Solo quitar resaltado y marcar como visto si la carga fue exitosa
+                clearModifiedHighlight(id);
+                markPaintAsViewed(id);
                 
                 const paint = await response.json();
                 
@@ -1842,7 +1851,12 @@
                 viewPaintModal.show();
                 
             } catch (error) {
-                console.error('Error:', error);
+                console.error('❌ Error en viewPaint:', error);
+                console.error('❌ Tipo de error:', error.name);
+                console.error('❌ Mensaje:', error.message);
+                if (error.stack) {
+                    console.error('❌ Stack trace:', error.stack);
+                }
                 alert(`Error al cargar detalles de la pintura: ${error.message}`);
             }
         }
@@ -1851,8 +1865,15 @@
         async function editPaint(id) {
             try {
                 console.log(`🔧 Iniciando edición de pintura ID: ${id}`);
+                console.log(`🌐 Realizando fetch a: /admin/paints/${id}`);
                 
-                const response = await fetch(`/admin/paints/${id}`);
+                const response = await fetch(`/admin/paints/${id}`, {
+                    method: 'GET',
+                    credentials: 'same-origin',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
                 
                 console.log(`📡 Respuesta del servidor: ${response.status} ${response.statusText}`);
                 
@@ -1912,7 +1933,12 @@
                 console.log(`✅ Pintura ${id} cargada exitosamente para edición`);
                 
             } catch (error) {
-                console.error('Error:', error);
+                console.error('❌ Error en editPaint:', error);
+                console.error('❌ Tipo de error:', error.name);
+                console.error('❌ Mensaje:', error.message);
+                if (error.stack) {
+                    console.error('❌ Stack trace:', error.stack);
+                }
                 alert(`Error al cargar datos de la pintura: ${error.message}`);
             }
         }
