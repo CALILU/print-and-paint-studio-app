@@ -1644,8 +1644,17 @@
                     stockText = 'Sin stock';
                 }
                 
-                const originalImageUrl = paint.image_url || paint.url_de_la_imagen || 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTUwIiBoZWlnaHQ9IjE1MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTUwIiBoZWlnaHQ9IjE1MCIgZmlsbD0iI2NjY2NjYyIvPjx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBmb250LXNpemU9IjE0IiBmaWxsPSIjNjY2NjY2IiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBkeT0iLjNlbSI+Tm8gSW1hZ2U8L3RleHQ+PC9zdmc+'; 
-                const imageUrl = tryDirectFirst(originalImageUrl);
+                // 🔧 USAR DIRECTAMENTE LA URL DE LA BASE DE DATOS
+                const imageUrl = paint.image_url || paint.url_de_la_imagen || 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTUwIiBoZWlnaHQ9IjE1MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTUwIiBoZWlnaHQ9IjE1MCIgZmlsbD0iI2NjY2NjYyIvPjx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBmb250LXNpemU9IjE0IiBmaWxsPSIjNjY2NjY2IiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBkeT0iLjNlbSI+Tm8gSW1hZ2U8L3RleHQ+PC9zdmc>';
+                
+                // 🔍 DEBUG: Verificar URLs por una muestra
+                if (Math.random() < 0.05) { // 5% de las pinturas para debugging
+                    console.log(`🔍 [GRID] Imagen para pintura ${paint.id}:`, {
+                        image_url: paint.image_url,
+                        url_de_la_imagen: paint.url_de_la_imagen,
+                        imageUrl_final: imageUrl
+                    });
+                }
                 
                 // ⚡ NUEVO: Badge para artículos nuevos
                 const newBadge = isNewUnviewed ? 
@@ -1664,7 +1673,13 @@
                         <i class="bi bi-trash action-icon" onclick="confirmDelete(${paint.id})" title="Eliminar"></i>
                         ${markViewedBtn}
                     </div>
-                    <img src="${imageUrl}" alt="${paint.name}" class="paint-image" referrerpolicy="no-referrer" onerror="handleImageError(this)" onload="handleImageSuccess(this)">
+                    <img 
+                        class="paint-image lazy-load" 
+                        data-src="${imageUrl}" 
+                        src="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjQwIiBoZWlnaHQ9IjE2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSIjZWVlIi8+PHRleHQgeD0iNTAlIiB5PSI1MCUiIGZvbnQtZmFtaWx5PSJBcmlhbCwgc2Fucy1zZXJpZiIgZm9udC1zaXplPSIxNCIgZmlsbD0iIzk5OSIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZHk9Ii4zZW0iPkNhcmdhbmRvLi4uPC90ZXh0Pjwvc3ZnPg==" 
+                        alt="${paint.name}" 
+                        referrerpolicy="no-referrer"
+                        loading="lazy">
                     <div class="paint-color-preview" style="background-color: ${paint.color_preview || '#cccccc'}"></div>
                     <div class="paint-title">${paint.name}</div>
                     <div class="paint-code">${paint.color_code || ''}</div>
@@ -1678,6 +1693,9 @@
                 
                 container.appendChild(paintCard);
             });
+            
+            // ⚡ INICIALIZAR LAZY LOADING después de renderizar
+            setTimeout(() => initializeLazyLoading(), 100);
         }
         
         // Función para mostrar pinturas en formato de lista
@@ -1714,14 +1732,21 @@
                     stockText = 'Sin stock';
                 }
                 
-                const originalImageUrl = paint.image_url || paint.url_de_la_imagen || 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTUwIiBoZWlnaHQ9IjE1MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTUwIiBoZWlnaHQ9IjE1MCIgZmlsbD0iI2NjY2NjYyIvPjx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBmb250LXNpemU9IjE0IiBmaWxsPSIjNjY2NjY2IiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBkeT0iLjNlbSI+Tm8gSW1hZ2U8L3RleHQ+PC9zdmc+'; 
-                const imageUrl = tryDirectFirst(originalImageUrl);
+                // 🔧 USAR DIRECTAMENTE LA URL DE LA BASE DE DATOS
+                const imageUrl = paint.image_url || paint.url_de_la_imagen || 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTUwIiBoZWlnaHQ9IjE1MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTUwIiBoZWlnaHQ9IjE1MCIgZmlsbD0iI2NjY2NjYyIvPjx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBmb250LXNpemU9IjE0IiBmaWxsPSIjNjY2NjY2IiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBkeT0iLjNlbSI+Tm8gSW1hZ2U8L3RleHQ+PC9zdmc+';
                 
                 const row = document.createElement('tr');
                 row.setAttribute('data-paint-id', paint.id);
                 row.innerHTML = `
                     <td>
-                        <img src="${imageUrl}" alt="${paint.name}" style="width: 50px; height: 50px; object-fit: contain;" referrerpolicy="no-referrer" onerror="handleImageError(this)" onload="handleImageSuccess(this)">
+                        <img 
+                            class="lazy-load"
+                            data-src="${imageUrl}" 
+                            src="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNTAiIGhlaWdodD0iNTAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PHJlY3Qgd2lkdGg9IjEwMCUiIGhlaWdodD0iMTAwJSIgZmlsbD0iI2VlZSIvPjx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBmb250LWZhbWlseT0iQXJpYWwsIHNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iOCIgZmlsbD0iIzk5OSIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZHk9Ii4zZW0iPi4uLjwvdGV4dD48L3N2Zz4=" 
+                            alt="${paint.name}" 
+                            style="width: 50px; height: 50px; object-fit: contain;" 
+                            referrerpolicy="no-referrer"
+                            loading="lazy">
                         <div style="width: 25px; height: 25px; background-color: ${paint.color_preview || '#cccccc'}; display: inline-block; border-radius: 50%; border: 1px solid #ddd; vertical-align: middle;"></div>
                     </td>
                     <td>
@@ -1758,6 +1783,9 @@
             table.appendChild(thead);
             table.appendChild(tbody); 
             container.appendChild(table);
+            
+            // ⚡ INICIALIZAR LAZY LOADING después de renderizar
+            setTimeout(() => initializeLazyLoading(), 100);
         }
         
         // Función para buscar pinturas
@@ -2041,6 +2069,50 @@
         
         // Llamar a esta función desde la consola: testPaintEndpoint(4767)
         window.testPaintEndpoint = testPaintEndpoint;
+
+        // 🖼️ LAZY LOADING INTELIGENTE PARA IMÁGENES
+        function initializeLazyLoading() {
+            // Configurar Intersection Observer para lazy loading
+            const imageObserver = new IntersectionObserver((entries, observer) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        const img = entry.target;
+                        const realSrc = img.getAttribute('data-src');
+                        
+                        if (realSrc) {
+                            console.log(`🖼️ Cargando imagen lazy: ${realSrc.substring(0, 50)}...`);
+                            
+                            // Cargar imagen real directamente
+                            img.src = realSrc;
+                            img.removeAttribute('data-src');
+                            
+                            // Agregar handler simple de error 
+                            img.onerror = () => {
+                                console.log(`❌ Error cargando imagen: ${realSrc}`);
+                                // Usar placeholder en caso de error
+                                img.src = "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjQwIiBoZWlnaHQ9IjE2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSIjZjBmMGYwIi8+PHRleHQgeD0iNTAlIiB5PSI1MCUiIGZvbnQtZmFtaWx5PSJBcmlhbCwgc2Fucy1zZXJpZiIgZm9udC1zaXplPSIxNCIgZmlsbD0iIzk5OSIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZHk9Ii4zZW0iPkltYWdlbiBubyBkaXNwb25pYmxlPC90ZXh0Pjwvc3ZnPg==";
+                            };
+                            img.onload = () => {
+                                console.log(`✅ Imagen cargada: ${realSrc.substring(0, 50)}...`);
+                            };
+                            
+                            // Dejar de observar esta imagen
+                            observer.unobserve(img);
+                        }
+                    }
+                });
+            }, {
+                // Configuración del observer
+                rootMargin: '100px', // Cargar imágenes 100px antes de que sean visibles
+                threshold: 0.1
+            });
+            
+            // Observar todas las imágenes lazy
+            const lazyImages = document.querySelectorAll('img.lazy-load');
+            lazyImages.forEach(img => imageObserver.observe(img));
+            
+            console.log(`🖼️ Lazy loading inicializado para ${lazyImages.length} imágenes`);
+        }
 
         // Función para confirmar eliminación 
         function confirmDelete(id) {
