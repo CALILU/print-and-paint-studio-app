@@ -1809,9 +1809,9 @@
                 
                 const controller = new AbortController();
                 const timeoutId = setTimeout(() => {
-                    console.log(`⏰ Timeout alcanzado para viewPaint(${id})`);
+                    console.log(`⏰ Timeout alcanzado para viewPaint(${id}) - Servidor muy lento`);
                     controller.abort();
-                }, 10000); // 10 segundos timeout
+                }, 30000); // 30 segundos timeout
                 
                 const response = await fetch(`/admin/paints/${id}`, {
                     method: 'GET',
@@ -1869,7 +1869,7 @@
                 
                 let errorMessage = error.message;
                 if (error.name === 'AbortError') {
-                    errorMessage = 'La solicitud tardó demasiado tiempo (timeout)';
+                    errorMessage = 'El servidor está tardando demasiado en responder (más de 30 segundos). Esto puede indicar un problema de rendimiento en el backend.';
                 }
                 
                 alert(`Error al cargar detalles de la pintura: ${errorMessage}`);
@@ -1884,9 +1884,9 @@
                 
                 const controller = new AbortController();
                 const timeoutId = setTimeout(() => {
-                    console.log(`⏰ Timeout alcanzado para editPaint(${id})`);
+                    console.log(`⏰ Timeout alcanzado para editPaint(${id}) - Servidor muy lento`);
                     controller.abort();
-                }, 10000); // 10 segundos timeout
+                }, 30000); // 30 segundos timeout
                 
                 const response = await fetch(`/admin/paints/${id}`, {
                     method: 'GET',
@@ -1966,7 +1966,7 @@
                 
                 let errorMessage = error.message;
                 if (error.name === 'AbortError') {
-                    errorMessage = 'La solicitud tardó demasiado tiempo (timeout)';
+                    errorMessage = 'El servidor está tardando demasiado en responder (más de 30 segundos). Esto puede indicar un problema de rendimiento en el backend.';
                 }
                 
                 alert(`Error al cargar datos de la pintura: ${errorMessage}`);

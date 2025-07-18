@@ -66,12 +66,22 @@ def login_required(f):
 def admin_required(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
+        import time
+        start_time = time.time()
+        
         if 'user_id' not in session:
+            print(f"🚫 admin_required: No user_id in session after {time.time() - start_time:.3f}s")
             return redirect(url_for('login'))
+        
         user = User.query.get(session['user_id'])
+        auth_time = time.time() - start_time
+        
         if not user or user.role != 'admin':
+            print(f"🚫 admin_required: User {session.get('user_id')} not admin after {auth_time:.3f}s")
             flash('Acceso denegado. Se requieren privilegios de administrador.', 'danger')
             return redirect(url_for('user_dashboard'))
+        
+        print(f"✅ admin_required: User {user.username} authenticated in {auth_time:.3f}s")
         return f(*args, **kwargs)
     return decorated_function
 
@@ -1252,21 +1262,38 @@ def add_paint():
 @app.route('/admin/paints/<int:paint_id>', methods=['GET'])
 @admin_required
 def get_paint(paint_id):
-    paint = Paint.query.get_or_404(paint_id)
-    return jsonify({
-        'id': paint.id,
-        'name': paint.name,
-        'brand': paint.brand,
-        'color_code': paint.color_code,
-        'color_type': paint.color_type,
-        'color_family': paint.color_family,
-        'image_url': paint.image_url,
-        'stock': paint.stock,
-        'price': paint.price,
-        'description': paint.description,
-        'color_preview': paint.color_preview,
-        'created_at': paint.created_at.isoformat() if paint.created_at else None
-    })
+    import time
+    start_time = time.time()
+    print(f"🔍 GET /admin/paints/{paint_id} - Iniciando búsqueda...")
+    
+    try:
+        paint = Paint.query.get_or_404(paint_id)
+        query_time = time.time() - start_time
+        print(f"✅ Pintura {paint_id} encontrada en {query_time:.3f}s")
+        
+        response_data = {
+            'id': paint.id,
+            'name': paint.name,
+            'brand': paint.brand,
+            'color_code': paint.color_code,
+            'color_type': paint.color_type,
+            'color_family': paint.color_family,
+            'image_url': paint.image_url,
+            'stock': paint.stock,
+            'price': paint.price,
+            'description': paint.description,
+            'color_preview': paint.color_preview,
+            'created_at': paint.created_at.isoformat() if paint.created_at else None
+        }
+        
+        total_time = time.time() - start_time
+        print(f"📤 Respuesta enviada en {total_time:.3f}s total")
+        
+        return jsonify(response_data)
+    except Exception as e:
+        error_time = time.time() - start_time
+        print(f"❌ Error en get_paint después de {error_time:.3f}s: {str(e)}")
+        raise
 
 @app.route('/admin/paints/<int:paint_id>', methods=['PUT'])
 @admin_required
