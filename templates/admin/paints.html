@@ -1644,7 +1644,7 @@
                     ${newBadge}
                     <div class="paint-actions">
                         <i class="bi bi-eye action-icon" onclick="viewPaint(${paint.id})" title="Ver detalles"></i>
-                        <i class="bi bi-pencil action-icon" onclick="editPaint(${paint.id})" title="Editar"></i>
+                        <i class="bi bi-pencil action-icon" onclick="console.log('🖱️ Click en editar pintura:', ${paint.id}); editPaint(${paint.id})" title="Editar"></i>
                         <i class="bi bi-trash action-icon" onclick="confirmDelete(${paint.id})" title="Eliminar"></i>
                         ${markViewedBtn}
                     </div>
@@ -1726,7 +1726,7 @@
                             <button class="btn btn-sm btn-outline-primary" onclick="viewPaint(${paint.id})" title="Ver detalles">
                                 <i class="bi bi-eye"></i>
                             </button>
-                            <button class="btn btn-sm btn-outline-success" onclick="editPaint(${paint.id})" title="Editar">
+                            <button class="btn btn-sm btn-outline-success" onclick="console.log('🖱️ Click en editar pintura (lista):', ${paint.id}); editPaint(${paint.id})" title="Editar">
                                 <i class="bi bi-pencil"></i>
                             </button>
                             <button class="btn btn-sm btn-outline-danger" onclick="confirmDelete(${paint.id})" title="Eliminar">
@@ -1850,14 +1850,18 @@
         // Función para editar una pintura
         async function editPaint(id) {
             try {
-                // Quitar resaltado de modificación al editar
-                clearModifiedHighlight(id);
+                console.log(`🔧 Iniciando edición de pintura ID: ${id}`);
                 
                 const response = await fetch(`/admin/paints/${id}`);
                 
+                console.log(`📡 Respuesta del servidor: ${response.status} ${response.statusText}`);
+                
                 if (!response.ok) {
-                    throw new Error('Error al cargar datos de la pintura');
+                    throw new Error(`Error al cargar datos de la pintura (${response.status}: ${response.statusText})`);
                 }
+                
+                // Solo quitar resaltado si la carga fue exitosa
+                clearModifiedHighlight(id);
                 
                 const paint = await response.json();
                 
@@ -1904,6 +1908,8 @@
                 
                 // Disparar eventos para actualizar la vista previa
                 document.getElementById('name').dispatchEvent(new Event('input'));
+                
+                console.log(`✅ Pintura ${id} cargada exitosamente para edición`);
                 
             } catch (error) {
                 console.error('Error:', error);
