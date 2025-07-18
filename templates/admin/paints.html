@@ -377,6 +377,42 @@
                 transform: translateY(0);
             }
         }
+        
+        /* 🔄 ESTILOS PARA BOTÓN DE RECARGA MANUAL */
+        #manualRefreshBtn {
+            position: relative;
+            overflow: hidden;
+            transition: all 0.3s ease;
+        }
+        
+        #manualRefreshBtn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+        
+        #manualRefreshBtn:active {
+            transform: translateY(0);
+        }
+        
+        #manualRefreshBtn i {
+            transition: transform 0.5s ease;
+        }
+        
+        #manualRefreshBtn:hover i.bi-arrow-clockwise {
+            transform: rotate(360deg);
+        }
+        
+        /* Animación de recarga */
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+        
+        .spinner-border-sm {
+            width: 1rem;
+            height: 1rem;
+            border-width: 0.2em;
+        }
     </style>
 </head>
 <body>
@@ -581,13 +617,19 @@
                         <!-- Paints display -->
                         <div class="d-flex justify-content-between align-items-center mb-3">
                             <h3>Pinturas <span class="badge bg-secondary" id="paintCount">0</span></h3>
-                            <div class="btn-group">
-                                <button id="gridViewBtn" class="btn btn-outline-secondary active" onclick="setViewMode('grid')">
-                                    <i class="bi bi-grid"></i>
+                            <div class="d-flex gap-2">
+                                <!-- 🔄 NUEVO: Botón de recarga manual -->
+                                <button id="manualRefreshBtn" class="btn btn-success" onclick="manualRefreshDatabase()" title="Recargar datos desde la base de datos">
+                                    <i class="bi bi-arrow-clockwise"></i> Actualizar BD
                                 </button>
-                                <button id="listViewBtn" class="btn btn-outline-secondary" onclick="setViewMode('list')">
-                                    <i class="bi bi-list"></i>
-                                </button>
+                                <div class="btn-group">
+                                    <button id="gridViewBtn" class="btn btn-outline-secondary active" onclick="setViewMode('grid')">
+                                        <i class="bi bi-grid"></i>
+                                    </button>
+                                    <button id="listViewBtn" class="btn btn-outline-secondary" onclick="setViewMode('list')">
+                                        <i class="bi bi-list"></i>
+                                    </button>
+                                </div>
                             </div>
                         </div>
                         
@@ -2112,6 +2154,99 @@
             lazyImages.forEach(img => imageObserver.observe(img));
             
             console.log(`🖼️ Lazy loading inicializado para ${lazyImages.length} imágenes`);
+        }
+
+        // 🔄 FUNCIÓN DE RECARGA MANUAL DE BASE DE DATOS
+        async function manualRefreshDatabase() {
+            const refreshBtn = document.getElementById('manualRefreshBtn');
+            const container = document.getElementById('paints-container');
+            
+            if (!refreshBtn || !container) {
+                console.error('Elementos necesarios no encontrados');
+                return;
+            }
+            
+            // Deshabilitar botón y mostrar estado de carga
+            refreshBtn.disabled = true;
+            const originalContent = refreshBtn.innerHTML;
+            refreshBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status"></span>Cargando...';
+            
+            // Mostrar notificación
+            showNotification('🔄 Actualizando datos desde la base de datos...', 'info');
+            
+            try {
+                console.log('🔄 Iniciando recarga manual de base de datos');
+                const startTime = performance.now();
+                
+                // Hacer fetch a la base de datos
+                const response = await fetch('/api/paints', {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Cache-Control': 'no-cache, no-store, must-revalidate',
+                        'Pragma': 'no-cache',
+                        'Expires': '0'
+                    }
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`Error HTTP: ${response.status}`);
+                }
+                
+                const paints = await response.json();
+                const loadTime = performance.now() - startTime;
+                
+                console.log(`✅ Datos recargados exitosamente: ${paints.length} pinturas en ${loadTime.toFixed(0)}ms`);
+                
+                // Limpiar cache local si existe
+                if (window.paint_cache) {
+                    window.paint_cache = {};
+                    console.log('🧹 Cache local limpiado');
+                }
+                
+                // Actualizar la vista con los nuevos datos
+                allPaints = paints;
+                currentPaints = [...paints];
+                
+                // Aplicar filtros actuales si existen
+                applyFilters();
+                
+                // Actualizar contador
+                document.getElementById('paintCount').textContent = paints.length;
+                
+                // Mostrar notificación de éxito
+                showNotification(`✅ Base de datos actualizada: ${paints.length} pinturas cargadas en ${(loadTime/1000).toFixed(1)}s`, 'success');
+                
+                // Animación de confirmación en el botón
+                refreshBtn.innerHTML = '<i class="bi bi-check-circle me-2"></i>¡Actualizado!';
+                refreshBtn.classList.remove('btn-success');
+                refreshBtn.classList.add('btn-primary');
+                
+                setTimeout(() => {
+                    refreshBtn.innerHTML = originalContent;
+                    refreshBtn.classList.remove('btn-primary');
+                    refreshBtn.classList.add('btn-success');
+                    refreshBtn.disabled = false;
+                }, 2000);
+                
+            } catch (error) {
+                console.error('❌ Error al recargar base de datos:', error);
+                
+                // Mostrar error
+                showNotification(`❌ Error al actualizar: ${error.message}`, 'error');
+                
+                // Restaurar botón con estado de error
+                refreshBtn.innerHTML = '<i class="bi bi-exclamation-triangle me-2"></i>Error';
+                refreshBtn.classList.remove('btn-success');
+                refreshBtn.classList.add('btn-danger');
+                
+                setTimeout(() => {
+                    refreshBtn.innerHTML = originalContent;
+                    refreshBtn.classList.remove('btn-danger');
+                    refreshBtn.classList.add('btn-success');
+                    refreshBtn.disabled = false;
+                }, 3000);
+            }
         }
 
         // Función para confirmar eliminación 
