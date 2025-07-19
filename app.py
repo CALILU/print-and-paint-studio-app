@@ -1268,6 +1268,7 @@ def get_paints():
                         'price': getattr(paint, 'price', 0.0) or 0.0,
                         'description': getattr(paint, 'description', '') or '',
                         'color_preview': getattr(paint, 'color_preview', '#000000') or '#000000',
+                        'sync_status': getattr(paint, 'sync_status', 'synced'),  # Default to 'synced'
                         'created_at': paint.created_at.isoformat() if paint.created_at else None
                     }
                 result.append(paint_dict)
