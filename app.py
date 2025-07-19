@@ -2592,6 +2592,22 @@ def debug_set_sync_status(paint_id):
         db.session.rollback()
         return jsonify({'success': False, 'error': str(e)}), 500
 
+# Endpoint temporal para debug - verificar notificaciones pendientes
+@app.route('/api/debug/pending-notifications', methods=['GET'])
+def debug_pending_notifications():
+    """Debug endpoint para ver notificaciones pendientes"""
+    try:
+        notifications = getattr(app, 'pending_notifications', [])
+        return jsonify({
+            'success': True,
+            'pending_count': len(notifications),
+            'notifications': notifications,
+            'timestamp': datetime.now().isoformat()
+        })
+    except Exception as e:
+        print(f"Error checking pending notifications: {str(e)}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
 # Endpoint para marcar pinturas como sincronizadas
 @app.route('/api/paints/mark-synced', methods=['POST'])
 @admin_required

@@ -628,6 +628,12 @@
                                     <button class="btn btn-sm btn-outline-success" onclick="debugMarkSynced()">
                                         <i class="bi bi-check-circle me-1"></i> Marcar como sincronizado
                                     </button>
+                                    <button class="btn btn-sm btn-outline-primary" onclick="debugPendingNotifications()">
+                                        <i class="bi bi-bell me-1"></i> Verificar notificaciones
+                                    </button>
+                                    <button class="btn btn-sm btn-outline-secondary" onclick="debugAutoRefreshStatus()">
+                                        <i class="bi bi-activity me-1"></i> Estado auto-refresh
+                                    </button>
                                 </div>
                                 <div id="debugResults" class="mt-2" style="font-family: monospace; font-size: 0.8rem;"></div>
                             </div>
@@ -3760,6 +3766,51 @@
             console.error('Error setting synced:', error);
             document.getElementById('debugResults').innerHTML = `<span style="color: red">Error: ${error.message}</span>`;
         });
+    }
+    
+    function debugPendingNotifications() {
+        fetch('/api/debug/pending-notifications')
+            .then(response => response.json())
+            .then(data => {
+                const resultsDiv = document.getElementById('debugResults');
+                if (data.success) {
+                    let html = `<strong>Notificaciones pendientes: ${data.pending_count}</strong><br>`;
+                    if (data.pending_count > 0) {
+                        data.notifications.forEach((notif, index) => {
+                            html += `${index + 1}. ${notif.action}: ${notif.paint_name} (ID:${notif.paint_id}) - ${notif.timestamp}<br>`;
+                        });
+                    } else {
+                        html += '<span style="color: gray">No hay notificaciones pendientes</span>';
+                    }
+                    resultsDiv.innerHTML = html;
+                } else {
+                    resultsDiv.innerHTML = `<span style="color: red">Error: ${data.error}</span>`;
+                }
+            })
+            .catch(error => {
+                console.error('Error checking pending notifications:', error);
+                document.getElementById('debugResults').innerHTML = `<span style="color: red">Error: ${error.message}</span>`;
+            });
+    }
+    
+    function debugAutoRefreshStatus() {
+        const resultsDiv = document.getElementById('debugResults');
+        
+        // Verificar si el sistema está disponible
+        if (typeof window.androidRefresh !== 'undefined') {
+            const status = window.androidRefresh.status();
+            let html = `<strong>Sistema Auto-refresh:</strong><br>`;
+            html += `Estado: <span style="color: ${status.active ? 'green' : 'red'}">${status.active ? 'ACTIVO' : 'INACTIVO'}</span><br>`;
+            html += `Total notificaciones procesadas: ${status.totalNotifications}<br>`;
+            html += `Funciones disponibles: start, stop, forceCheck, status<br>`;
+            
+            // Forzar verificación
+            html += '<br><button onclick="window.androidRefresh.forceCheck(); setTimeout(() => debugPendingNotifications(), 1000);" class="btn btn-xs btn-outline-primary">Forzar verificación</button>';
+            
+            resultsDiv.innerHTML = html;
+        } else {
+            resultsDiv.innerHTML = '<span style="color: red">Sistema Auto-refresh NO DISPONIBLE</span>';
+        }
     }
     
     </script>
