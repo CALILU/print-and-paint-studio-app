@@ -1691,6 +1691,11 @@
             
             // Reinicializar los tooltips después de agregar nuevos elementos
             initTooltips();
+            
+            // Inicializar lazy loading después de renderizar los videos
+            setTimeout(() => {
+                initializeVideoLazyLoading();
+            }, 100);
         }
         
         // Función para mostrar videos en formato de cuadrícula
@@ -3236,24 +3241,52 @@
         }
         
         function updateDashboardStatistics(data) {
+            // Verificar si los datos existen antes de usarlos
+            if (!data || typeof data !== 'object') {
+                console.error('Datos de estadísticas inválidos:', data);
+                return;
+            }
+            
             // Métricas principales
-            document.getElementById('totalUsers').textContent = data.users.total;
-            document.getElementById('totalVideos').textContent = data.videos.total;
-            document.getElementById('totalTechniques').textContent = data.techniques.total;
-            document.getElementById('totalFavorites').textContent = data.favorites.total;
+            if (data.users && document.getElementById('totalUsers')) {
+                document.getElementById('totalUsers').textContent = data.users.total || 0;
+            }
+            if (data.videos && document.getElementById('totalVideos')) {
+                document.getElementById('totalVideos').textContent = data.videos.total || 0;
+            }
+            if (data.techniques && document.getElementById('totalTechniques')) {
+                document.getElementById('totalTechniques').textContent = data.techniques.total || 0;
+            }
+            if (data.favorites && document.getElementById('totalFavorites')) {
+                document.getElementById('totalFavorites').textContent = data.favorites.total || 0;
+            }
             
             // Usuarios
-            document.getElementById('regularUsers').textContent = data.users.regular;
-            document.getElementById('adminUsers').textContent = data.users.admin;
+            if (data.users) {
+                if (document.getElementById('regularUsers')) {
+                    document.getElementById('regularUsers').textContent = data.users.regular || 0;
+                }
+                if (document.getElementById('adminUsers')) {
+                    document.getElementById('adminUsers').textContent = data.users.admin || 0;
+                }
+            }
             
             // Técnicas
-            document.getElementById('techniquesCount').textContent = data.techniques.total;
-            document.getElementById('avgTechniquesPerVideo').textContent = data.techniques.avg_per_video;
-            document.getElementById('totalTechniquesDuration').textContent = data.techniques.total_duration_formatted;
+            if (data.techniques) {
+                if (document.getElementById('techniquesCount')) {
+                    document.getElementById('techniquesCount').textContent = data.techniques.total || 0;
+                }
+                if (document.getElementById('avgTechniquesPerVideo')) {
+                    document.getElementById('avgTechniquesPerVideo').textContent = data.techniques.avg_per_video || 0;
+                }
+                if (document.getElementById('totalTechniquesDuration')) {
+                    document.getElementById('totalTechniquesDuration').textContent = data.techniques.total_duration_formatted || '0:00';
+                }
+            }
             
             // Videos populares
             const popularVideosList = document.getElementById('popularVideosList');
-            if (data.favorites.popular_videos && data.favorites.popular_videos.length > 0) {
+            if (data.favorites && data.favorites.popular_videos && data.favorites.popular_videos.length > 0) {
                 popularVideosList.innerHTML = '';
                 data.favorites.popular_videos.forEach(video => {
                     popularVideosList.innerHTML += `
@@ -3269,7 +3302,7 @@
             
             // Usuarios activos
             const activeUsersList = document.getElementById('activeUsersList');
-            if (data.favorites.active_users && data.favorites.active_users.length > 0) {
+            if (data.favorites && data.favorites.active_users && data.favorites.active_users.length > 0) {
                 activeUsersList.innerHTML = '';
                 data.favorites.active_users.forEach(user => {
                     activeUsersList.innerHTML += `
@@ -3285,7 +3318,7 @@
             
              // Videos con más técnicas
             const videosWithTechniquesList = document.getElementById('videosWithMostTechniquesList');
-            if (data.techniques.videos_with_most_techniques && data.techniques.videos_with_most_techniques.length > 0) {
+            if (data.techniques && data.techniques.videos_with_most_techniques && data.techniques.videos_with_most_techniques.length > 0) {
                 videosWithTechniquesList.innerHTML = '';
                 data.techniques.videos_with_most_techniques.forEach(video => {
                     videosWithTechniquesList.innerHTML += `
@@ -3300,15 +3333,27 @@
             }
             
             // Generar gráficos
-            createUsersChart(data.users);
-            createUserLevelsChart(data.users.by_level);
-            createVideoDifficultyChart(data.videos.by_level);
-            createVideoCategoriesChart(data.videos.by_category);
+            if (data.users) {
+                createUsersChart(data.users);
+                if (data.users.by_level) {
+                    createUserLevelsChart(data.users.by_level);
+                }
+            }
+            if (data.videos) {
+                if (data.videos.by_level) {
+                    createVideoDifficultyChart(data.videos.by_level);
+                }
+                if (data.videos.by_category) {
+                    createVideoCategoriesChart(data.videos.by_category);
+                }
+            }
         }
         
         function createUsersChart(userData) {
+            if (!userData) return;
+            
             const options = {
-                series: [userData.regular, userData.admin],
+                series: [userData.regular || 0, userData.admin || 0],
                 chart: {
                     type: 'donut',
                     height: 250
@@ -3331,10 +3376,12 @@
         }
         
         function createUserLevelsChart(levelsData) {
+            if (!levelsData) return;
+            
             const options = {
                 series: [{
                     name: 'Usuarios',
-                    data: [levelsData.beginner, levelsData.intermediate, levelsData.expert]
+                    data: [levelsData.beginner || 0, levelsData.intermediate || 0, levelsData.expert || 0]
                 }],
                 chart: {
                     type: 'bar',
@@ -3379,10 +3426,12 @@
         }
         
         function createVideoDifficultyChart(difficultyData) {
+            if (!difficultyData) return;
+            
             const options = {
                 series: [{
                     name: 'Videos',
-                    data: [difficultyData.beginner, difficultyData.intermediate, difficultyData.expert]
+                    data: [difficultyData.beginner || 0, difficultyData.intermediate || 0, difficultyData.expert || 0]
                 }],
                 chart: {
                     type: 'bar',
@@ -3418,9 +3467,11 @@
         }
         
         function createVideoCategoriesChart(categoriesData) {
+            if (!categoriesData || !Array.isArray(categoriesData)) return;
+            
             // Preparar datos para el gráfico
-            const labels = categoriesData.map(cat => cat.name);
-            const series = categoriesData.map(cat => cat.count);
+            const labels = categoriesData.map(cat => cat.name || 'Sin categoría');
+            const series = categoriesData.map(cat => cat.count || 0);
             
             const options = {
                 series: series,
@@ -3502,14 +3553,7 @@
             container.innerHTML = `<iframe src="https://www.youtube.com/embed/${videoId}?autoplay=1" frameborder="0" allowfullscreen allow="autoplay"></iframe>`;
         }
 
-        // Re-inicializar lazy loading después de actualizar videos
-        const originalFilterVideos = filterVideos;
-        filterVideos = function() {
-            originalFilterVideos();
-            setTimeout(() => {
-                initializeVideoLazyLoading();
-            }, 100);
-        };
+        // Lazy loading ya se inicializa automáticamente en displayVideos()
 
         // Inicializar lazy loading cuando se carga la página
         document.addEventListener('DOMContentLoaded', function() {
