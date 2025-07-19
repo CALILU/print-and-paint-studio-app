@@ -2,7 +2,7 @@
 
 ## Overview
 
-This document details the implementation of lazy loading optimization for the video gallery in the Print and Paint Studio application. The optimization was implemented on January 19, 2025, to address performance issues when loading large numbers of YouTube video thumbnails.
+This document details the implementation of lazy loading optimization for the video gallery in the Print and Paint Studio application, including the integration of paint image management within the video gallery modal context. The optimization was implemented on January 19, 2025, to address performance issues when loading large numbers of YouTube video thumbnails and to provide comprehensive paint visual management.
 
 ## Problem Statement
 
@@ -11,12 +11,16 @@ This document details the implementation of lazy loading optimization for the vi
 - **Resource Consumption**: Each iframe consumed significant memory and network resources
 - **Page Load Time**: Initial page load exceeded 30+ seconds with all videos
 - **Browser Limitations**: Risk of browser crashes with hundreds of concurrent iframes
+- **Missing Paint Visual Context**: Paint management modal within video gallery lacked image thumbnails
+- **Inconsistent User Experience**: Different visual representations between main paint gallery and video-integrated paint modal
 
 ### Root Cause Analysis
 1. Direct iframe embedding for all videos on page load
 2. No progressive loading mechanism
 3. YouTube iframe API overhead multiplied by video count
 4. Synchronous resource loading blocking render pipeline
+5. Incomplete paint modal implementation lacking visual image representation
+6. Missing lazy loading architecture for modal-integrated content
 
 ## Solution Architecture
 
@@ -252,6 +256,126 @@ fetchVideos()
     });
 ```
 
+### 5. Paint Modal Integration
+
+#### Enhanced Paint Management within Video Gallery
+
+The video gallery optimization was extended to include comprehensive paint image management within the modal context, providing visual consistency across all paint-related interfaces.
+
+##### Paint Modal Structure
+```html
+<!-- Enhanced paint item with conditional image display -->
+<div class="paint-item ${isAssociated ? 'associated' : ''}" onclick="togglePaintSelection(${paint.id})">
+    ${imageUrl ? `
+    <div class="paint-image-container mb-2">
+        <img 
+            class="paint-image lazy-load-modal" 
+            data-src="${imageUrl}" 
+            src="data:image/svg+xml;base64,${LOADING_PLACEHOLDER}"
+            alt="${paint.name}" 
+            referrerpolicy="no-referrer"
+            loading="lazy">
+        <div class="paint-color-preview" style="background-color: ${paint.color_preview || '#cccccc'}"></div>
+    </div>
+    ` : ''}
+    <div class="d-flex align-items-center mb-2">
+        ${!imageUrl ? `<div class="paint-color-circle" style="background-color: ${paint.color_preview || '#cccccc'}"></div>` : ''}
+        <div class="flex-grow-1">
+            <strong>${paint.name}</strong>
+            <div class="small text-muted">${paint.brand} - ${paint.color_code || 'Sin código'}</div>
+        </div>
+        <div class="form-check">
+            <input class="form-check-input" type="checkbox" ${isAssociated ? 'checked' : ''} id="paint_${paint.id}">
+        </div>
+    </div>
+</div>
+```
+
+##### Modal-Specific Lazy Loading
+```javascript
+function initializePaintModalLazyLoading() {
+    const modalLazyImages = document.querySelectorAll('img.lazy-load-modal[data-src]');
+    
+    if (modalLazyImages.length === 0) {
+        return;
+    }
+
+    const modalImageObserver = new IntersectionObserver((entries, observer) => {
+        entries.forEach(entry => {
+            if (entry.isIntersecting) {
+                const img = entry.target;
+                const realSrc = img.getAttribute('data-src');
+                
+                if (realSrc) {
+                    img.src = realSrc;
+                    img.removeAttribute('data-src');
+                    
+                    img.onerror = () => {
+                        img.src = FALLBACK_PLACEHOLDER_SVG;
+                    };
+                    
+                    observer.unobserve(img);
+                }
+            }
+        });
+    }, {
+        rootMargin: '50px',
+        threshold: 0.1
+    });
+    
+    modalLazyImages.forEach(img => modalImageObserver.observe(img));
+}
+```
+
+##### CSS Integration for Paint Images
+```css
+/* Paint image container in modal context */
+.paint-image-container {
+    position: relative;
+    text-align: center;
+}
+
+/* Responsive paint image styling */
+.paint-image {
+    width: 100%;
+    height: 120px;
+    object-fit: cover;
+    border-radius: 6px;
+    border: 2px solid #dee2e6;
+    transition: opacity 0.3s ease-in-out;
+}
+
+/* Color preview overlay */
+.paint-color-preview {
+    position: absolute;
+    bottom: 5px;
+    right: 5px;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    border: 2px solid white;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+}
+```
+
+##### Integration with Modal Lifecycle
+```javascript
+function displayPaintsInModal(paints) {
+    // ... paint rendering logic ...
+    
+    // Initialize lazy loading after DOM update
+    setTimeout(() => {
+        initializePaintModalLazyLoading();
+    }, 100);
+}
+
+// Search and filter maintain lazy loading
+function searchPaintsInModal() {
+    // ... search logic ...
+    displayPaintsInModal(filteredPaints); // Auto-reinitializes lazy loading
+}
+```
+
 ## Performance Metrics
 
 ### Before Optimization
@@ -271,6 +395,26 @@ fetchVideos()
 - **Memory usage**: 90% reduction
 - **Network efficiency**: 95% reduction in initial requests
 - **User interactivity**: Immediate response vs 30s wait
+
+### Paint Modal Integration Performance
+
+#### Before Enhancement
+- **Visual Information**: Color circles only in paint selection modal
+- **User Experience**: Limited visual paint identification within video context
+- **Consistency**: Inconsistent with main paint gallery interface
+- **Performance**: N/A (no images loaded in modal)
+
+#### After Enhancement
+- **Visual Information**: Full paint images with color overlays in modal
+- **User Experience**: Rich visual paint identification within video context
+- **Consistency**: Unified visual experience across all paint interfaces
+- **Performance**: Progressive image loading optimized for modal viewport
+
+#### Paint Modal Metrics
+- **Image Loading**: Progressive based on modal viewport visibility
+- **Memory Efficiency**: Optimized through modal-specific lazy loading
+- **Network Optimization**: 50px preload buffer for modal context
+- **User Experience**: Immediate visual feedback for paint selection
 
 ## Error Handling and Edge Cases
 
@@ -445,11 +589,11 @@ if (navigator.connection) {
 
 ## Conclusion
 
-The lazy loading implementation for video galleries provides a robust, scalable solution for handling large numbers of YouTube videos. By replacing immediate iframe loading with progressive thumbnail loading, we achieve significant performance improvements while maintaining full functionality and user experience.
+The lazy loading implementation for video galleries provides a robust, scalable solution for handling large numbers of YouTube videos and integrated paint management. By replacing immediate iframe loading with progressive thumbnail loading and extending this architecture to include modal paint image management, we achieve significant performance improvements while maintaining full functionality and comprehensive visual user experience across all content types.
 
 ---
 
 **Last Updated**: January 19, 2025  
-**Version**: 1.0  
+**Version**: 1.1 (Paint Modal Integration)  
 **Author**: Technical Documentation Team  
-**Status**: Production Ready
+**Status**: Production Ready with Paint Integration

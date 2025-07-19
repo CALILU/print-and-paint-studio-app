@@ -2812,6 +2812,155 @@ def clear_old_backups():
             "message": f"Error al limpiar backups antiguos: {str(e)}"
         }), 500
 
+# =====================================================
+# ENDPOINTS DE NOTIFICACIONES WEB PARA ACTUALIZACIONES ANDROID → WEB
+# =====================================================
+
+# Variable global para mantener notificaciones pendientes
+if not hasattr(app, 'pending_notifications'):
+    app.pending_notifications = []
+
+@app.route('/api/web-notify/paint-updated', methods=['POST'])
+def notify_paint_updated():
+    """
+    Endpoint para recibir notificaciones de Android cuando se actualiza una pintura
+    """
+    try:
+        data = request.get_json()
+        
+        if not data:
+            return jsonify({'success': False, 'message': 'No se proporcionaron datos JSON'}), 400
+        
+        # Log de la notificación
+        action = data.get('action', 'unknown')
+        paint_name = data.get('paint_name', 'Desconocido')
+        paint_id = data.get('paint_id')
+        source = data.get('source', 'unknown')
+        
+        print(f"🔔 Notificación web recibida: {action} - {paint_name} (ID: {paint_id}) desde {source}")
+        
+        # Almacenar notificación para clientes web conectados
+        notification = {
+            'type': 'paint_update',
+            'action': action,
+            'paint_id': paint_id,
+            'paint_name': paint_name,
+            'paint_code': data.get('paint_code'),
+            'paint_brand': data.get('paint_brand'),
+            'timestamp': datetime.now().isoformat(),
+            'source': source
+        }
+        
+        # Almacenar en lista en memoria
+        app.pending_notifications.append(notification)
+        
+        # Mantener solo las últimas 100 notificaciones para evitar problemas de memoria
+        if len(app.pending_notifications) > 100:
+            app.pending_notifications = app.pending_notifications[-100:]
+        
+        print(f"✅ Notificación almacenada exitosamente. Total pendientes: {len(app.pending_notifications)}")
+        
+        return jsonify({
+            'success': True, 
+            'message': f'Notificación recibida para {paint_name}',
+            'timestamp': datetime.now().isoformat()
+        })
+        
+    except Exception as e:
+        print(f"❌ Error procesando notificación web: {str(e)}")
+        return jsonify({'success': False, 'message': f'Error: {str(e)}'}), 500
+
+@app.route('/api/web-notify/paint-created', methods=['POST'])
+def notify_paint_created():
+    """
+    Endpoint para recibir notificaciones de Android cuando se crea una pintura nueva
+    """
+    try:
+        data = request.get_json()
+        
+        if not data:
+            return jsonify({'success': False, 'message': 'No se proporcionaron datos JSON'}), 400
+        
+        # Log de la notificación
+        paint_name = data.get('paint_name', 'Desconocido')
+        paint_id = data.get('paint_id')
+        source = data.get('source', 'unknown')
+        
+        print(f"🔔 Notificación web recibida: CREADA - {paint_name} (ID: {paint_id}) desde {source}")
+        
+        # Almacenar notificación
+        notification = {
+            'type': 'paint_create',
+            'action': 'created',
+            'paint_id': paint_id,
+            'paint_name': paint_name,
+            'paint_code': data.get('paint_code'),
+            'paint_brand': data.get('paint_brand'),
+            'timestamp': datetime.now().isoformat(),
+            'source': source
+        }
+        
+        app.pending_notifications.append(notification)
+        
+        # Mantener solo las últimas 100 notificaciones
+        if len(app.pending_notifications) > 100:
+            app.pending_notifications = app.pending_notifications[-100:]
+        
+        print(f"✅ Notificación de creación almacenada exitosamente. Total pendientes: {len(app.pending_notifications)}")
+        
+        return jsonify({
+            'success': True, 
+            'message': f'Notificación de creación recibida para {paint_name}',
+            'timestamp': datetime.now().isoformat()
+        })
+        
+    except Exception as e:
+        print(f"❌ Error procesando notificación de creación: {str(e)}")
+        return jsonify({'success': False, 'message': f'Error: {str(e)}'}), 500
+
+@app.route('/api/web-notify/get-notifications', methods=['GET'])
+def get_pending_notifications():
+    """
+    Endpoint para que la web app obtenga las notificaciones pendientes
+    La web app puede llamar esto periódicamente o cuando necesite actualizar
+    """
+    try:
+        # Obtener todas las notificaciones pendientes
+        notifications = app.pending_notifications.copy()
+        
+        # Limpiar las notificaciones después de enviarlas
+        app.pending_notifications.clear()
+        
+        print(f"📤 Enviando {len(notifications)} notificaciones a la web app")
+        
+        return jsonify({
+            'success': True,
+            'notifications': notifications,
+            'count': len(notifications),
+            'timestamp': datetime.now().isoformat()
+        })
+        
+    except Exception as e:
+        print(f"❌ Error obteniendo notificaciones: {str(e)}")
+        return jsonify({'success': False, 'message': f'Error: {str(e)}'}), 500
+
+@app.route('/api/web-notify/status', methods=['GET'])
+def notification_status():
+    """
+    Endpoint para verificar el estado del sistema de notificaciones
+    """
+    try:
+        return jsonify({
+            'success': True,
+            'status': 'activo',
+            'pending_count': len(app.pending_notifications),
+            'timestamp': datetime.now().isoformat()
+        })
+        
+    except Exception as e:
+        print(f"❌ Error obteniendo estado de notificaciones: {str(e)}")
+        return jsonify({'success': False, 'message': f'Error: {str(e)}'}), 500
+
 if __name__ == '__main__':
     # Este bloque solo se ejecuta en desarrollo local
     with app.app_context():

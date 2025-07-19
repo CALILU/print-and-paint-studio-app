@@ -6,8 +6,9 @@ Comprehensive documentation for the Intersection Observer-based lazy loading sys
 
 - **Paint Management Module**: 3,000+ paint images (Supabase storage)
 - **Video Gallery Module**: 182+ YouTube video thumbnails (YouTube API)
+- **Paint Modal Integration**: Paint images within video gallery modal context
 
-This unified lazy loading architecture provides efficient progressive loading for both static images and video content.
+This unified lazy loading architecture provides efficient progressive loading for static images, video content, and modal-integrated paint galleries.
 
 ## Architecture
 
@@ -31,8 +32,13 @@ graph TD
         K[Video Thumbnails] --> L[YouTube API Loader]
     end
     
+    subgraph "Paint Modal Module"
+        M[Modal Paint Images] --> N[Modal-Specific Loader]
+    end
+    
     B --> I
     B --> K
+    B --> M
 ```
 
 ### Technical Stack
@@ -40,7 +46,7 @@ graph TD
 - **Placeholder Strategy**: Base64-encoded SVG data URIs
 - **Loading Strategy**: Progressive on-demand with module-specific optimizations
 - **Error Handling**: Cascading fallbacks with quality degradation
-- **Content Types**: Static images (Supabase) and YouTube thumbnails
+- **Content Types**: Static images (Supabase), YouTube thumbnails, and modal paint images
 
 ## Implementation Details
 
@@ -100,6 +106,30 @@ graph TD
         alt="${video.title}" 
         style="width: 120px; height: 68px; border-radius: 4px; cursor: pointer; display: block;"
         onclick="playVideo(this, '${video.video_id}')">
+</div>
+```
+
+#### C. Paint Modal Integration Module
+
+##### Paint Images within Video Gallery Modal
+```html
+<div class="paint-item ${isAssociated ? 'associated' : ''}" onclick="togglePaintSelection(${paint.id})">
+    ${imageUrl ? `
+    <div class="paint-image-container mb-2">
+        <img 
+            class="paint-image lazy-load-modal" 
+            data-src="${imageUrl}" 
+            src="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSIjZWVlIi8+PHRleHQgeD0iNTAlIiB5PSI1MCUiIGZvbnQtZmFtaWx5PSJBcmlhbCwgc2Fucy1zZXJpZiIgZm9udC1zaXplPSIxMCIgZmlsbD0iIzk5OSIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZHk9Ii4zZW0iPkNhcmdhbmRvLi4uPC90ZXh0Pjwvc3ZnPg=="
+            alt="${paint.name}" 
+            referrerpolicy="no-referrer"
+            loading="lazy">
+        <div class="paint-color-preview" style="background-color: ${paint.color_preview || '#cccccc'}"></div>
+    </div>
+    ` : ''}
+    <div class="d-flex align-items-center mb-2">
+        ${!imageUrl ? `<div class="paint-color-circle" style="background-color: ${paint.color_preview || '#cccccc'}"></div>` : ''}
+        <strong>${paint.name}</strong>
+    </div>
 </div>
 ```
 
@@ -224,7 +254,62 @@ function initializeVideoLazyLoading() {
 }
 ```
 
-#### C. Dynamic iframe Creation (Video Playback)
+#### C. Paint Modal Observer
+```javascript
+function initializePaintModalLazyLoading() {
+    // Target only modal paint images with pending data-src
+    const modalLazyImages = document.querySelectorAll('img.lazy-load-modal[data-src]');
+    
+    if (modalLazyImages.length === 0) {
+        console.log('✅ No hay imágenes pendientes en modal de pinturas');
+        return;
+    }
+
+    console.log(`🖼️ Iniciando lazy loading para ${modalLazyImages.length} imágenes del modal de pinturas`);
+
+    // Configure Intersection Observer for modal context
+    const modalImageObserver = new IntersectionObserver((entries, observer) => {
+        entries.forEach(entry => {
+            if (entry.isIntersecting) {
+                const img = entry.target;
+                const realSrc = img.getAttribute('data-src');
+                
+                if (realSrc) {
+                    console.log(`🖼️ Cargando imagen de pintura en modal: ${realSrc.substring(0, 50)}...`);
+                    
+                    // Load real image
+                    img.src = realSrc;
+                    img.removeAttribute('data-src');
+                    
+                    // Error handling with fallback
+                    img.onerror = () => {
+                        console.log(`❌ Error cargando imagen de pintura: ${realSrc}`);
+                        img.src = "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSIjZjBmMGYwIi8+PHRleHQgeD0iNTAlIiB5PSI1MCUiIGZvbnQtZmFtaWx5PSJBcmlhbCwgc2Fucy1zZXJpZiIgZm9udC1zaXplPSIxMCIgZmlsbD0iIzk5OSIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZHk9Ii4zZW0iPkltYWdlbiBubyBkaXNwb25pYmxlPC90ZXh0Pjwvc3ZnPg==";
+                    };
+                    
+                    // Success callback
+                    img.onload = () => {
+                        console.log(`✅ Imagen de pintura cargada: ${realSrc.substring(0, 50)}...`);
+                    };
+                    
+                    // Stop observing loaded image
+                    observer.unobserve(img);
+                }
+            }
+        });
+    }, {
+        rootMargin: '50px',  // Load 50px before becoming visible
+        threshold: 0.1       // Trigger when 10% visible
+    });
+    
+    // Start observing all modal images
+    modalLazyImages.forEach(img => modalImageObserver.observe(img));
+    
+    console.log(`✅ Lazy loading inicializado para ${modalLazyImages.length} imágenes del modal`);
+}
+```
+
+#### D. Dynamic iframe Creation (Video Playback)
 ```javascript
 function playVideo(imgElement, videoId) {
     const container = imgElement.closest('.youtube-container');
@@ -320,6 +405,80 @@ function displayVideos(videos) {
     setTimeout(() => {
         initializeVideoLazyLoading();
     }, 100);
+}
+```
+
+#### C. Paint Modal Integration
+
+##### Modal Display Function Integration
+```javascript
+function displayPaintsInModal(paints) {
+    const container = document.getElementById('availablePaintsList');
+    
+    if (paints.length === 0) {
+        container.innerHTML = `
+            <div class="col-12">
+                <div class="alert alert-info">No se encontraron pinturas.</div>
+            </div>
+        `;
+        return;
+    }
+    
+    container.innerHTML = '';
+    
+    paints.forEach(paint => {
+        const isAssociated = associatedPaints.has(paint.id);
+        const paintElement = document.createElement('div');
+        paintElement.className = 'col-md-6 col-lg-4';
+        
+        // Determine image URL with fallback hierarchy
+        const imageUrl = paint.image_url || paint.url_de_la_imagen || '';
+        
+        paintElement.innerHTML = `<!-- Enhanced template with conditional images -->`;
+        container.appendChild(paintElement);
+    });
+    
+    // Initialize lazy loading after DOM update
+    setTimeout(() => {
+        initializePaintModalLazyLoading();
+    }, 100);
+}
+```
+
+##### Modal Lifecycle Integration
+```javascript
+async function openPaintsModal(videoId, videoTitle) {
+    // ... existing modal setup ...
+    
+    // Load paint data
+    await loadPaintsForModal();
+    await loadVideoAssociatedPaints(videoId);
+    
+    // Modal display automatically triggers lazy loading
+    paintsModal.show();
+}
+```
+
+##### Search and Filter Integration
+```javascript
+function searchPaintsInModal() {
+    const searchTerm = document.getElementById('searchPaintsInput').value.toLowerCase();
+    const brand = document.getElementById('filterPaintsBrand').value;
+    
+    // Filter paints based on search criteria
+    let filteredPaints = allPaintsModal.filter(paint => {
+        const matchesSearch = !searchTerm || 
+            paint.name.toLowerCase().includes(searchTerm) ||
+            paint.brand.toLowerCase().includes(searchTerm) ||
+            (paint.color_code && paint.color_code.toLowerCase().includes(searchTerm));
+        
+        const matchesBrand = !brand || paint.brand === brand;
+        
+        return matchesSearch && matchesBrand;
+    });
+    
+    // Re-display with automatic lazy loading re-initialization
+    displayPaintsInModal(filteredPaints);
 }
 ```
 
@@ -619,19 +778,23 @@ function displayPaints(paints) {
 
 ## Module Comparison and Technical Differences
 
-### Paint Management vs Video Gallery Implementation
+### Multi-Module Implementation Comparison
 
-| Aspect | Paint Management | Video Gallery |
-|--------|------------------|---------------|
-| **Content Type** | Static images (Supabase) | Video thumbnails (YouTube API) |
-| **Observer Instance** | Per-function local | Global singleton with cleanup |
-| **CSS Classes** | `.lazy-load` | `.lazy-load-video` |
-| **Data Attributes** | `data-src` only | `data-src` + `data-video-id` |
-| **Error Handling** | Single fallback | Cascading quality fallback |
-| **Placeholder** | Generic loading SVG | Video-specific dark placeholder |
-| **Interaction** | View image | Click-to-play iframe |
-| **Observer Config** | 100px margin, 0.1 threshold | 50px margin, 0.01 threshold |
-| **Content Sources** | Database URLs | YouTube thumbnail API |
+| Aspect | Paint Management | Video Gallery | Paint Modal Integration |
+|--------|------------------|---------------|-------------------------|
+| **Content Type** | Static images (Supabase) | Video thumbnails (YouTube API) | Paint images (Modal context) |
+| **Observer Instance** | Per-function local | Global singleton with cleanup | Modal-specific observer |
+| **CSS Classes** | `.lazy-load` | `.lazy-load-video` | `.lazy-load-modal` |
+| **Data Attributes** | `data-src` only | `data-src` + `data-video-id` | `data-src` only |
+| **Error Handling** | Single fallback | Cascading quality fallback | Single fallback with SVG |
+| **Placeholder** | Generic loading SVG | Video-specific dark placeholder | Compact loading SVG |
+| **Interaction** | View image | Click-to-play iframe | Paint selection toggle |
+| **Observer Config** | 100px margin, 0.1 threshold | 50px margin, 0.01 threshold | 50px margin, 0.1 threshold |
+| **Content Sources** | Database URLs | YouTube thumbnail API | Database URLs (modal context) |
+| **Layout Context** | Grid/List pages | Video gallery | Modal dialog |
+| **Image Dimensions** | Variable (grid: 240x160, list: 50x50) | Fixed aspect ratio | Fixed (100% width, 120px height) |
+| **Color Integration** | Separate color preview circle | N/A | Overlay color preview |
+| **Conditional Rendering** | Always show image placeholder | Always show video placeholder | Show image if available, else color circle |
 
 ### Key Technical Differences
 
@@ -704,8 +867,8 @@ function playVideo(imgElement, videoId) {
 
 ---
 
-**Implementation Date**: December 19, 2024 (Paint), January 19, 2025 (Video)  
-**Performance Improvement**: 90% reduction in initial load time across both modules  
-**Content Handled**: 3,000+ paint images + 182+ video thumbnails efficiently loaded  
+**Implementation Dates**: December 19, 2024 (Paint), January 19, 2025 (Video + Paint Modal)  
+**Performance Improvement**: 90% reduction in initial load time across all modules  
+**Content Handled**: 3,000+ paint images + 182+ video thumbnails + modal paint galleries efficiently loaded  
 **Browser Support**: All modern browsers with polyfill fallback  
-**Architecture**: Unified lazy loading system with module-specific optimizations
+**Architecture**: Unified lazy loading system with module-specific optimizations and modal integration
