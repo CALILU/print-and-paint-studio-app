@@ -3593,6 +3593,42 @@
             }
         }
         
+        // Función para marcar pinturas como sincronizadas
+        async function markPaintsAsSynced(paintIds) {
+            try {
+                log(`Marcando ${paintIds.length} pinturas como sincronizadas...`);
+                
+                const response = await fetch('/api/paints/mark-synced', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        paint_ids: paintIds
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    log(`✅ ${data.updated_count} pinturas marcadas como sincronizadas`);
+                    
+                    // Refrescar la galería para quitar los indicadores de modificación
+                    setTimeout(() => {
+                        log('🔄 [PASO 3] Actualizando galería para quitar indicadores...');
+                        if (typeof fetchPaints === 'function') {
+                            fetchPaints();
+                        }
+                    }, 1000);
+                } else {
+                    console.error('Error marking paints as synced:', data.message);
+                }
+                
+            } catch (error) {
+                console.error('Error calling mark-synced endpoint:', error);
+            }
+        }
+        
         // Función para refrescar datos de pinturas
         function refreshPaintData() {
             // Limpiar cache de imágenes si existe
@@ -3634,53 +3670,50 @@
         initWhenReady();
     })();
     
-    // === FUNCIONES DE DEBUG (SCOPE GLOBAL) ===
+    // === FUNCIONES DE DEBUG - SCOPE GLOBAL GARANTIZADO ===
     
-    async function debugSyncStatus() {
-        try {
-            const response = await fetch('/api/debug/sync-status');
-            const data = await response.json();
-            
-            const resultsDiv = document.getElementById('debugResults');
-            if (data.success) {
-                let html = `<strong>Estado sync_status (últimas ${data.total_checked} pinturas):</strong><br>`;
-                data.paints.forEach(paint => {
-                    const status = paint.sync_status;
-                    const color = status === 'pending_upload' ? 'color: orange' : 
-                                 status === 'synced' ? 'color: green' : 'color: red';
-                    html += `ID:${paint.id} - ${paint.name} - <span style="${color}">${status}</span><br>`;
-                });
-                resultsDiv.innerHTML = html;
-            } else {
-                resultsDiv.innerHTML = `<span style="color: red">Error: ${data.error}</span>`;
-            }
-        } catch (error) {
-            console.error('Error checking sync status:', error);
-            document.getElementById('debugResults').innerHTML = `<span style="color: red">Error: ${error.message}</span>`;
-        }
+    function debugSyncStatus() {
+        fetch('/api/debug/sync-status')
+            .then(response => response.json())
+            .then(data => {
+                const resultsDiv = document.getElementById('debugResults');
+                if (data.success) {
+                    let html = `<strong>Estado sync_status (últimas ${data.total_checked} pinturas):</strong><br>`;
+                    data.paints.forEach(paint => {
+                        const status = paint.sync_status;
+                        const color = status === 'pending_upload' ? 'color: orange' : 
+                                     status === 'synced' ? 'color: green' : 'color: red';
+                        html += `ID:${paint.id} - ${paint.name} - <span style="${color}">${status}</span><br>`;
+                    });
+                    resultsDiv.innerHTML = html;
+                } else {
+                    resultsDiv.innerHTML = `<span style="color: red">Error: ${data.error}</span>`;
+                }
+            })
+            .catch(error => {
+                console.error('Error checking sync status:', error);
+                document.getElementById('debugResults').innerHTML = `<span style="color: red">Error: ${error.message}</span>`;
+            });
     }
     
-    async function debugSetPendingUpload() {
+    function debugSetPendingUpload() {
         const paintId = prompt('Ingresa el ID de la pintura para marcar como "pending_upload":');
         if (!paintId) return;
         
-        try {
-            const response = await fetch(`/api/debug/set-sync-status/${paintId}`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({
-                    status: 'pending_upload'
-                })
-            });
-            
-            const data = await response.json();
+        fetch(`/api/debug/set-sync-status/${paintId}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                status: 'pending_upload'
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
             const resultsDiv = document.getElementById('debugResults');
-            
             if (data.success) {
                 resultsDiv.innerHTML = `<span style="color: orange">✅ Pintura ID:${data.paint_id} (${data.name}) marcada como "pending_upload"</span>`;
-                
                 setTimeout(() => {
                     if (typeof fetchPaints === 'function') {
                         fetchPaints();
@@ -3689,33 +3722,31 @@
             } else {
                 resultsDiv.innerHTML = `<span style="color: red">Error: ${data.error}</span>`;
             }
-        } catch (error) {
+        })
+        .catch(error => {
             console.error('Error setting pending upload:', error);
             document.getElementById('debugResults').innerHTML = `<span style="color: red">Error: ${error.message}</span>`;
-        }
+        });
     }
     
-    async function debugMarkSynced() {
+    function debugMarkSynced() {
         const paintId = prompt('Ingresa el ID de la pintura para marcar como "synced":');
         if (!paintId) return;
         
-        try {
-            const response = await fetch(`/api/debug/set-sync-status/${paintId}`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({
-                    status: 'synced'
-                })
-            });
-            
-            const data = await response.json();
+        fetch(`/api/debug/set-sync-status/${paintId}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                status: 'synced'
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
             const resultsDiv = document.getElementById('debugResults');
-            
             if (data.success) {
                 resultsDiv.innerHTML = `<span style="color: green">✅ Pintura ID:${data.paint_id} (${data.name}) marcada como "synced"</span>`;
-                
                 setTimeout(() => {
                     if (typeof fetchPaints === 'function') {
                         fetchPaints();
@@ -3724,120 +3755,13 @@
             } else {
                 resultsDiv.innerHTML = `<span style="color: red">Error: ${data.error}</span>`;
             }
-        } catch (error) {
+        })
+        .catch(error => {
             console.error('Error setting synced:', error);
             document.getElementById('debugResults').innerHTML = `<span style="color: red">Error: ${error.message}</span>`;
-        }
+        });
     }
     
-    // Función para marcar pinturas como sincronizadas
-    async function markPaintsAsSynced(paintIds) {
-            try {
-                log(`Marcando ${paintIds.length} pinturas como sincronizadas...`);
-                
-                const response = await fetch('/api/paints/mark-synced', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({
-                        paint_ids: paintIds
-                    })
-                });
-                
-                const data = await response.json();
-                
-                if (data.success) {
-                    log(`✅ ${data.updated_count} pinturas marcadas como sincronizadas`);
-                    
-                    // Refrescar la galería para quitar los indicadores de modificación
-                    setTimeout(() => {
-                        log('🔄 [PASO 3] Actualizando galería para quitar indicadores...');
-                        if (typeof fetchPaints === 'function') {
-                            fetchPaints();
-                        }
-                    }, 1000); // Dar un poco más de tiempo
-                } else {
-                    console.error('Error marking paints as synced:', data.message);
-                }
-                
-            } catch (error) {
-                console.error('Error calling mark-synced endpoint:', error);
-            }
-        }
-        
-        // Iniciar sistema
-        function start() {
-            if (isActive) return;
-            
-            isActive = true;
-            log('Sistema iniciado - verificando cambios cada 5 segundos');
-            
-            createIndicator();
-            showNotification('Sistema activado', '#28a745');
-            
-            // Verificar inmediatamente
-            checkNotifications();
-            
-            // Configurar intervalo
-            pollTimer = setInterval(checkNotifications, 5000);
-        }
-        
-        // Detener sistema
-        function stop() {
-            if (pollTimer) {
-                clearInterval(pollTimer);
-                pollTimer = null;
-            }
-            isActive = false;
-            log('Sistema detenido');
-        }
-        
-        // Inicializar cuando fetchPaints esté disponible
-        function initWhenReady() {
-            if (typeof fetchPaints === 'function') {
-                log('Función fetchPaints detectada, activando sistema');
-                start();
-            } else {
-                // Reintentar en 1 segundo
-                setTimeout(initWhenReady, 1000);
-            }
-        }
-        
-        // Inicializar
-        if (document.readyState === 'loading') {
-            document.addEventListener('DOMContentLoaded', initWhenReady);
-        } else {
-            initWhenReady();
-        }
-        
-        // Pausar cuando la página no esté visible
-        document.addEventListener('visibilitychange', function() {
-            if (document.hidden) {
-                log('Página oculta, pausando verificaciones');
-                stop();
-            } else {
-                log('Página visible, reanudando verificaciones');
-                start();
-            }
-        });
-        
-        // Detener al salir de la página
-        window.addEventListener('beforeunload', stop);
-        
-        // Exponer funciones para control manual
-        window.androidRefresh = {
-            start: start,
-            stop: stop,
-            forceCheck: checkNotifications,
-            status: () => ({
-                active: isActive,
-                totalNotifications: totalNotifications
-            })
-        };
-        
-        log('Sistema de auto-refresh cargado y listo');
-    })();
     </script>
 
 </body>
