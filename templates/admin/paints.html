@@ -3530,6 +3530,9 @@
                 if (data.success && data.count > 0) {
                     log(`${data.count} nuevas notificaciones detectadas`);
                     
+                    // Recopilar IDs de las pinturas modificadas
+                    const modifiedPaintIds = [];
+                    
                     // Procesar cada notificación
                     data.notifications.forEach(notif => {
                         const actionText = {
@@ -3540,6 +3543,11 @@
                         
                         log(`${notif.action}: ${notif.paint_name} (${notif.paint_brand})`);
                         showNotification(`Pintura ${actionText[notif.action]}:<br><strong>${notif.paint_name}</strong>`);
+                        
+                        // Recopilar ID si es una actualización
+                        if (notif.action === 'updated' && notif.paint_id) {
+                            modifiedPaintIds.push(notif.paint_id);
+                        }
                     });
                     
                     totalNotifications += data.count;
@@ -3548,6 +3556,11 @@
                     setTimeout(() => {
                         log('Refrescando datos debido a cambios de Android...');
                         refreshPaintData();
+                        
+                        // Marcar pinturas como sincronizadas después de refrescar
+                        if (modifiedPaintIds.length > 0) {
+                            setTimeout(() => markPaintsAsSynced(modifiedPaintIds), 1000);
+                        }
                     }, 2500);
                 }
                 
@@ -3569,6 +3582,42 @@
                 fetchPaints();
             } else {
                 console.error('fetchPaints function not available');
+            }
+        }
+        
+        // Función para marcar pinturas como sincronizadas
+        async function markPaintsAsSynced(paintIds) {
+            try {
+                log(`Marcando ${paintIds.length} pinturas como sincronizadas...`);
+                
+                const response = await fetch('/api/paints/mark-synced', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        paint_ids: paintIds
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    log(`✅ ${data.updated_count} pinturas marcadas como sincronizadas`);
+                    
+                    // Refrescar la galería para quitar los indicadores de modificación
+                    setTimeout(() => {
+                        log('Actualizando galería para quitar indicadores...');
+                        if (typeof fetchPaints === 'function') {
+                            fetchPaints();
+                        }
+                    }, 500);
+                } else {
+                    console.error('Error marking paints as synced:', data.message);
+                }
+                
+            } catch (error) {
+                console.error('Error calling mark-synced endpoint:', error);
             }
         }
         

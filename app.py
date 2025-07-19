@@ -2013,6 +2013,10 @@ def update_paint_android(id):
         # Actualizar fecha de modificación
         paint.updated_at = datetime.utcnow()
         
+        # 📱 Marcar como modificado desde Android para mostrar en galería web
+        if hasattr(paint, 'sync_status'):
+            paint.sync_status = 'pending_upload'
+        
         # Guardar cambios
         db.session.commit()
         
@@ -2526,6 +2530,39 @@ def get_paint_images_stats():
             "data": None,
             "message": f"Error obteniendo estadísticas: {str(e)}"
         }), 500
+
+# Endpoint para marcar pinturas como sincronizadas
+@app.route('/api/paints/mark-synced', methods=['POST'])
+@admin_required
+def mark_paints_synced():
+    """Marcar pinturas como sincronizadas después de procesar notificaciones de Android"""
+    try:
+        data = request.get_json()
+        paint_ids = data.get('paint_ids', [])
+        
+        if not paint_ids:
+            return jsonify({"success": False, "message": "No paint IDs provided"}), 400
+        
+        # Actualizar sync_status a 'synced' para las pinturas especificadas
+        updated_count = 0
+        for paint_id in paint_ids:
+            paint = Paint.query.get(paint_id)
+            if paint and hasattr(paint, 'sync_status'):
+                paint.sync_status = 'synced'
+                updated_count += 1
+        
+        db.session.commit()
+        
+        return jsonify({
+            "success": True,
+            "message": f"Marked {updated_count} paints as synced",
+            "updated_count": updated_count
+        })
+        
+    except Exception as e:
+        print(f"Error marking paints as synced: {str(e)}")
+        db.session.rollback()
+        return jsonify({"success": False, "message": str(e)}), 500
 
 # ==================== BACKUP SYSTEM - STEP 1 ====================
 
