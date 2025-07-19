@@ -3573,12 +3573,17 @@
                     
                     // Refrescar datos después de mostrar notificaciones
                     setTimeout(() => {
-                        log('Refrescando datos debido a cambios de Android...');
+                        log('🔄 [PASO 1] Refrescando datos debido a cambios de Android...');
                         refreshPaintData();
                         
                         // Marcar pinturas como sincronizadas después de refrescar
+                        // Dar tiempo suficiente para que el usuario vea los indicadores
                         if (modifiedPaintIds.length > 0) {
-                            setTimeout(() => markPaintsAsSynced(modifiedPaintIds), 1000);
+                            log(`⏰ [PASO 2] Programando marcado como sincronizado en 8 segundos para ${modifiedPaintIds.length} pinturas...`);
+                            setTimeout(() => {
+                                log(`🔄 [PASO 2] Marcando pinturas como sincronizadas: ${modifiedPaintIds.join(', ')}`);
+                                markPaintsAsSynced(modifiedPaintIds);
+                            }, 8000); // 8 segundos para ver indicadores
                         }
                     }, 2500);
                 }
@@ -3724,11 +3729,11 @@
                     
                     // Refrescar la galería para quitar los indicadores de modificación
                     setTimeout(() => {
-                        log('Actualizando galería para quitar indicadores...');
+                        log('🔄 [PASO 3] Actualizando galería para quitar indicadores...');
                         if (typeof fetchPaints === 'function') {
                             fetchPaints();
                         }
-                    }, 500);
+                    }, 1000); // Dar un poco más de tiempo
                 } else {
                     console.error('Error marking paints as synced:', data.message);
                 }
