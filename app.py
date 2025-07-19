@@ -2960,6 +2960,171 @@ def notification_status():
         print(f"❌ Error obteniendo estado de notificaciones: {str(e)}")
         return jsonify({'success': False, 'message': f'Error: {str(e)}'}), 500
 
+# =====================================================
+# ENDPOINTS DE DEBUGGING PARA DIAGNÓSTICO DE STOCK
+# =====================================================
+
+@app.route('/api/debug/paint/<int:paint_id>', methods=['GET'])
+def debug_paint_stock(paint_id):
+    """
+    Endpoint de debugging para verificar el estado real de una pintura en Railway
+    """
+    try:
+        paint = Paint.query.get(paint_id)
+        if not paint:
+            return jsonify({
+                "success": False,
+                "message": f"Paint with ID {paint_id} not found"
+            }), 404
+        
+        # Información completa de la pintura
+        debug_info = {
+            "success": True,
+            "paint_data": {
+                "id": paint.id,
+                "name": paint.name,
+                "brand": paint.brand,
+                "color_code": paint.color_code,
+                "stock": paint.stock,
+                "price": paint.price,
+                "description": paint.description,
+                "image_url": paint.image_url,
+                "created_at": paint.created_at.isoformat() if paint.created_at else None,
+                "updated_at": paint.updated_at.isoformat() if paint.updated_at else None
+            },
+            "query_info": {
+                "table_name": "paints",
+                "query_time": datetime.now().isoformat()
+            }
+        }
+        
+        print(f"🔍 DEBUG - Paint {paint_id} info:")
+        print(f"   - Name: {paint.name}")
+        print(f"   - Stock: {paint.stock}")
+        print(f"   - Updated: {paint.updated_at}")
+        
+        return jsonify(debug_info)
+        
+    except Exception as e:
+        print(f"❌ Error in debug endpoint: {str(e)}")
+        return jsonify({
+            "success": False,
+            "message": f"Debug error: {str(e)}"
+        }), 500
+
+@app.route('/api/debug/all-paints', methods=['GET'])
+def debug_all_paints():
+    """
+    Endpoint para ver TODAS las pinturas en Railway (limitado a 50 para no sobrecargar)
+    """
+    try:
+        paints = Paint.query.order_by(Paint.updated_at.desc()).limit(50).all()
+        
+        debug_info = {
+            "success": True,
+            "total_count": Paint.query.count(),
+            "showing_latest": len(paints),
+            "paints": []
+        }
+        
+        for paint in paints:
+            debug_info["paints"].append({
+                "id": paint.id,
+                "name": paint.name,
+                "brand": paint.brand,
+                "color_code": paint.color_code,
+                "stock": paint.stock,
+                "updated_at": paint.updated_at.isoformat() if paint.updated_at else None
+            })
+        
+        print(f"🔍 DEBUG - Total paints in Railway: {debug_info['total_count']}")
+        print(f"🔍 DEBUG - Latest 50 paints retrieved")
+        
+        return jsonify(debug_info)
+        
+    except Exception as e:
+        print(f"❌ Error in debug all paints: {str(e)}")
+        return jsonify({
+            "success": False,
+            "message": f"Debug error: {str(e)}"
+        }), 500
+
+@app.route('/api/debug/search-paint/<color_code>', methods=['GET'])
+def debug_search_paint_by_code(color_code):
+    """
+    Buscar pintura por color_code para debugging
+    """
+    try:
+        paints = Paint.query.filter_by(color_code=color_code).all()
+        
+        debug_info = {
+            "success": True,
+            "search_code": color_code,
+            "found_count": len(paints),
+            "paints": []
+        }
+        
+        for paint in paints:
+            debug_info["paints"].append({
+                "id": paint.id,
+                "name": paint.name,
+                "brand": paint.brand,
+                "color_code": paint.color_code,
+                "stock": paint.stock,
+                "created_at": paint.created_at.isoformat() if paint.created_at else None,
+                "updated_at": paint.updated_at.isoformat() if paint.updated_at else None
+            })
+        
+        print(f"🔍 DEBUG - Search for code '{color_code}': {len(paints)} results")
+        
+        return jsonify(debug_info)
+        
+    except Exception as e:
+        print(f"❌ Error in debug search: {str(e)}")
+        return jsonify({
+            "success": False,
+            "message": f"Debug error: {str(e)}"
+        }), 500
+
+@app.route('/api/debug/paint-count-by-brand', methods=['GET'])
+def debug_paint_count_by_brand():
+    """
+    Contar pinturas por marca para debugging
+    """
+    try:
+        from sqlalchemy import func
+        
+        # Contar pinturas por marca
+        brand_counts = db.session.query(
+            Paint.brand,
+            func.count(Paint.id).label('count'),
+            func.sum(Paint.stock).label('total_stock')
+        ).group_by(Paint.brand).all()
+        
+        debug_info = {
+            "success": True,
+            "total_brands": len(brand_counts),
+            "brands": []
+        }
+        
+        for brand, count, total_stock in brand_counts:
+            debug_info["brands"].append({
+                "brand": brand,
+                "paint_count": count,
+                "total_stock": total_stock or 0
+            })
+        
+        print(f"🔍 DEBUG - Total brands: {len(brand_counts)}")
+        
+        return jsonify(debug_info)
+        
+    except Exception as e:
+        print(f"❌ Error in debug brand count: {str(e)}")
+        return jsonify({
+            "success": False,
+            "message": f"Debug error: {str(e)}"
+        }), 500
+
 if __name__ == '__main__':
     # Este bloque solo se ejecuta en desarrollo local
     with app.app_context():
