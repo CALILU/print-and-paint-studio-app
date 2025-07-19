@@ -3524,29 +3524,38 @@
             }
         }
 
+        // Variable global para el observer
+        let videoImageObserver = null;
+        
         // 🖼️ LAZY LOADING PARA MINIATURAS DE VIDEOS
         function initializeVideoLazyLoading() {
             console.log('🔍 Iniciando lazy loading de videos...');
             
-            // Buscar todas las imágenes lazy
-            const lazyImages = document.querySelectorAll('img.lazy-load-video');
-            console.log(`📸 Encontradas ${lazyImages.length} imágenes para lazy loading`);
+            // Si ya existe un observer, desconectarlo primero
+            if (videoImageObserver) {
+                videoImageObserver.disconnect();
+                console.log('🔄 Observer anterior desconectado');
+            }
+            
+            // Buscar solo imágenes que aún no han sido cargadas
+            const lazyImages = document.querySelectorAll('img.lazy-load-video[data-src]');
+            console.log(`📸 Encontradas ${lazyImages.length} imágenes pendientes de carga`);
             
             if (lazyImages.length === 0) {
-                console.warn('⚠️ No se encontraron imágenes con clase lazy-load-video');
+                console.log('✅ Todas las imágenes ya están cargadas o no hay imágenes nuevas');
                 return;
             }
             
             // Configurar Intersection Observer para lazy loading
-            const imageObserver = new IntersectionObserver((entries, observer) => {
+            videoImageObserver = new IntersectionObserver((entries, observer) => {
                 entries.forEach(entry => {
                     if (entry.isIntersecting) {
                         const img = entry.target;
                         const realSrc = img.getAttribute('data-src');
                         
-                        console.log(`👁️ Imagen visible, cargando: ${realSrc}`);
-                        
                         if (realSrc) {
+                            console.log(`👁️ Cargando miniatura: ${realSrc}`);
+                            
                             // Cargar imagen directamente
                             img.src = realSrc;
                             img.removeAttribute('data-src');
@@ -3557,7 +3566,8 @@
                                 console.error('❌ Error cargando miniatura:', realSrc);
                                 // Intentar con imagen alternativa
                                 const videoId = img.getAttribute('data-video-id');
-                                if (videoId) {
+                                if (videoId && !img.classList.contains('error-handled')) {
+                                    img.classList.add('error-handled');
                                     // Intentar diferentes calidades de miniatura
                                     const altSrc = `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`;
                                     console.log(`🔄 Intentando imagen alternativa: ${altSrc}`);
@@ -3580,28 +3590,12 @@
                 threshold: 0.01
             });
             
-            // Observar todas las imágenes lazy
+            // Observar todas las imágenes lazy pendientes
             lazyImages.forEach(img => {
-                imageObserver.observe(img);
+                videoImageObserver.observe(img);
             });
             
-            console.log(`✅ Lazy loading inicializado correctamente`);
-            
-            // Forzar carga de las primeras imágenes visibles
-            setTimeout(() => {
-                lazyImages.forEach(img => {
-                    const rect = img.getBoundingClientRect();
-                    if (rect.top < window.innerHeight && rect.bottom > 0) {
-                        const realSrc = img.getAttribute('data-src');
-                        if (realSrc) {
-                            console.log(`🚀 Carga forzada de imagen visible: ${realSrc}`);
-                            img.src = realSrc;
-                            img.removeAttribute('data-src');
-                            img.classList.add('loaded');
-                        }
-                    }
-                });
-            }, 100);
+            console.log(`✅ Lazy loading inicializado para ${lazyImages.length} imágenes`);
         }
 
         // Función para reproducir video al hacer clic en la miniatura
@@ -3612,22 +3606,7 @@
 
         // Lazy loading ya se inicializa automáticamente en displayVideos()
 
-        // Inicializar lazy loading cuando se carga la página
-        document.addEventListener('DOMContentLoaded', function() {
-            console.log('📄 DOM cargado, esperando para inicializar lazy loading...');
-            setTimeout(() => {
-                console.log('⏰ Iniciando lazy loading después del timeout...');
-                initializeVideoLazyLoading();
-            }, 500);
-        });
-        
-        // También inicializar cuando se cargan los videos por primera vez
-        window.addEventListener('load', function() {
-            console.log('🌐 Página completamente cargada');
-            if (document.querySelectorAll('img.lazy-load-video').length > 0) {
-                initializeVideoLazyLoading();
-            }
-        });
+        // No necesitamos inicializar aquí porque ya se hace después de cargar los videos
     </script>
     <!-- Script para ApexCharts necesario para las estadísticas -->
     <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
