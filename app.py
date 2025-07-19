@@ -2531,6 +2531,67 @@ def get_paint_images_stats():
             "message": f"Error obteniendo estadísticas: {str(e)}"
         }), 500
 
+# Endpoint temporal para debug - verificar sync_status
+@app.route('/api/debug/sync-status', methods=['GET'])
+def debug_sync_status():
+    """Debug endpoint para verificar el estado de sync_status"""
+    try:
+        # Obtener pinturas con sync_status diferente a 'synced'
+        paints = Paint.query.limit(10).all()
+        result = []
+        
+        for paint in paints:
+            sync_status = getattr(paint, 'sync_status', 'field_not_exists')
+            result.append({
+                'id': paint.id,
+                'name': paint.name,
+                'sync_status': sync_status,
+                'stock': paint.stock,
+                'created_at': paint.created_at.isoformat() if paint.created_at else None
+            })
+        
+        return jsonify({
+            'success': True,
+            'paints': result,
+            'total_checked': len(result)
+        })
+        
+    except Exception as e:
+        print(f"Error in debug sync status: {str(e)}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+# Endpoint temporal para testing - establecer sync_status manualmente
+@app.route('/api/debug/set-sync-status/<int:paint_id>', methods=['POST'])
+@admin_required
+def debug_set_sync_status(paint_id):
+    """Debug endpoint para establecer sync_status manualmente"""
+    try:
+        data = request.get_json()
+        status = data.get('status', 'pending_upload')
+        
+        paint = Paint.query.get(paint_id)
+        if not paint:
+            return jsonify({'success': False, 'error': 'Paint not found'}), 404
+        
+        if hasattr(paint, 'sync_status'):
+            paint.sync_status = status
+            db.session.commit()
+            
+            return jsonify({
+                'success': True,
+                'paint_id': paint_id,
+                'name': paint.name,
+                'old_status': 'synced',
+                'new_status': status
+            })
+        else:
+            return jsonify({'success': False, 'error': 'sync_status field not available'}), 400
+            
+    except Exception as e:
+        print(f"Error setting sync status: {str(e)}")
+        db.session.rollback()
+        return jsonify({'success': False, 'error': str(e)}), 500
+
 # Endpoint para marcar pinturas como sincronizadas
 @app.route('/api/paints/mark-synced', methods=['POST'])
 @admin_required

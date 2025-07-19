@@ -614,6 +614,25 @@
                             </div>
                         </div>
                         
+                        <!-- Debug Section -->
+                        <div class="card mb-3" style="border-left: 4px solid #ffc107;">
+                            <div class="card-body">
+                                <h6 class="card-title mb-3">🛠️ Debug - Indicadores de Modificación</h6>
+                                <div class="d-flex flex-wrap gap-2">
+                                    <button class="btn btn-sm btn-outline-info" onclick="debugSyncStatus()">
+                                        <i class="bi bi-search me-1"></i> Verificar sync_status
+                                    </button>
+                                    <button class="btn btn-sm btn-outline-warning" onclick="debugSetPendingUpload()">
+                                        <i class="bi bi-phone me-1"></i> Simular modificación Android
+                                    </button>
+                                    <button class="btn btn-sm btn-outline-success" onclick="debugMarkSynced()">
+                                        <i class="bi bi-check-circle me-1"></i> Marcar como sincronizado
+                                    </button>
+                                </div>
+                                <div id="debugResults" class="mt-2" style="font-family: monospace; font-size: 0.8rem;"></div>
+                            </div>
+                        </div>
+                        
                         <!-- Paints display -->
                         <div class="d-flex justify-content-between align-items-center mb-3">
                             <h3>Pinturas <span class="badge bg-secondary" id="paintCount">0</span></h3>
@@ -3582,6 +3601,104 @@
                 fetchPaints();
             } else {
                 console.error('fetchPaints function not available');
+            }
+        }
+        
+        // === FUNCIONES DE DEBUG ===
+        
+        async function debugSyncStatus() {
+            try {
+                const response = await fetch('/api/debug/sync-status');
+                const data = await response.json();
+                
+                const resultsDiv = document.getElementById('debugResults');
+                if (data.success) {
+                    let html = `<strong>Estado sync_status (últimas ${data.total_checked} pinturas):</strong><br>`;
+                    data.paints.forEach(paint => {
+                        const status = paint.sync_status;
+                        const color = status === 'pending_upload' ? 'color: orange' : 
+                                     status === 'synced' ? 'color: green' : 'color: red';
+                        html += `ID:${paint.id} - ${paint.name} - <span style="${color}">${status}</span><br>`;
+                    });
+                    resultsDiv.innerHTML = html;
+                } else {
+                    resultsDiv.innerHTML = `<span style="color: red">Error: ${data.error}</span>`;
+                }
+            } catch (error) {
+                console.error('Error checking sync status:', error);
+                document.getElementById('debugResults').innerHTML = `<span style="color: red">Error: ${error.message}</span>`;
+            }
+        }
+        
+        async function debugSetPendingUpload() {
+            const paintId = prompt('Ingresa el ID de la pintura para marcar como "pending_upload":');
+            if (!paintId) return;
+            
+            try {
+                const response = await fetch(`/api/debug/set-sync-status/${paintId}`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        status: 'pending_upload'
+                    })
+                });
+                
+                const data = await response.json();
+                const resultsDiv = document.getElementById('debugResults');
+                
+                if (data.success) {
+                    resultsDiv.innerHTML = `<span style="color: orange">✅ Pintura ID:${data.paint_id} (${data.name}) marcada como "pending_upload"</span>`;
+                    
+                    // Refrescar galería para ver el cambio
+                    setTimeout(() => {
+                        if (typeof fetchPaints === 'function') {
+                            fetchPaints();
+                        }
+                    }, 500);
+                } else {
+                    resultsDiv.innerHTML = `<span style="color: red">Error: ${data.error}</span>`;
+                }
+            } catch (error) {
+                console.error('Error setting pending upload:', error);
+                document.getElementById('debugResults').innerHTML = `<span style="color: red">Error: ${error.message}</span>`;
+            }
+        }
+        
+        async function debugMarkSynced() {
+            const paintId = prompt('Ingresa el ID de la pintura para marcar como "synced":');
+            if (!paintId) return;
+            
+            try {
+                const response = await fetch(`/api/debug/set-sync-status/${paintId}`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        status: 'synced'
+                    })
+                });
+                
+                const data = await response.json();
+                const resultsDiv = document.getElementById('debugResults');
+                
+                if (data.success) {
+                    resultsDiv.innerHTML = `<span style="color: green">✅ Pintura ID:${data.paint_id} (${data.name}) marcada como "synced"</span>`;
+                    
+                    // Refrescar galería para ver el cambio
+                    setTimeout(() => {
+                        if (typeof fetchPaints === 'function') {
+                            fetchPaints();
+                        }
+                    }, 500);
+                } else {
+                    resultsDiv.innerHTML = `<span style="color: red">Error: ${data.error}</span>`;
+                }
+            } catch (error) {
+                console.error('Error setting synced:', error);
+                document.getElementById('debugResults').innerHTML = `<span style="color: red">Error: ${error.message}</span>`;
             }
         }
         
