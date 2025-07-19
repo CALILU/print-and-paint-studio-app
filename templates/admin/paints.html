@@ -3444,5 +3444,183 @@
         
     </script>
 
+    <!-- ================================================= -->
+    <!-- SISTEMA DE AUTO-REFRESH PARA CAMBIOS DE ANDROID -->
+    <!-- ================================================= -->
+    <script>
+    // Sistema de auto-refresh para cambios de Android
+    (function() {
+        let isActive = false;
+        let pollTimer = null;
+        let totalNotifications = 0;
+        
+        function log(message) {
+            console.log(`🔔 Android Auto-Refresh: ${message}`);
+        }
+        
+        // Crear indicador visual
+        function createIndicator() {
+            if (document.getElementById('android-indicator')) return;
+            
+            const indicator = document.createElement('div');
+            indicator.id = 'android-indicator';
+            indicator.innerHTML = `
+                <div style="
+                    position: fixed;
+                    top: 80px;
+                    right: 20px;
+                    background: #28a745;
+                    color: white;
+                    padding: 8px 12px;
+                    border-radius: 4px;
+                    font-size: 11px;
+                    z-index: 9999;
+                    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+                    font-family: Arial, sans-serif;
+                    display: none;
+                    max-width: 200px;
+                    word-wrap: break-word;
+                " id="indicator-content">
+                    📱 Conectado con Android
+                </div>
+            `;
+            document.body.appendChild(indicator);
+        }
+        
+        // Mostrar notificación
+        function showNotification(message, color = '#007bff') {
+            const indicator = document.getElementById('indicator-content');
+            if (indicator) {
+                indicator.style.background = color;
+                indicator.style.display = 'block';
+                indicator.innerHTML = `📱 ${message}`;
+                
+                setTimeout(() => {
+                    indicator.style.display = 'none';
+                }, 4000);
+            }
+        }
+        
+        // Verificar notificaciones
+        async function checkNotifications() {
+            try {
+                const response = await fetch('/api/web-notify/get-notifications');
+                const data = await response.json();
+                
+                if (data.success && data.count > 0) {
+                    log(`${data.count} nuevas notificaciones detectadas`);
+                    
+                    // Procesar cada notificación
+                    data.notifications.forEach(notif => {
+                        const actionText = {
+                            'updated': 'actualizada',
+                            'created': 'creada', 
+                            'bulk_update': 'actualizaciones múltiples'
+                        };
+                        
+                        log(`${notif.action}: ${notif.paint_name} (${notif.paint_brand})`);
+                        showNotification(`Pintura ${actionText[notif.action]}:<br><strong>${notif.paint_name}</strong>`);
+                    });
+                    
+                    totalNotifications += data.count;
+                    
+                    // Refrescar datos después de mostrar notificaciones
+                    setTimeout(() => {
+                        log('Refrescando datos debido a cambios de Android...');
+                        refreshPaintData();
+                    }, 2500);
+                }
+                
+            } catch (error) {
+                console.error('Error verificando notificaciones Android:', error);
+            }
+        }
+        
+        // Función para refrescar datos de pinturas
+        function refreshPaintData() {
+            // Limpiar cache de imágenes si existe
+            if (typeof clearImageCache === 'function') {
+                clearImageCache();
+            }
+            
+            // Recargar datos de pinturas
+            log('Recargando datos de pinturas...');
+            loadPaints();
+        }
+        
+        // Iniciar sistema
+        function start() {
+            if (isActive) return;
+            
+            isActive = true;
+            log('Sistema iniciado - verificando cambios cada 5 segundos');
+            
+            createIndicator();
+            showNotification('Sistema activado', '#28a745');
+            
+            // Verificar inmediatamente
+            checkNotifications();
+            
+            // Configurar intervalo
+            pollTimer = setInterval(checkNotifications, 5000);
+        }
+        
+        // Detener sistema
+        function stop() {
+            if (pollTimer) {
+                clearInterval(pollTimer);
+                pollTimer = null;
+            }
+            isActive = false;
+            log('Sistema detenido');
+        }
+        
+        // Inicializar cuando loadPaints esté disponible
+        function initWhenReady() {
+            if (typeof loadPaints === 'function') {
+                log('Función loadPaints detectada, activando sistema');
+                start();
+            } else {
+                // Reintentar en 1 segundo
+                setTimeout(initWhenReady, 1000);
+            }
+        }
+        
+        // Inicializar
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', initWhenReady);
+        } else {
+            initWhenReady();
+        }
+        
+        // Pausar cuando la página no esté visible
+        document.addEventListener('visibilitychange', function() {
+            if (document.hidden) {
+                log('Página oculta, pausando verificaciones');
+                stop();
+            } else {
+                log('Página visible, reanudando verificaciones');
+                start();
+            }
+        });
+        
+        // Detener al salir de la página
+        window.addEventListener('beforeunload', stop);
+        
+        // Exponer funciones para control manual
+        window.androidRefresh = {
+            start: start,
+            stop: stop,
+            forceCheck: checkNotifications,
+            status: () => ({
+                active: isActive,
+                totalNotifications: totalNotifications
+            })
+        };
+        
+        log('Sistema de auto-refresh cargado y listo');
+    })();
+    </script>
+
 </body>
 </html>
