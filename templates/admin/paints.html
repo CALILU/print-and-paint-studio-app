@@ -1205,12 +1205,13 @@
             // Configurar vista previa en tiempo real
             setupLivePreview();
             
-            // 🔄 AUTO-REFRESH OPTIMIZADO: Intervalo más largo y con detección de actividad
+            // 🔄 AUTO-REFRESH OPTIMIZADO: Intervalo más corto para notificaciones de Android
             let lastUserActivity = Date.now();
-            let refreshInterval = 60000; // 60 segundos en lugar de 15
+            let refreshInterval = 10000; // 10 segundos para detectar cambios de Android rápidamente
             
-            // Detectar actividad del usuario para pausar auto-refresh innecesario
-            ['click', 'keydown', 'mousemove', 'scroll'].forEach(event => {
+            // Detectar actividad del usuario para pausar auto-refresh innecesario  
+            // Excluir mousemove para ser menos sensible a la actividad del usuario
+            ['click', 'keydown', 'scroll'].forEach(event => {
                 document.addEventListener(event, () => {
                     lastUserActivity = Date.now();
                 }, { passive: true });
@@ -1219,7 +1220,7 @@
             setInterval(() => {
                 // Solo refrescar si no ha habido actividad reciente (evitar interferir con el usuario)
                 const timeSinceActivity = Date.now() - lastUserActivity;
-                if (timeSinceActivity > 30000) { // 30 segundos sin actividad
+                if (timeSinceActivity > 5000) { // 5 segundos sin actividad (reducido de 30)
                     console.log('🔄 Auto-refreshing paint data (user inactive)...');
                     silentRefresh().then(() => {
                         console.log('✅ Paint data refreshed silently');
