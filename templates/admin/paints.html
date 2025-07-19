@@ -1673,6 +1673,12 @@
                     paintCard.classList.add('new-paint-highlight');
                 }
                 
+                // 📱 NUEVO: Detectar si fue modificado en Android
+                const isModifiedInAndroid = paint.sync_status === 'pending_upload';
+                if (isModifiedInAndroid) {
+                    paintCard.classList.add('paint-modified');
+                }
+                
                 // Determinar clase de stock y texto más detallado
                 let stockClass, stockText;
                 if (paint.stock > 10) {
@@ -1702,6 +1708,10 @@
                 const newBadge = isNewUnviewed ? 
                     `<div class="new-badge">⚡ NUEVO</div>` : '';
                 
+                // 📱 NUEVO: Badge para artículos modificados en Android
+                const modifiedBadge = isModifiedInAndroid ? 
+                    `<div class="modified-badge">📱 MODIFICADO</div>` : '';
+                
                 // ⚡ NUEVO: Botón para marcar como visto
                 const markViewedBtn = isNewUnviewed ? 
                     `<i class="bi bi-eye-slash action-icon mark-viewed-btn" onclick="markAsViewed(${paint.id})" title="Marcar como visto"></i>` : '';
@@ -1709,6 +1719,7 @@
                 paintCard.innerHTML = `
                     <div class="stock-badge ${stockClass}">${stockText}</div>
                     ${newBadge}
+                    ${modifiedBadge}
                     <div class="paint-actions">
                         <i class="bi bi-eye action-icon" onclick="console.log('👁️ Click en ver pintura:', ${paint.id}); viewPaint(${paint.id})" title="Ver detalles"></i>
                         <i class="bi bi-pencil action-icon" onclick="console.log('🖱️ Click en editar pintura:', ${paint.id}); editPaint(${paint.id})" title="Editar"></i>
@@ -1761,6 +1772,9 @@
             const tbody = document.createElement('tbody');
             
             paints.forEach(paint => {
+                // 📱 Detectar si fue modificado en Android
+                const isModifiedInAndroid = paint.sync_status === 'pending_upload';
+                
                 // Determinar clase de stock
                 let stockClass, stockText;
                 if (paint.stock > 10) {
@@ -1779,6 +1793,11 @@
                 
                 const row = document.createElement('tr');
                 row.setAttribute('data-paint-id', paint.id);
+                
+                // Agregar clase especial para elementos modificados en Android
+                if (isModifiedInAndroid) {
+                    row.classList.add('table-success');
+                }
                 row.innerHTML = `
                     <td>
                         <img 
@@ -1793,6 +1812,7 @@
                     </td>
                     <td>
                         <strong>${paint.name}</strong>
+                        ${isModifiedInAndroid ? '<span class="badge bg-success ms-1">📱 Modificado</span>' : ''}
                         <div><small class="text-muted">${paint.color_code || 'Sin código'}</small></div>
                     </td>
                     <td>${paint.brand}</td>

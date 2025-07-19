@@ -115,6 +115,7 @@ class Paint(db.Model):
     # volume = db.Column(db.Integer, nullable=True)
     # hex_color = db.Column(db.String(6), default='000000')  # Hex color field
     # updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    sync_status = db.Column(db.String(20), default='synced')  # 'synced', 'pending_upload'
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     
     def to_dict(self):
@@ -131,6 +132,7 @@ class Paint(db.Model):
             'price': self.price,
             'color_preview': self.color_preview,
             'image_url': self.image_url,
+            'sync_status': self.sync_status,
             # Temporarily disabled fields
             # 'volume': self.volume,
             # 'hex_color': self.hex_color,
