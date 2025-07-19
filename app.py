@@ -1986,13 +1986,12 @@ def update_paint_android(id):
         if 'description' in data:
             paint.description = data['description']
         if 'stock' in data:
-            # Sumar el stock de Android al stock existente en la web
-            additional_stock = data['stock']
-            if paint.stock is None:
-                paint.stock = additional_stock
-            else:
-                paint.stock += additional_stock
-            print(f"Stock updated: added {additional_stock}, new total: {paint.stock}")
+            # Android envía el stock como valor absoluto, no como incremento
+            # Para actualizaciones desde Android, reemplazar el stock completamente
+            new_stock = data['stock']
+            old_stock = paint.stock if paint.stock is not None else 0
+            paint.stock = new_stock
+            print(f"🔄 Stock replaced: {old_stock} → {new_stock} for paint {paint.name} (ID: {id})")
         if 'price' in data:
             paint.price = data['price']
         if 'color_preview' in data:
