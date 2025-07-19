@@ -30,7 +30,7 @@ def debug_template_paths():
 db_url = os.environ.get('DATABASE_URL')
 print(f"URL original de la base de datos: {db_url}")
 
-# Verificar si la URL existe y si necesita ser modificada para SQLAlchemy
+# Verificar si la URL existe y si necesita ser modificadas para SQLAlchemy
 if db_url and db_url.startswith('postgres://'):
     db_url = db_url.replace('postgres://', 'postgresql://', 1)
     print(f"URL modificada para SQLAlchemy: {db_url}")
