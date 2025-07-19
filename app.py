@@ -2989,8 +2989,7 @@ def debug_paint_stock(paint_id):
                 "price": paint.price,
                 "description": paint.description,
                 "image_url": paint.image_url,
-                "created_at": paint.created_at.isoformat() if paint.created_at else None,
-                "updated_at": paint.updated_at.isoformat() if paint.updated_at else None
+                "created_at": paint.created_at.isoformat() if paint.created_at else None
             },
             "query_info": {
                 "table_name": "paints",
@@ -3001,7 +3000,7 @@ def debug_paint_stock(paint_id):
         print(f"🔍 DEBUG - Paint {paint_id} info:")
         print(f"   - Name: {paint.name}")
         print(f"   - Stock: {paint.stock}")
-        print(f"   - Updated: {paint.updated_at}")
+        print(f"   - Created: {paint.created_at}")
         
         return jsonify(debug_info)
         
@@ -3018,7 +3017,7 @@ def debug_all_paints():
     Endpoint para ver TODAS las pinturas en Railway (limitado a 50 para no sobrecargar)
     """
     try:
-        paints = Paint.query.order_by(Paint.updated_at.desc()).limit(50).all()
+        paints = Paint.query.order_by(Paint.created_at.desc()).limit(50).all()
         
         debug_info = {
             "success": True,
@@ -3034,7 +3033,7 @@ def debug_all_paints():
                 "brand": paint.brand,
                 "color_code": paint.color_code,
                 "stock": paint.stock,
-                "updated_at": paint.updated_at.isoformat() if paint.updated_at else None
+                "created_at": paint.created_at.isoformat() if paint.created_at else None
             })
         
         print(f"🔍 DEBUG - Total paints in Railway: {debug_info['total_count']}")
@@ -3071,8 +3070,7 @@ def debug_search_paint_by_code(color_code):
                 "brand": paint.brand,
                 "color_code": paint.color_code,
                 "stock": paint.stock,
-                "created_at": paint.created_at.isoformat() if paint.created_at else None,
-                "updated_at": paint.updated_at.isoformat() if paint.updated_at else None
+                "created_at": paint.created_at.isoformat() if paint.created_at else None
             })
         
         print(f"🔍 DEBUG - Search for code '{color_code}': {len(paints)} results")
