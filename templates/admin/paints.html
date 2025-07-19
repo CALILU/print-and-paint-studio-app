@@ -1038,16 +1038,6 @@
         let viewPaintModal;
         
         // Funciones críticas definidas primero para evitar errores de referencia
-        
-        // Alias temporal para loadPaints (mientras se actualiza caché)
-        window.loadPaints = function() {
-            if (typeof fetchPaints === 'function') {
-                fetchPaints();
-            } else {
-                console.error('fetchPaints function not available');
-            }
-        };
-        
         function setViewMode(mode) {
             console.log('setViewMode called with:', mode);
             viewMode = mode;
@@ -3537,18 +3527,6 @@
                     // Refrescar datos después de mostrar notificaciones
                     setTimeout(() => {
                         log('Refrescando datos debido a cambios de Android...');
-                        
-                        // Definir loadPaints si no existe (compatibilidad temporal)
-                        if (typeof window.loadPaints !== 'function') {
-                            window.loadPaints = function() {
-                                if (typeof fetchPaints === 'function') {
-                                    fetchPaints();
-                                } else {
-                                    console.error('fetchPaints not available');
-                                }
-                            };
-                        }
-                        
                         refreshPaintData();
                     }, 2500);
                 }
