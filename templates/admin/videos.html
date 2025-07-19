@@ -98,13 +98,23 @@
             border-radius: 4px;
             margin-bottom: 10px;
         }
-        .youtube-container iframe, .youtube-container div {
+        .youtube-container iframe {
             position: absolute;
             top: 0;
             left: 0;
             width: 100%;
             height: 100%;
             border: none;
+        }
+        .youtube-container img {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            border: none;
+            cursor: pointer;
         }
         .technique-item {
             margin-bottom: 10px;
@@ -385,14 +395,17 @@
         .lazy-load-video.loaded {
             opacity: 1;
         }
-        .youtube-container img {
-            display: block;
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-        }
         .youtube-container:hover img {
             filter: brightness(0.8);
+        }
+        /* Icono de play centrado */
+        .youtube-container > div {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            pointer-events: none;
+            z-index: 1;
         }
     </style>
 </head>
@@ -1750,10 +1763,9 @@
                                 data-src="https://img.youtube.com/vi/${video.video_id}/mqdefault.jpg"
                                 src="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzIwIiBoZWlnaHQ9IjE4MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSIjMzMzIi8+PHRleHQgeD0iNTAlIiB5PSI1MCUiIGZvbnQtZmFtaWx5PSJBcmlhbCwgc2Fucy1zZXJpZiIgZm9udC1zaXplPSIxNCIgZmlsbD0iI2FhYSIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZHk9Ii4zZW0iPkNhcmdhbmRvIHZpZGVvLi4uPC90ZXh0Pjwvc3ZnPg=="
                                 alt="${video.title}"
-                                style="width: 100%; height: 100%; object-fit: cover; cursor: pointer;"
                                 onclick="playVideo(this, '${video.video_id}')"
                             />
-                            <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); pointer-events: none;">
+                            <div>
                                 <i class="bi bi-play-circle-fill" style="font-size: 3rem; color: rgba(255,255,255,0.8); text-shadow: 0 0 10px rgba(0,0,0,0.5);"></i>
                             </div>
                         </div>
@@ -1838,15 +1850,17 @@
                         <input type="checkbox" class="form-check-input video-selector" onclick="toggleVideoSelection(${video.id})">
                     </td>
                     <td>
-                        <img 
-                            class="lazy-load-video"
-                            data-video-id="${video.video_id}"
-                            data-src="https://img.youtube.com/vi/${video.video_id}/mqdefault.jpg"
-                            src="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTIwIiBoZWlnaHQ9IjY4IiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciPjxyZWN0IHdpZHRoPSIxMDAlIiBoZWlnaHQ9IjEwMCUiIGZpbGw9IiMzMzMiLz48dGV4dCB4PSI1MCUiIHk9IjUwJSIgZm9udC1mYW1pbHk9IkFyaWFsLCBzYW5zLXNlcmlmIiBmb250LXNpemU9IjEwIiBmaWxsPSIjYWFhIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBkeT0iLjNlbSI+Q2FyZ2FuZG8uLi48L3RleHQ+PC9zdmc+"
-                            alt="${video.title}" 
-                            style="width: 120px; border-radius: 4px; cursor: pointer;"
-                            onclick="playVideo(this, '${video.video_id}')"
-                        >
+                        <div style="position: relative; width: 120px;">
+                            <img 
+                                class="lazy-load-video"
+                                data-video-id="${video.video_id}"
+                                data-src="https://img.youtube.com/vi/${video.video_id}/mqdefault.jpg"
+                                src="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTIwIiBoZWlnaHQ9IjY4IiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciPjxyZWN0IHdpZHRoPSIxMDAlIiBoZWlnaHQ9IjEwMCUiIGZpbGw9IiMzMzMiLz48dGV4dCB4PSI1MCUiIHk9IjUwJSIgZm9udC1mYW1pbHk9IkFyaWFsLCBzYW5zLXNlcmlmIiBmb250LXNpemU9IjEwIiBmaWxsPSIjYWFhIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBkeT0iLjNlbSI+Q2FyZ2FuZG8uLi48L3RleHQ+PC9zdmc+"
+                                alt="${video.title}" 
+                                style="width: 120px; height: 68px; border-radius: 4px; cursor: pointer; display: block;"
+                                onclick="playVideo(this, '${video.video_id}')"
+                            >
+                        </div>
                     </td>
                     <td>
                         <strong>${video.title}</strong>
