@@ -1380,6 +1380,9 @@ def update_paint(paint_id):
     paint = Paint.query.get_or_404(paint_id)
     data = request.json
     
+    # Guardar el stock anterior para comparar
+    old_stock = paint.stock
+    
     paint.name = data.get('name', paint.name)
     paint.brand = data.get('brand', paint.brand)
     paint.color_code = data.get('color_code', paint.color_code)
@@ -1392,6 +1395,22 @@ def update_paint(paint_id):
     paint.color_preview = data.get('color_preview', paint.color_preview)
     
     db.session.commit()
+    
+    # Enviar notificación push a Android si el stock cambió
+    try:
+        if 'stock' in data and data.get('stock') != old_stock:
+            send_android_notification(paint_id, 'stock_updated', {
+                'paint_id': paint.id,
+                'paint_name': paint.name,
+                'paint_code': paint.color_code,
+                'brand': paint.brand,
+                'old_stock': old_stock,
+                'new_stock': paint.stock,
+                'source': 'web_admin'
+            })
+            print(f"🔔 Notification sent to Android for stock update: {paint.name} (Stock: {old_stock} → {paint.stock})")
+    except Exception as e:
+        print(f"⚠️ Failed to send Android notification: {str(e)}")
     
     return jsonify({
         'id': paint.id,
@@ -3237,6 +3256,84 @@ def debug_paint_count_by_brand():
             "success": False,
             "message": f"Debug error: {str(e)}"
         }), 500
+
+# ==================== SISTEMA DE NOTIFICACIONES WEB → ANDROID ====================
+
+# Variable global para mantener notificaciones pendientes para Android
+if not hasattr(app, 'pending_android_notifications'):
+    app.pending_android_notifications = []
+
+def send_android_notification(paint_id, action, data):
+    """
+    Función para enviar notificaciones a Android
+    """
+    try:
+        notification = {
+            'type': 'paint_update',
+            'action': action,
+            'paint_id': paint_id,
+            'timestamp': datetime.utcnow().isoformat(),
+            'data': data
+        }
+        
+        app.pending_android_notifications.append(notification)
+        
+        # Mantener solo las últimas 100 notificaciones
+        if len(app.pending_android_notifications) > 100:
+            app.pending_android_notifications = app.pending_android_notifications[-100:]
+        
+        return True
+    except Exception as e:
+        print(f"❌ Error sending Android notification: {str(e)}")
+        return False
+
+@app.route('/api/android-notify/get-notifications', methods=['GET'])
+def get_android_notifications():
+    """
+    Endpoint para que Android obtenga las notificaciones pendientes
+    """
+    try:
+        if not hasattr(app, 'pending_android_notifications'):
+            app.pending_android_notifications = []
+        
+        # Obtener todas las notificaciones pendientes
+        notifications = app.pending_android_notifications.copy()
+        
+        # Limpiar las notificaciones después de enviarlas
+        app.pending_android_notifications.clear()
+        
+        print(f"📤 Sending {len(notifications)} notifications to Android")
+        
+        return jsonify({
+            'success': True,
+            'notifications': notifications,
+            'count': len(notifications),
+            'timestamp': datetime.utcnow().isoformat()
+        })
+        
+    except Exception as e:
+        print(f"❌ Error getting Android notifications: {str(e)}")
+        return jsonify({'success': False, 'message': f'Error: {str(e)}'}), 500
+
+@app.route('/api/android-notify/status', methods=['GET'])
+def android_notification_status():
+    """
+    Endpoint para verificar el estado del sistema de notificaciones para Android
+    """
+    try:
+        if not hasattr(app, 'pending_android_notifications'):
+            app.pending_android_notifications = []
+        
+        return jsonify({
+            'success': True,
+            'status': 'active',
+            'pending_count': len(app.pending_android_notifications),
+            'timestamp': datetime.utcnow().isoformat()
+        })
+        
+    except Exception as e:
+        print(f"❌ Error getting Android notification status: {str(e)}")
+        return jsonify({'success': False, 'message': f'Error: {str(e)}'}), 500
 
 if __name__ == '__main__':
     # Este bloque solo se ejecuta en desarrollo local
