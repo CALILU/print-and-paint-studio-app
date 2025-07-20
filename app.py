@@ -2039,6 +2039,22 @@ def update_paint_android(id):
         # Guardar cambios
         db.session.commit()
         
+        # Enviar notificación push a Android si el stock cambió (desde aplicación externa como nuestro script de testing)
+        try:
+            if 'stock' in data and data.get('stock') != old_stock:
+                send_android_notification(id, 'stock_updated', {
+                    'paint_id': paint.id,
+                    'paint_name': paint.name,
+                    'paint_code': paint.color_code,
+                    'brand': paint.brand,
+                    'old_stock': old_stock,
+                    'new_stock': paint.stock,
+                    'source': 'external_api'
+                })
+                print(f"📱 Android notification sent: {paint.name} stock {old_stock} → {paint.stock}")
+        except Exception as e:
+            print(f"⚠️ Failed to send Android notification: {str(e)}")
+        
         # Retornar respuesta para Android
         return jsonify({
             "success": True,
