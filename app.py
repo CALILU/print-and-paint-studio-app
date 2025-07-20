@@ -3275,21 +3275,28 @@ def debug_paint_count_by_brand():
 
 # ==================== SISTEMA DE NOTIFICACIONES WEB → ANDROID ====================
 
-# Variable global para mantener notificaciones pendientes para Android
+# Variables globales para mantener notificaciones pendientes para Android
 if not hasattr(app, 'pending_android_notifications'):
     app.pending_android_notifications = []
+if not hasattr(app, 'sent_notification_ids'):
+    app.sent_notification_ids = set()
 
 def send_android_notification(paint_id, action, data):
     """
     Función para enviar notificaciones a Android
     """
     try:
+        import uuid
+        notification_id = str(uuid.uuid4())
+        
         notification = {
+            'id': notification_id,
             'type': 'paint_update',
             'action': action,
             'paint_id': paint_id,
             'timestamp': datetime.utcnow().isoformat(),
-            'data': data
+            'data': data,
+            'sent': False
         }
         
         app.pending_android_notifications.append(notification)
@@ -3307,28 +3314,57 @@ def send_android_notification(paint_id, action, data):
 def get_android_notifications():
     """
     Endpoint para que Android obtenga las notificaciones pendientes
+    Solo retorna notificaciones que no han sido enviadas previamente
     """
     try:
         if not hasattr(app, 'pending_android_notifications'):
             app.pending_android_notifications = []
+        if not hasattr(app, 'sent_notification_ids'):
+            app.sent_notification_ids = set()
         
-        # Obtener todas las notificaciones pendientes
-        notifications = app.pending_android_notifications.copy()
-        
-        # NO limpiar inmediatamente - dejar que expiren por tiempo
-        # Solo limpiar notificaciones antiguas (más de 5 minutos)
+        # Limpiar notificaciones antiguas (más de 5 minutos) y IDs de enviados antiguos
         current_time = datetime.utcnow()
-        app.pending_android_notifications = [
-            notif for notif in app.pending_android_notifications
-            if (current_time - datetime.fromisoformat(notif['timestamp'].replace('Z', '+00:00').replace('+00:00', ''))).total_seconds() < 300
+        valid_notifications = []
+        valid_sent_ids = set()
+        
+        for notif in app.pending_android_notifications:
+            try:
+                # Manejar diferentes formatos de timestamp
+                timestamp_str = notif['timestamp'].replace('Z', '+00:00').replace('+00:00', '')
+                notif_time = datetime.fromisoformat(timestamp_str)
+                time_diff = (current_time - notif_time).total_seconds()
+                
+                if time_diff < 300:  # Menor a 5 minutos
+                    valid_notifications.append(notif)
+                    if notif.get('sent', False):
+                        valid_sent_ids.add(notif.get('id'))
+            except Exception as parse_error:
+                print(f"⚠️ Error parsing notification timestamp: {parse_error}")
+                # Mantener notificación si no se puede parsear timestamp (asumir reciente)
+                valid_notifications.append(notif)
+        
+        app.pending_android_notifications = valid_notifications
+        app.sent_notification_ids = valid_sent_ids
+        
+        # Obtener solo notificaciones no enviadas
+        new_notifications = [
+            notif for notif in app.pending_android_notifications 
+            if not notif.get('sent', False) and notif.get('id') not in app.sent_notification_ids
         ]
         
-        print(f"📤 Sending {len(notifications)} notifications to Android")
+        # Marcar como enviadas y agregar a conjunto de enviados
+        for notif in new_notifications:
+            notif['sent'] = True
+            if 'id' in notif:
+                app.sent_notification_ids.add(notif['id'])
+        
+        print(f"📤 Sending {len(new_notifications)} new notifications to Android (total pending: {len(app.pending_android_notifications)})")
         
         return jsonify({
             'success': True,
-            'notifications': notifications,
-            'count': len(notifications),
+            'notifications': new_notifications,
+            'count': len(new_notifications),
+            'total_pending': len(app.pending_android_notifications),
             'timestamp': datetime.utcnow().isoformat()
         })
         
@@ -3344,11 +3380,20 @@ def android_notification_status():
     try:
         if not hasattr(app, 'pending_android_notifications'):
             app.pending_android_notifications = []
+        if not hasattr(app, 'sent_notification_ids'):
+            app.sent_notification_ids = set()
+        
+        # Contar notificaciones por estado
+        sent_count = sum(1 for n in app.pending_android_notifications if n.get('sent', False))
+        unsent_count = len(app.pending_android_notifications) - sent_count
         
         return jsonify({
             'success': True,
             'status': 'active',
-            'pending_count': len(app.pending_android_notifications),
+            'total_pending': len(app.pending_android_notifications),
+            'sent_count': sent_count,
+            'unsent_count': unsent_count,
+            'sent_ids_tracked': len(app.sent_notification_ids),
             'timestamp': datetime.utcnow().isoformat()
         })
         
@@ -3412,27 +3457,115 @@ def create_test_notification():
 def confirm_notifications_processed():
     """
     Endpoint para que Android confirme que procesó las notificaciones
+    Acepta tanto processed_count como notification_ids para mayor flexibilidad
     """
     try:
         data = request.get_json()
         processed_count = data.get('processed_count', 0)
+        notification_ids = data.get('notification_ids', [])
         
         if not hasattr(app, 'pending_android_notifications'):
             app.pending_android_notifications = []
+        if not hasattr(app, 'sent_notification_ids'):
+            app.sent_notification_ids = set()
         
-        # Limpiar las primeras N notificaciones que fueron procesadas
-        if processed_count > 0:
-            app.pending_android_notifications = app.pending_android_notifications[processed_count:]
-            print(f"✅ Android confirmed processing {processed_count} notifications")
+        initial_count = len(app.pending_android_notifications)
+        
+        # Método 1: Por IDs específicos (más preciso)
+        if notification_ids:
+            app.pending_android_notifications = [
+                notif for notif in app.pending_android_notifications
+                if notif.get('id') not in notification_ids
+            ]
+            # Remover IDs del conjunto de enviados
+            for notif_id in notification_ids:
+                app.sent_notification_ids.discard(notif_id)
+            print(f"✅ Android confirmed processing {len(notification_ids)} notifications by ID")
+        
+        # Método 2: Por cantidad (compatibilidad con implementación anterior)
+        elif processed_count > 0:
+            # Remover las primeras N notificaciones enviadas
+            sent_notifications = [n for n in app.pending_android_notifications if n.get('sent', False)]
+            to_remove = sent_notifications[:processed_count]
+            
+            for notif in to_remove:
+                if notif in app.pending_android_notifications:
+                    app.pending_android_notifications.remove(notif)
+                if 'id' in notif:
+                    app.sent_notification_ids.discard(notif['id'])
+            
+            print(f"✅ Android confirmed processing {processed_count} notifications by count")
+        
+        removed_count = initial_count - len(app.pending_android_notifications)
         
         return jsonify({
             'success': True,
             'remaining_count': len(app.pending_android_notifications),
+            'removed_count': removed_count,
             'timestamp': datetime.utcnow().isoformat()
         })
         
     except Exception as e:
         print(f"❌ Error confirming processed notifications: {str(e)}")
+        return jsonify({'success': False, 'message': f'Error: {str(e)}'}), 500
+
+@app.route('/api/android-notify/clear', methods=['POST'])
+def clear_android_notifications():
+    """
+    Endpoint para limpiar manualmente las notificaciones (útil para debugging)
+    """
+    try:
+        if not hasattr(app, 'pending_android_notifications'):
+            app.pending_android_notifications = []
+        if not hasattr(app, 'sent_notification_ids'):
+            app.sent_notification_ids = set()
+        
+        data = request.get_json() or {}
+        clear_type = data.get('type', 'all')  # 'all', 'sent', 'old'
+        
+        initial_count = len(app.pending_android_notifications)
+        initial_sent_ids = len(app.sent_notification_ids)
+        
+        if clear_type == 'all':
+            app.pending_android_notifications = []
+            app.sent_notification_ids = set()
+            print("🧹 Cleared all Android notifications")
+        
+        elif clear_type == 'sent':
+            app.pending_android_notifications = [
+                notif for notif in app.pending_android_notifications 
+                if not notif.get('sent', False)
+            ]
+            app.sent_notification_ids = set()
+            print("🧹 Cleared sent Android notifications")
+        
+        elif clear_type == 'old':
+            current_time = datetime.utcnow()
+            app.pending_android_notifications = [
+                notif for notif in app.pending_android_notifications
+                if (current_time - datetime.fromisoformat(notif['timestamp'].replace('Z', '+00:00').replace('+00:00', ''))).total_seconds() < 60
+            ]
+            print("🧹 Cleared old Android notifications (>1 minute)")
+        
+        final_count = len(app.pending_android_notifications)
+        final_sent_ids = len(app.sent_notification_ids)
+        
+        return jsonify({
+            'success': True,
+            'type': clear_type,
+            'removed': {
+                'notifications': initial_count - final_count,
+                'sent_ids': initial_sent_ids - final_sent_ids
+            },
+            'remaining': {
+                'notifications': final_count,
+                'sent_ids': final_sent_ids
+            },
+            'timestamp': datetime.utcnow().isoformat()
+        })
+        
+    except Exception as e:
+        print(f"❌ Error clearing Android notifications: {str(e)}")
         return jsonify({'success': False, 'message': f'Error: {str(e)}'}), 500
 
 if __name__ == '__main__':
