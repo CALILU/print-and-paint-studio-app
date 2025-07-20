@@ -1057,6 +1057,7 @@
         let filteredTypes = [];
         let filteredStockStatus = [];
         let filteredColorFamilies = [];
+        let recentlyViewedPaints = new Set(); // IDs de pinturas vistas/editadas recientemente
         let viewMode = 'grid';
         let paintToDelete = null;
         let confirmDeleteModal;
@@ -1455,19 +1456,28 @@
         // Función para marcar pinturas modificadas visualmente
         function markModifiedPaints(modifiedIds) {
             modifiedIds.forEach(id => {
+                // No marcar si fue recientemente visto/editado
+                if (recentlyViewedPaints.has(id)) {
+                    console.log(`⏭️ Skipping modification highlight for recently viewed paint ID: ${id}`);
+                    return;
+                }
+                
                 // Aplicar estilo inmediatamente
                 setTimeout(() => {
                     const paintElements = document.querySelectorAll(`[data-paint-id="${id}"]`);
                     paintElements.forEach(element => {
-                        element.classList.add('paint-modified');
-                        
-                        // Agregar badge de "MODIFICADO"
-                        const badge = document.createElement('div');
-                        badge.className = 'modified-badge';
-                        badge.textContent = 'MODIFICADO';
-                        element.appendChild(badge);
-                        
-                        // No remover automáticamente - se quitará al hacer clic para ver/editar
+                        // Solo agregar si no está ya marcado
+                        if (!element.classList.contains('paint-modified')) {
+                            element.classList.add('paint-modified');
+                            
+                            // Agregar badge de "MODIFICADO" solo si no existe
+                            if (!element.querySelector('.modified-badge')) {
+                                const badge = document.createElement('div');
+                                badge.className = 'modified-badge';
+                                badge.textContent = 'MODIFICADO';
+                                element.appendChild(badge);
+                            }
+                        }
                     });
                 }, 100);
             });
@@ -1483,6 +1493,16 @@
                     badge.remove();
                 }
             });
+            
+            // Agregar a la lista de recientemente vistos
+            recentlyViewedPaints.add(paintId);
+            
+            // Limpiar de la lista después de 5 minutos
+            setTimeout(() => {
+                recentlyViewedPaints.delete(paintId);
+                console.log(`🗑️ Removed paint ID ${paintId} from recently viewed list`);
+            }, 5 * 60 * 1000); // 5 minutos
+            
             console.log(`🎯 Cleared modification highlight for paint ID: ${paintId}`);
         }
         
