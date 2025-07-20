@@ -1121,6 +1121,16 @@
                 
                 allPaints = paints;
                 
+                // Limpiar todos los estados de modificación al cargar
+                setTimeout(() => {
+                    document.querySelectorAll('.paint-modified').forEach(element => {
+                        element.classList.remove('paint-modified');
+                    });
+                    document.querySelectorAll('.modified-badge').forEach(badge => {
+                        badge.remove();
+                    });
+                }, 100);
+                
                 // Actualizar contador
                 const countElement = document.getElementById('paintCount');
                 if (countElement) {
@@ -2268,6 +2278,14 @@
                 // Actualizar la vista con los nuevos datos
                 allPaints = paints;
                 currentPaints = [...paints];
+                
+                // Limpiar todos los estados de modificación al actualizar BD
+                document.querySelectorAll('.paint-modified').forEach(element => {
+                    element.classList.remove('paint-modified');
+                });
+                document.querySelectorAll('.modified-badge').forEach(badge => {
+                    badge.remove();
+                });
                 
                 // Aplicar filtros actuales si existen
                 applyFilters();

@@ -98,6 +98,36 @@ These optimizations address performance bottlenecks across multiple content type
 - Error handling and user experience optimization
 - Testing checklist and browser compatibility
 
+### ⚡ [Auto-Refresh System Optimization (2025-07-19)](./38-auto-refresh-optimization-2025-07-19.md)
+**Auto-refresh performance optimization** - Technical documentation for resolving user activity detection issues that prevented automatic gallery updates.
+
+**Key Topics:**
+- User activity detection optimization
+- Auto-refresh timing parameter tuning
+- Android notification integration
+- Visual feedback system improvements
+- Performance metrics and monitoring
+
+### 🔔 [Web Notification System Technical Guide (2025-07-19)](./39-web-notification-system-technical-guide-2025-07-19.md)
+**Web notification system architecture** - Comprehensive technical guide for the Android-Web real-time notification system.
+
+**Key Topics:**
+- WebNotificationService implementation (Android)
+- Flask notification endpoints
+- Auto-refresh system integration
+- Visual indicators and user feedback
+- Debugging tools and troubleshooting
+
+### 🔄 [Android-Web Synchronization Developer Guide (2025-07-19)](./40-android-web-sync-developer-guide-2025-07-19.md)
+**Complete synchronization system guide** - Detailed developer documentation for the bidirectional sync system between Android and Web applications.
+
+**Key Topics:**
+- Synchronization architecture and data flow
+- Repository pattern implementation
+- Conflict resolution strategies
+- Debugging tools and commands
+- Performance monitoring and metrics
+
 ## Quick Reference
 
 ### Performance Metrics (Before vs After)
@@ -388,6 +418,6 @@ For technical questions about these optimizations:
 
 ---
 
-**Last Updated**: January 19, 2025  
-**Version**: 2.1 (Multi-Module Optimization + Paint Modal Integration)  
+**Last Updated**: July 19, 2025  
+**Version**: 2.2 (Multi-Module Optimization + Auto-Refresh System + Android-Web Sync)  
 **Status**: Production Ready
