@@ -16,7 +16,7 @@ app = Flask(__name__)
 app.config['DEBUG'] = True
 app.config['TEMPLATES_AUTO_RELOAD'] = True
 
-# Añadir código de depuración después de crear la app Flask
+# Añadir código de depuración después de crear las app Flask
 @app.before_request
 def debug_template_paths():
     print(f"Directorio de plantillas: {app.template_folder}")
