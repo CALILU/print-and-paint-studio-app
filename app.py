@@ -3351,6 +3351,58 @@ def android_notification_status():
         print(f"❌ Error getting Android notification status: {str(e)}")
         return jsonify({'success': False, 'message': f'Error: {str(e)}'}), 500
 
+@app.route('/api/android-notify/test-notification', methods=['POST'])
+def create_test_notification():
+    """
+    ENDPOINT TEMPORAL - Crear notificación de testing para verificar que Android funciona
+    """
+    try:
+        if not hasattr(app, 'pending_android_notifications'):
+            app.pending_android_notifications = []
+        
+        # Get Blanco Hueso data
+        paint = Paint.query.filter_by(name='Blanco Hueso').first()
+        if not paint:
+            return jsonify({
+                'success': False,
+                'message': 'Blanco Hueso not found'
+            }), 404
+        
+        # Create test notification
+        old_stock = paint.stock
+        new_stock = old_stock + 1
+        
+        # Update stock
+        paint.stock = new_stock
+        db.session.commit()
+        
+        # Send notification
+        send_android_notification(paint.id, 'stock_updated', {
+            'paint_id': paint.id,
+            'paint_name': paint.name,
+            'paint_code': paint.color_code,
+            'brand': paint.brand,
+            'old_stock': old_stock,
+            'new_stock': new_stock,
+            'source': 'test_endpoint'
+        })
+        
+        print(f"🧪 TEST: Created notification for {paint.name} stock {old_stock} → {new_stock}")
+        
+        return jsonify({
+            'success': True,
+            'message': f'Test notification created for {paint.name}',
+            'paint_name': paint.name,
+            'old_stock': old_stock,
+            'new_stock': new_stock,
+            'notification_count': len(app.pending_android_notifications),
+            'timestamp': datetime.utcnow().isoformat()
+        })
+        
+    except Exception as e:
+        print(f"❌ Error creating test notification: {str(e)}")
+        return jsonify({'success': False, 'message': f'Error: {str(e)}'}), 500
+
 if __name__ == '__main__':
     # Este bloque solo se ejecuta en desarrollo local
     with app.app_context():
