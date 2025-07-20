@@ -3315,8 +3315,13 @@ def get_android_notifications():
         # Obtener todas las notificaciones pendientes
         notifications = app.pending_android_notifications.copy()
         
-        # Limpiar las notificaciones después de enviarlas
-        app.pending_android_notifications.clear()
+        # NO limpiar inmediatamente - dejar que expiren por tiempo
+        # Solo limpiar notificaciones antiguas (más de 5 minutos)
+        current_time = datetime.utcnow()
+        app.pending_android_notifications = [
+            notif for notif in app.pending_android_notifications
+            if (current_time - datetime.fromisoformat(notif['timestamp'].replace('Z', '+00:00').replace('+00:00', ''))).total_seconds() < 300
+        ]
         
         print(f"📤 Sending {len(notifications)} notifications to Android")
         
@@ -3401,6 +3406,33 @@ def create_test_notification():
         
     except Exception as e:
         print(f"❌ Error creating test notification: {str(e)}")
+        return jsonify({'success': False, 'message': f'Error: {str(e)}'}), 500
+
+@app.route('/api/android-notify/confirm-processed', methods=['POST'])
+def confirm_notifications_processed():
+    """
+    Endpoint para que Android confirme que procesó las notificaciones
+    """
+    try:
+        data = request.get_json()
+        processed_count = data.get('processed_count', 0)
+        
+        if not hasattr(app, 'pending_android_notifications'):
+            app.pending_android_notifications = []
+        
+        # Limpiar las primeras N notificaciones que fueron procesadas
+        if processed_count > 0:
+            app.pending_android_notifications = app.pending_android_notifications[processed_count:]
+            print(f"✅ Android confirmed processing {processed_count} notifications")
+        
+        return jsonify({
+            'success': True,
+            'remaining_count': len(app.pending_android_notifications),
+            'timestamp': datetime.utcnow().isoformat()
+        })
+        
+    except Exception as e:
+        print(f"❌ Error confirming processed notifications: {str(e)}")
         return jsonify({'success': False, 'message': f'Error: {str(e)}'}), 500
 
 if __name__ == '__main__':
