@@ -11,7 +11,7 @@
 
 ## 📈 **IMPACTO EN BASE DE DATOS POSTGRESQL (RAILWAY)**
 
-### **1. OPERACIONES DE LECTURA**
+### **1. OPERACIONES DE LECTURAs**
 
 #### **Android Polling (WebNotificationReceiver)**
 - **Frecuencia**: Cada 10 segundos
