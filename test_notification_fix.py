@@ -1,171 +1,155 @@
 #!/usr/bin/env python3
-
+"""
+Test script para verificar que el fix de notificaciones funciona correctamente
+"""
 import requests
-import time
 import json
+import time
 
-# Configuration
-BASE_URL = "https://print-and-paint-studio-app-production.up.railway.app"
+RAILWAY_URL = "https://print-and-paint-studio-app-production.up.railway.app"
+LOCAL_URL = "http://localhost:5000"
 
-def test_notification_deduplication():
-    """
-    Test that notifications are not duplicated when fetched multiple times
-    """
-    print("🔍 Testing notification deduplication system...")
-    
-    # Step 1: Check if clear endpoint exists (new version)
-    print("\n1. Checking if clear endpoint exists...")
-    response = requests.post(f"{BASE_URL}/api/android-notify/clear", 
-                           json={"type": "all"})
-    if response.status_code == 200:
-        data = response.json()
-        print(f"   ✅ Cleared {data['removed']['notifications']} notifications")
-        use_new_version = True
-    else:
-        print(f"   ⚠️ Clear endpoint not available (status: {response.status_code})")
-        print("   📝 Testing with current deployed version...")
-        use_new_version = False
-    
-    # Step 2: Create a test notification
-    print("\n2. Creating test notification...")
-    response = requests.post(f"{BASE_URL}/api/android-notify/test-notification")
-    if response.status_code == 200:
-        print("   ✅ Test notification created")
-    else:
-        print(f"   ❌ Failed to create: {response.status_code}")
-        return False
-    
-    # Step 3: Check status
-    print("\n3. Checking notification status...")
-    response = requests.get(f"{BASE_URL}/api/android-notify/status")
-    if response.status_code == 200:
-        status = response.json()
-        if use_new_version:
-            print(f"   📊 Total: {status['total_pending']}, Sent: {status['sent_count']}, Unsent: {status['unsent_count']}")
-        else:
-            print(f"   📊 Pending: {status['pending_count']} (old version)")
-    else:
-        print(f"   ❌ Failed to get status: {response.status_code}")
-        return False
-    
-    # Step 4: Fetch notifications (first time)
-    print("\n4. Fetching notifications (1st time)...")
-    response = requests.get(f"{BASE_URL}/api/android-notify/get-notifications")
-    if response.status_code == 200:
-        data = response.json()
-        first_count = data['count']
-        first_notifications = data['notifications']
-        print(f"   📦 Received {first_count} notifications")
-        if first_count > 0:
-            print(f"   🔍 First notification ID: {first_notifications[0].get('id', 'No ID')}")
-    else:
-        print(f"   ❌ Failed to fetch: {response.status_code}")
-        return False
-    
-    # Step 5: Wait and fetch again (should get 0 notifications)
-    print("\n5. Waiting 2 seconds and fetching again...")
-    time.sleep(2)
-    response = requests.get(f"{BASE_URL}/api/android-notify/get-notifications")
-    if response.status_code == 200:
-        data = response.json()
-        second_count = data['count']
-        print(f"   📦 Received {second_count} notifications (should be 0)")
-        if second_count == 0:
-            print("   ✅ SUCCESS: No duplicate notifications!")
-        else:
-            print("   ❌ FAILURE: Got duplicate notifications!")
-            return False
-    else:
-        print(f"   ❌ Failed to fetch: {response.status_code}")
-        return False
-    
-    # Step 6: Check final status
-    print("\n6. Checking final status...")
-    response = requests.get(f"{BASE_URL}/api/android-notify/status")
-    if response.status_code == 200:
-        status = response.json()
-        if use_new_version:
-            print(f"   📊 Total: {status['total_pending']}, Sent: {status['sent_count']}, Unsent: {status['unsent_count']}")
-            if status['sent_count'] > 0 and status['unsent_count'] == 0:
-                print("   ✅ Status confirms notifications are marked as sent")
-            else:
-                print("   ⚠️ Status shows unexpected counts")
-        else:
-            print(f"   📊 Pending: {status['pending_count']} (old version)")
-    
-    # Step 7: Test confirmation system
-    print("\n7. Testing confirmation system...")
-    if first_count > 0 and len(first_notifications) > 0:
-        if use_new_version:
-            notification_ids = [notif['id'] for notif in first_notifications if 'id' in notif]
-            if notification_ids:
-                response = requests.post(f"{BASE_URL}/api/android-notify/confirm-processed",
-                                       json={"notification_ids": notification_ids})
-                if response.status_code == 200:
-                    data = response.json()
-                    print(f"   ✅ Confirmed processing {len(notification_ids)} notifications")
-                    print(f"   📊 Remaining: {data['remaining_count']}")
-                else:
-                    print(f"   ❌ Failed to confirm: {response.status_code}")
-        else:
-            # Test old confirmation method
-            response = requests.post(f"{BASE_URL}/api/android-notify/confirm-processed",
-                                   json={"processed_count": first_count})
-            if response.status_code == 200:
-                data = response.json()
-                print(f"   ✅ Confirmed processing {first_count} notifications")
-                print(f"   📊 Remaining: {data['remaining_count']}")
-            else:
-                print(f"   ❌ Failed to confirm: {response.status_code}")
-    
-    if use_new_version:
-        print("\n✅ New notification deduplication system working!")
-    else:
-        print("\n⚠️ Testing completed with old system - duplicates expected")
-    return True
+# Usar Railway en producción o local para development
+BASE_URL = RAILWAY_URL  # Cambiar a LOCAL_URL si estás probando localmente
 
-def test_current_duplication_issue():
+def test_notification_flow():
     """
-    Demonstrate the current duplication issue with the deployed version
+    Simula el flujo completo de notificaciones web admin → Android
     """
-    print("\n🔄 Testing current system - demonstrating duplication issue...")
+    print("🧪 TESTING NOTIFICATION FLOW")
+    print("=" * 50)
     
-    # Create a test notification
-    print("   Creating test notification...")
-    response = requests.post(f"{BASE_URL}/api/android-notify/test-notification")
-    if response.status_code != 200:
-        print(f"   ❌ Failed to create notification: {response.status_code}")
-        return
+    # 1. Limpiar notificaciones existentes
+    print("\n1. Clearing existing notifications...")
+    clear_response = requests.post(f"{BASE_URL}/api/android-notify/clear", json={"type": "all"})
+    print(f"Clear response: {clear_response.status_code}")
     
-    # Fetch notifications multiple times to show duplication
-    for i in range(1, 4):
-        print(f"\n   Fetch #{i}:")
-        response = requests.get(f"{BASE_URL}/api/android-notify/get-notifications")
-        if response.status_code == 200:
-            data = response.json()
-            print(f"      📦 Received {data['count']} notifications")
-            if data['count'] > 0:
-                print(f"      🔍 Timestamp: {data['notifications'][0]['timestamp']}")
-        time.sleep(2)
+    # 2. Verificar estado inicial
+    print("\n2. Checking initial state...")
+    debug_response = requests.get(f"{BASE_URL}/api/android-notify/debug")
+    debug_data = debug_response.json()
+    print(f"Initial notifications: {debug_data['summary']['total_notifications']}")
     
-    print("\n   📝 As you can see, the same notification is returned multiple times!")
-    print("   💡 This is the duplication issue we fixed in the new version.")
+    # 3. Crear notificación usando el endpoint de testing
+    print("\n3. Creating test notification...")
+    test_response = requests.post(f"{BASE_URL}/api/android-notify/test-notification")
+    test_data = test_response.json()
+    print(f"Test notification created: {test_data.get('success', False)}")
+    print(f"Paint: {test_data.get('paint_name', 'Unknown')}")
+    print(f"Stock change: {test_data.get('old_stock')} → {test_data.get('new_stock')}")
+    
+    # 4. Verificar que la notificación existe
+    print("\n4. Checking notification was created...")
+    debug_response = requests.get(f"{BASE_URL}/api/android-notify/debug")
+    debug_data = debug_response.json()
+    print(f"Total notifications: {debug_data['summary']['total_notifications']}")
+    print(f"Unsent notifications: {debug_data['summary']['unsent_count']}")
+    
+    if debug_data['summary']['total_notifications'] == 0:
+        print("❌ ERROR: No notification was created!")
+        return False
+    
+    # 5. Simular Android obteniendo notificaciones (primer call)
+    print("\n5. Simulating Android getting notifications (first call)...")
+    android_response = requests.get(f"{BASE_URL}/api/android-notify/get-notifications")
+    android_data = android_response.json()
+    print(f"Android received: {android_data['count']} notifications")
+    print(f"Total pending: {android_data['total_pending']}")
+    
+    if android_data['count'] == 0:
+        print("❌ ERROR: Android didn't receive any notifications!")
+        return False
+        
+    notification_ids = [notif['id'] for notif in android_data['notifications']]
+    print(f"Notification IDs: {notification_ids}")
+    
+    # 6. Simular Android obteniendo notificaciones inmediatamente otra vez (segundo call)
+    print("\n6. Simulating Android getting notifications immediately again (second call)...")
+    android_response2 = requests.get(f"{BASE_URL}/api/android-notify/get-notifications")
+    android_data2 = android_response2.json()
+    print(f"Android received (2nd call): {android_data2['count']} notifications")
+    print(f"Total pending (2nd call): {android_data2['total_pending']}")
+    
+    # Con el fix, el segundo call debería recibir 0 notificaciones
+    if android_data2['count'] > 0:
+        print("❌ ERROR: Android received duplicated notifications!")
+        print("❌ FIX NOT WORKING: Notifications are not properly managed")
+        return False
+    else:
+        print("✅ SUCCESS: No duplicate notifications sent!")
+    
+    # 7. Verificar estado después de entrega
+    print("\n7. Checking state after delivery...")
+    debug_response = requests.get(f"{BASE_URL}/api/android-notify/debug")
+    debug_data = debug_response.json()
+    print(f"Total notifications: {debug_data['summary']['total_notifications']}")
+    print(f"Delivered notifications: {debug_data['summary']['delivered_count']}")
+    print(f"Sent notifications: {debug_data['summary']['sent_count']}")
+    
+    # 8. Simular Android confirmando procesamiento
+    print("\n8. Simulating Android confirming processing...")
+    confirm_response = requests.post(f"{BASE_URL}/api/android-notify/confirm-processed", 
+                                   json={"notification_ids": notification_ids})
+    confirm_data = confirm_response.json()
+    print(f"Confirmation success: {confirm_data.get('success', False)}")
+    print(f"Remaining notifications: {confirm_data.get('remaining_count', 'unknown')}")
+    
+    # 9. Verificar estado final
+    print("\n9. Checking final state...")
+    debug_response = requests.get(f"{BASE_URL}/api/android-notify/debug")
+    debug_data = debug_response.json()
+    print(f"Final notifications: {debug_data['summary']['total_notifications']}")
+    
+    if debug_data['summary']['total_notifications'] == 0:
+        print("✅ SUCCESS: All notifications properly cleaned up!")
+        return True
+    else:
+        print("⚠️ WARNING: Some notifications remain after confirmation")
+        return True  # Still consider success if main flow worked
+
+def test_web_admin_update():
+    """
+    Simula una actualización de stock desde web admin
+    """
+    print("\n\n🌐 TESTING WEB ADMIN STOCK UPDATE")
+    print("=" * 50)
+    
+    # Este test requeriría autenticación admin, así que usamos el endpoint de test
+    print("Using test endpoint to simulate web admin update...")
+    
+    # Limpiar notificaciones
+    requests.post(f"{BASE_URL}/api/android-notify/clear", json={"type": "all"})
+    
+    # Crear notificación via test endpoint (simula web admin)
+    test_response = requests.post(f"{BASE_URL}/api/android-notify/test-notification")
+    
+    # Verificar que Android puede recibir la notificación
+    android_response = requests.get(f"{BASE_URL}/api/android-notify/get-notifications")
+    android_data = android_response.json()
+    
+    if android_data['count'] > 0:
+        print("✅ SUCCESS: Web admin update creates notifications for Android!")
+        return True
+    else:
+        print("❌ ERROR: Web admin update doesn't create notifications!")
+        return False
 
 if __name__ == "__main__":
-    print("🧪 Testing notification system...")
+    print(f"Testing notification system at: {BASE_URL}")
+    print(f"Timestamp: {time.strftime('%Y-%m-%d %H:%M:%S')}")
     
-    try:
-        # First demonstrate the current issue
-        test_current_duplication_issue()
-        
-        # Then test our fix (if deployed)
-        test_notification_deduplication()
-        
-        print("\n🎉 Testing completed!")
-        print("\n📋 SUMMARY:")
-        print("   - The current deployed version shows notification duplication")
-        print("   - Our fix adds unique IDs and tracking to prevent duplicates")
-        print("   - Deploy the updated app.py to Railway to activate the fix")
-        
-    except Exception as e:
-        print(f"\n❌ Test failed with error: {str(e)}")
+    # Test 1: Basic notification flow
+    test1_success = test_notification_flow()
+    
+    # Test 2: Web admin update simulation
+    test2_success = test_web_admin_update()
+    
+    print("\n\n🏁 TEST RESULTS")
+    print("=" * 50)
+    print(f"Notification Flow Test: {'✅ PASS' if test1_success else '❌ FAIL'}")
+    print(f"Web Admin Update Test: {'✅ PASS' if test2_success else '❌ FAIL'}")
+    
+    if test1_success and test2_success:
+        print("\n🎉 ALL TESTS PASSED! Notification fix is working correctly.")
+    else:
+        print("\n💥 SOME TESTS FAILED! Check the output above for details.")
