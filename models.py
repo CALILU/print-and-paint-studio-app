@@ -111,6 +111,7 @@ class Paint(db.Model):
     price = db.Column(db.Float)
     description = db.Column(db.Text)
     color_preview = db.Column(db.Text)
+    ean = db.Column(db.String(13))  # Campo EAN agregado
     # New fields temporarily disabled
     # volume = db.Column(db.Integer, nullable=True)
     # hex_color = db.Column(db.String(6), default='000000')  # Hex color field
@@ -132,7 +133,7 @@ class Paint(db.Model):
             'price': self.price,
             'color_preview': self.color_preview,
             'image_url': self.image_url,
-            'ean': getattr(self, 'ean', None),  # Agregar campo EAN
+            'ean': self.ean,  # Campo EAN
             'sync_status': getattr(self, 'sync_status', 'synced'),  # Default to 'synced' if field doesn't exist
             # Temporarily disabled fields
             # 'volume': self.volume,
