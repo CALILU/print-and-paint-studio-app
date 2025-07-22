@@ -132,6 +132,7 @@ class Paint(db.Model):
             'price': self.price,
             'color_preview': self.color_preview,
             'image_url': self.image_url,
+            'ean': getattr(self, 'ean', None),  # Agregar campo EAN
             'sync_status': getattr(self, 'sync_status', 'synced'),  # Default to 'synced' if field doesn't exist
             # Temporarily disabled fields
             # 'volume': self.volume,

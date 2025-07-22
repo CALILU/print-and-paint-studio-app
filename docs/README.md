@@ -128,6 +128,56 @@ These optimizations address performance bottlenecks across multiple content type
 - Debugging tools and commands
 - Performance monitoring and metrics
 
+### 🔔 [Bidirectional Notification System (2025-07-20)](./42-notification-system-bidirectional-sync-2025-07-20.md)
+**Complete notification system architecture** - Technical documentation for the bidirectional notification system between Web admin and Android application.
+
+**Key Topics:**
+- WebNotificationReceiver implementation and polling system
+- LocalBroadcastManager for automatic UI updates
+- Notification creation, delivery tracking, and confirmation
+- Broadcasting system for real-time gallery refresh
+- Integration with existing synchronization architecture
+
+### 🔧 [Notification Deduplication Critical Fix (2025-07-20)](./43-notification-deduplication-technical-fix-2025-07-20.md)
+**Critical bug fix documentation** - Detailed technical analysis and solution for notification duplication issue causing cyclic stock updates.
+
+**Key Topics:**
+- Root cause analysis of notification cycling (stock rotating 11→12→13)
+- UUID-based unique identification system
+- Delivery tracking vs confirmation separation
+- Smart filtering logic and timeout protection
+- Performance improvements (97% reduction in duplicates)
+
+### 🏗️ [Project Architecture & Directory Separation (2025-07-20)](./44-project-architecture-directory-separation-2025-07-20.md)
+**Critical architectural documentation** - Complete guide to the hybrid system architecture with strict directory separation between Android and Web applications.
+
+**Key Topics:**
+- Mandatory directory separation rules (C:\Paintscanner vs C:\print-and-paint-studio-app)
+- Claude Code automatic analysis instructions
+- System integration through APIs and shared database
+- Development workflows and deployment strategies
+- Troubleshooting and debugging procedures per system
+
+### 🔧 [Developer Troubleshooting Guide (2025-07-20)](./45-developer-troubleshooting-guide-2025-07-20.md)
+**Comprehensive troubleshooting reference** - Complete guide for diagnosing, resolving, and preventing issues in the hybrid Paint Scanner system.
+
+**Key Topics:**
+- Critical problems and solutions (notification duplication, UI updates, API issues)
+- Debugging tools for Android (ADB) and Web (Railway, Flask)
+- Automated diagnosis scripts and recovery procedures
+- Performance monitoring and security checks
+- Emergency rollback procedures and system health monitoring
+
+### 📋 [Session Summary (2025-07-20)](./46-session-summary-2025-07-20.md)
+**Complete session documentation** - Comprehensive summary of critical notification deduplication fixes and technical documentation created during the 2025-07-20 development session.
+
+**Key Topics:**
+- Critical bug resolution (notification cycling/duplication)
+- Android UI auto-update implementation
+- Complete technical documentation suite (5 new documents)
+- System architecture and deployment procedures
+- Knowledge transfer instructions for Claude Code
+
 ## Quick Reference
 
 ### Performance Metrics (Before vs After)
@@ -418,6 +468,6 @@ For technical questions about these optimizations:
 
 ---
 
-**Last Updated**: July 19, 2025  
-**Version**: 2.2 (Multi-Module Optimization + Auto-Refresh System + Android-Web Sync)  
+**Last Updated**: July 20, 2025  
+**Version**: 2.3 (Multi-Module Optimization + Bidirectional Notification System + Critical Bug Fixes)  
 **Status**: Production Ready
