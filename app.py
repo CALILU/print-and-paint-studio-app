@@ -2018,6 +2018,8 @@ def update_paint_android(id):
             paint.color_preview = data['color_preview']
         if 'image_url' in data:
             paint.image_url = data['image_url']
+        if 'ean' in data:
+            paint.ean = data['ean']
         if 'volume' in data:
             # Handle volume field (can be null)
             volume_value = data['volume']
