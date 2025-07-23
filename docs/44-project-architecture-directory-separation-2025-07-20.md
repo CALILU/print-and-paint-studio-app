@@ -511,25 +511,27 @@ git push origin main  # Auto-deploy a Railway
 
 #### **Android Version (C:\Paintscanner\models.py):**
 ```python
-# Enfoque: Stock, códigos, sincronización móvil
+# Enfoque: Stock, códigos, sincronización móvil, EAN scanning
 class Paint:
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(255), nullable=False)
     color_code = db.Column(db.String(50))
     brand = db.Column(db.String(100))
     stock = db.Column(db.Integer, default=0)  # ⭐ Focus en stock
+    ean = db.Column(db.String(13), unique=True, index=True)  # ⭐ EAN scanning support
     sync_status = db.Column(db.String(50))    # ⭐ Mobile sync
 ```
 
 #### **Web Version (C:\print-and-paint-studio-app\models.py):**
 ```python
-# Enfoque: Gestión completa, usuarios, categorías
+# Enfoque: Gestión completa, usuarios, categorías, EAN management
 class Paint:
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(255), nullable=False)
     color_code = db.Column(db.String(50))
     brand = db.Column(db.String(100))
     stock = db.Column(db.Integer, default=0)
+    ean = db.Column(db.String(13), unique=True, index=True)  # ⭐ EAN field with unique constraint
     # ⭐ Additional web-specific fields
     description = db.Column(db.Text)
     price = db.Column(db.Float)

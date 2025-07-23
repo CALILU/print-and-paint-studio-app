@@ -178,6 +178,36 @@ These optimizations address performance bottlenecks across multiple content type
 - System architecture and deployment procedures
 - Knowledge transfer instructions for Claude Code
 
+### 🏷️ [EAN Column Implementation (2025-01-23)](./47-ean-column-implementation-2025-01-23.md)
+**Database schema enhancement** - Technical documentation for implementing EAN (European Article Number) field in the hybrid system.
+
+**Key Topics:**
+- PostgreSQL schema modification (EAN column with UNIQUE constraint)
+- Android application updates (entities, DAOs, UI layouts)
+- Web application updates (models, endpoints, templates)
+- Migration guide for both applications
+- Critical directory separation instructions for Claude Code
+
+### 🔄 [EAN Migration Guide for Developers (2025-01-23)](./48-ean-migration-guide-developers-2025-01-23.md)
+**Step-by-step migration guide** - Detailed implementation instructions for developers to add EAN support to both Android and Web applications.
+
+**Key Topics:**
+- Complete Android code examples (entities, DAOs, activities, layouts)
+- Web application code updates (Flask endpoints, templates, JavaScript)
+- Testing checklist and validation procedures
+- Deployment steps for both applications
+- Critical directory verification instructions
+
+### 📋 [EAN Implementation Session Summary (2025-01-23)](./49-session-summary-ean-implementation-2025-01-23.md)
+**Complete session documentation** - Comprehensive summary of EAN field implementation session including database changes and technical documentation.
+
+**Key Topics:**
+- Database schema modifications (PostgreSQL Railway)
+- Documentation created and updated
+- Implementation checklist and status
+- Next steps and deployment plan
+- Critical instructions for Claude Code analysis
+
 ## Quick Reference
 
 ### Performance Metrics (Before vs After)
@@ -468,6 +498,6 @@ For technical questions about these optimizations:
 
 ---
 
-**Last Updated**: July 20, 2025  
-**Version**: 2.3 (Multi-Module Optimization + Bidirectional Notification System + Critical Bug Fixes)  
+**Last Updated**: January 23, 2025  
+**Version**: 2.4 (Multi-Module Optimization + Bidirectional Notification System + Critical Bug Fixes + EAN Field Implementation)  
 **Status**: Production Ready

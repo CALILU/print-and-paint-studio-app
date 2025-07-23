@@ -111,7 +111,7 @@ class Paint(db.Model):
     price = db.Column(db.Float)
     description = db.Column(db.Text)
     color_preview = db.Column(db.Text)
-    ean = db.Column(db.String(13))  # Campo EAN agregado
+    ean = db.Column(db.String(13), unique=True, index=True)  # Campo EAN único con índice
     # New fields temporarily disabled
     # volume = db.Column(db.Integer, nullable=True)
     # hex_color = db.Column(db.String(6), default='000000')  # Hex color field
