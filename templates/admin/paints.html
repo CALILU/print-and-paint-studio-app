@@ -83,7 +83,6 @@
             transition: transform 0.2s;
             height: 100%;
             position: relative;
-            z-index: 1;
         }
         .paint-container:hover {
             transform: translateY(-5px);
@@ -131,7 +130,6 @@
             background-color: rgba(0,0,0,0.5);
             border-radius: 4px;
             padding: 5px;
-            z-index: 10 !important;
         }
         .paint-container:hover .paint-actions {
             opacity: 1;
@@ -174,7 +172,6 @@
             border-radius: 20px;
             font-size: 0.8rem;
             font-weight: bold;
-            z-index: 10 !important;
         }
         .in-stock {
             background-color: #28a745;
@@ -213,6 +210,7 @@
             border-radius: 12px;
             font-size: 0.7rem;
             font-weight: bold;
+            z-index: 10;
         }
         @keyframes pulse-green {
             0% { box-shadow: 0 0 15px rgba(40, 167, 69, 0.3); }
@@ -774,7 +772,7 @@
                                         </div>
                                     </div>
                                     
-                                    <!-- Ubicación: Dentro de la sección "Description and Image " -->
+                                    <!-- Ubicación: Dentro de la sección "Description and Image" -->
                                     <div class="form-section">
                                         <h5 class="mb-3"><i class="bi bi-card-text me-2"></i> Descripción e Imagen</h5>
                                         <div class="row">
