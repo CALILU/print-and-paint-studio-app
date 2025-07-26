@@ -4120,6 +4120,7 @@
                 case 'fabricantes': return 'bg-success';
                 case 'tiendas_espana': return 'bg-primary';
                 case 'tiendas_internacionales': return 'bg-info';
+                case 'general': return 'bg-warning';
                 default: return 'bg-secondary';
             }
         }
@@ -4287,39 +4288,31 @@
                 <div class="modal-body">
                     <div class="row mb-3">
                         <div class="col-md-8">
-                            <h6>Buscando imágenes de alta resolución en:</h6>
+                            <h6>🔍 Búsqueda en Google Images</h6>
+                            <p class="text-muted mb-2">
+                                Buscando imágenes de alta resolución usando múltiples términos de búsqueda para obtener los mejores resultados.
+                            </p>
                             <div class="mb-2">
-                                <small class="text-muted">Fabricantes:</small>
+                                <small class="text-muted">Términos de búsqueda:</small>
                                 <div class="d-flex flex-wrap gap-1 mb-2">
-                                    <span class="badge bg-success">AK Interactive</span>
-                                    <span class="badge bg-success">Scale75</span>
-                                    <span class="badge bg-success">Vallejo</span>
-                                    <span class="badge bg-success">Green Stuff World</span>
+                                    <span class="badge bg-secondary">[Marca] [Nombre] paint miniature</span>
+                                    <span class="badge bg-secondary">[Marca] [Nombre] acrylic paint</span>
+                                    <span class="badge bg-secondary">[Marca] [Nombre] model paint</span>
                                 </div>
                             </div>
                             <div class="mb-2">
-                                <small class="text-muted">Tiendas España:</small>
-                                <div class="d-flex flex-wrap gap-1 mb-2">
-                                    <span class="badge bg-primary">E-Minis</span>
-                                    <span class="badge bg-primary">GoblinTrader</span>
-                                    <span class="badge bg-primary">Bandua Wargames</span>
-                                    <span class="badge bg-primary">Atlántica Juegos</span>
-                                </div>
-                            </div>
-                            <div class="mb-2">
-                                <small class="text-muted">Tiendas Internacionales:</small>
+                                <small class="text-muted">Filtros de calidad:</small>
                                 <div class="d-flex flex-wrap gap-1">
-                                    <span class="badge bg-info">PK-Pro</span>
-                                    <span class="badge bg-info">Element Games</span>
-                                    <span class="badge bg-info">Wayland Games</span>
-                                    <span class="badge bg-info">HobbyZone</span>
+                                    <span class="badge bg-success">Mín. 200x200px</span>
+                                    <span class="badge bg-primary">Sin duplicados</span>
+                                    <span class="badge bg-info">Ordenado por tamaño</span>
                                 </div>
                             </div>
                         </div>
                         <div class="col-md-4">
                             <div id="searchInfo" class="alert alert-info">
                                 <i class="bi bi-info-circle me-1"></i>
-                                <small>Selecciona una imagen para actualizar la URL del artículo</small>
+                                <small>Selecciona una imagen para actualizar la URL del artículo. Se mostrarán las imágenes más grandes primero.</small>
                             </div>
                         </div>
                     </div>
