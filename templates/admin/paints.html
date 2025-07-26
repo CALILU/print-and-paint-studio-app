@@ -202,15 +202,15 @@
         }
         .modified-badge {
             position: absolute;
-            top: 10px;
-            right: 10px;
+            top: 35px;
+            left: 10px;
             background-color: #28a745;
             color: white;
             padding: 4px 8px;
             border-radius: 12px;
             font-size: 0.7rem;
             font-weight: bold;
-            z-index: 10;
+            z-index: 15;
         }
         @keyframes pulse-green {
             0% { box-shadow: 0 0 15px rgba(40, 167, 69, 0.3); }
@@ -3666,12 +3666,31 @@
             }
         }
         
+        // Iniciar sistema
+        function start() {
+            if (isActive) return;
+            
+            isActive = true;
+            log('Sistema iniciado');
+            createIndicator();
+            
+            // Iniciar polling cada 10 segundos
+            pollTimer = setInterval(() => {
+                if (isActive) {
+                    checkForAndroidChanges();
+                }
+            }, 10000);
+            
+            // Primera verificación inmediata
+            setTimeout(checkForAndroidChanges, 1000);
+        }
+        
         // Detener sistema
         function stop() {
             isActive = false;
-            if (intervalId) {
-                clearInterval(intervalId);
-                intervalId = null;
+            if (pollTimer) {
+                clearInterval(pollTimer);
+                pollTimer = null;
             }
             log('Sistema detenido');
         }
