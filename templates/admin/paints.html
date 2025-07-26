@@ -3742,6 +3742,7 @@
 
         // Función para abrir el selector de color
         function openColorPicker(paintId) {
+            console.log(`🎨 [FRONTEND] Opening color picker for paint ${paintId}`);
             currentPaintId = paintId;
             
             // Buscar la imagen de la pintura
@@ -3753,12 +3754,15 @@
                 return;
             }
 
+            console.log(`🎨 [FRONTEND] Image source: ${img.src.substring(0, 50)}...`);
+
             // Mostrar modal
             const modal = new bootstrap.Modal(document.getElementById('colorPickerModal'));
             modal.show();
 
             // Configurar canvas cuando el modal se muestre
             document.getElementById('colorPickerModal').addEventListener('shown.bs.modal', function() {
+                console.log('🎨 [FRONTEND] Modal shown, setting up canvas');
                 setupColorPickerCanvas(img.src);
             }, { once: true });
         }
@@ -3766,7 +3770,7 @@
         // Configurar el canvas con la imagen
         function setupColorPickerCanvas(imageSrc) {
             colorPickerCanvas = document.getElementById('colorPickerCanvas');
-            colorPickerCtx = colorPickerCanvas.getContext('2d');
+            colorPickerCtx = colorPickerCanvas.getContext('2d', { willReadFrequently: true });
             
             const img = new Image();
             img.crossOrigin = 'anonymous';
@@ -3815,23 +3819,33 @@
             selectColorAtPosition(x, y);
         }
 
-        // Manejar movimiento del mouse (vista previa)
+        // Throttle para optimizar mousemove
+        let mouseThrottle = null;
+        
+        // Manejar movimiento del mouse (vista previa con throttling)
         function handleCanvasMouseMove(event) {
-            const rect = colorPickerCanvas.getBoundingClientRect();
-            const x = Math.floor((event.clientX - rect.left) * (colorPickerCanvas.width / rect.width));
-            const y = Math.floor((event.clientY - rect.top) * (colorPickerCanvas.height / rect.height));
+            if (mouseThrottle) return;
             
-            // Mostrar vista previa del color bajo el cursor
-            const imageData = colorPickerCtx.getImageData(x, y, 1, 1);
-            const [r, g, b] = imageData.data;
-            
-            // Actualizar cursor con el color
-            const hex = rgbToHex(r, g, b);
-            colorPickerCanvas.style.borderColor = hex;
+            mouseThrottle = setTimeout(() => {
+                const rect = colorPickerCanvas.getBoundingClientRect();
+                const x = Math.floor((event.clientX - rect.left) * (colorPickerCanvas.width / rect.width));
+                const y = Math.floor((event.clientY - rect.top) * (colorPickerCanvas.height / rect.height));
+                
+                // Mostrar vista previa del color bajo el cursor
+                const imageData = colorPickerCtx.getImageData(x, y, 1, 1);
+                const [r, g, b] = imageData.data;
+                
+                // Actualizar cursor con el color
+                const hex = rgbToHex(r, g, b);
+                colorPickerCanvas.style.borderColor = hex;
+                
+                mouseThrottle = null;
+            }, 50); // Throttle a 50ms (20 FPS)
         }
 
         // Seleccionar color en posición específica
         function selectColorAtPosition(x, y) {
+            console.log(`🎨 [FRONTEND] Selecting color at position (${x}, ${y})`);
             const imageData = colorPickerCtx.getImageData(x, y, 1, 1);
             const [r, g, b, a] = imageData.data;
             
@@ -3839,6 +3853,7 @@
             
             selectedColor = { r, g, b };
             const hex = rgbToHex(r, g, b);
+            console.log(`🎨 [FRONTEND] Color selected: ${hex} (RGB: ${r}, ${g}, ${b})`);
             
             // Actualizar UI
             document.getElementById('selectedColorPreview').style.backgroundColor = hex;
@@ -3847,6 +3862,7 @@
             
             // Habilitar botón de aplicar
             document.getElementById('applyColorBtn').disabled = false;
+            console.log('🎨 [FRONTEND] Apply button enabled');
         }
 
         // Convertir RGB a hexadecimal
@@ -3854,28 +3870,51 @@
             return "#" + ((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1);
         }
 
-        // Aplicar color seleccionado
-        document.getElementById('applyColorBtn').addEventListener('click', async function() {
-            if (!selectedColor || !currentPaintId) return;
+        // Función para aplicar color seleccionado
+        async function applySelectedColor() {
+            console.log('🎨 [FRONTEND] Apply color button clicked');
+            
+            if (!selectedColor || !currentPaintId) {
+                console.log('❌ [FRONTEND] Missing selectedColor or currentPaintId');
+                alert('Error: No hay color seleccionado o ID de pintura');
+                return;
+            }
             
             const hex = rgbToHex(selectedColor.r, selectedColor.g, selectedColor.b);
+            console.log(`🎨 [FRONTEND] Applying color ${hex} to paint ${currentPaintId}`);
             
             try {
+                // Preparar datos
+                const requestData = {
+                    paint_id: currentPaintId,
+                    color_preview: hex
+                };
+                console.log('🎨 [FRONTEND] Request data:', requestData);
+                
                 // Actualizar en base de datos
+                console.log('🎨 [FRONTEND] Sending request to /api/paints/update-color-preview');
                 const response = await fetch('/api/paints/update-color-preview', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
                     },
-                    body: JSON.stringify({
-                        paint_id: currentPaintId,
-                        color_preview: hex
-                    })
+                    body: JSON.stringify(requestData)
                 });
                 
+                console.log(`🎨 [FRONTEND] Response status: ${response.status}`);
+                
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    console.error('❌ [FRONTEND] Response not OK:', errorText);
+                    throw new Error(`HTTP ${response.status}: ${errorText}`);
+                }
+                
                 const result = await response.json();
+                console.log('🎨 [FRONTEND] Response data:', result);
                 
                 if (result.success) {
+                    console.log('✅ [FRONTEND] Color update successful');
+                    
                     // Actualizar UI en la galería
                     updateColorPreviewInGallery(currentPaintId, hex);
                     
@@ -3885,13 +3924,14 @@
                     // Mostrar notificación
                     showNotification(`Color actualizado: ${hex}`, 'success');
                 } else {
+                    console.error('❌ [FRONTEND] Server returned error:', result.message);
                     alert('Error al actualizar el color: ' + result.message);
                 }
             } catch (error) {
-                console.error('Error:', error);
-                alert('Error al conectar con el servidor');
+                console.error('❌ [FRONTEND] Network or parsing error:', error);
+                alert('Error al conectar con el servidor: ' + error.message);
             }
-        });
+        }
 
         // Actualizar vista previa de color en la galería
         function updateColorPreviewInGallery(paintId, hex) {
@@ -3918,6 +3958,12 @@
             if (colorPickerCanvas) {
                 colorPickerCanvas.removeEventListener('click', handleCanvasClick);
                 colorPickerCanvas.removeEventListener('mousemove', handleCanvasMouseMove);
+            }
+            
+            // Limpiar throttle
+            if (mouseThrottle) {
+                clearTimeout(mouseThrottle);
+                mouseThrottle = null;
             }
             
             // Reset valores
@@ -3975,7 +4021,7 @@
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                    <button type="button" class="btn btn-primary" id="applyColorBtn" disabled>
+                    <button type="button" class="btn btn-primary" id="applyColorBtn" onclick="applySelectedColor()" disabled>
                         <i class="bi bi-check-lg me-1"></i>Aplicar Color
                     </button>
                 </div>
