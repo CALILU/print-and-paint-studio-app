@@ -1781,7 +1781,7 @@
                         <i class="bi bi-eye action-icon" onclick="console.log('👁️ Click en ver pintura:', ${paint.id}); viewPaint(${paint.id})" title="Ver detalles"></i>
                         <i class="bi bi-pencil action-icon" onclick="console.log('🖱️ Click en editar pintura:', ${paint.id}); editPaint(${paint.id})" title="Editar"></i>
                         <i class="bi bi-eyedropper action-icon" onclick="openColorPicker(${paint.id})" title="Seleccionar color de imagen"></i>
-                        <i class="bi bi-search action-icon" onclick="openImageSearch('${paint.id}', '${paint.brand}', '${paint.name}', '${paint.color_code}')" title="Buscar mejor imagen"></i>
+                        <i class="bi bi-search action-icon" onclick="openImageSearch('${paint.id}', '${paint.brand}', '${paint.name}')" title="Buscar mejor imagen"></i>
                         <i class="bi bi-trash action-icon" onclick="confirmDelete(${paint.id})" title="Eliminar"></i>
                         ${markViewedBtn}
                     </div>
@@ -3997,11 +3997,11 @@
         let currentSearchData = null;
 
         // Función para abrir el buscador de imágenes
-        function openImageSearch(paintId, brand, name, colorCode) {
+        function openImageSearch(paintId, brand, name) {
             console.log(`🔍 [IMAGE SEARCH] Opening image search for paint ${paintId}`);
             
             currentSearchPaintId = paintId;
-            currentSearchData = { paintId, brand, name, colorCode };
+            currentSearchData = { paintId, brand, name };
             
             // Mostrar modal
             const modal = new bootstrap.Modal(document.getElementById('imageSearchModal'));
@@ -4032,8 +4032,7 @@
                 const requestData = {
                     paint_id: currentSearchPaintId,
                     brand: currentSearchData.brand,
-                    name: currentSearchData.name,
-                    color_code: currentSearchData.colorCode
+                    name: currentSearchData.name
                 };
                 
                 console.log('🔍 [IMAGE SEARCH] Request data:', requestData);
@@ -4099,8 +4098,10 @@
                             <small class="text-muted d-block" style="font-size: 0.7rem;">
                                 ${image.width}x${image.height}px
                             </small>
-                            <small class="text-primary d-block" style="font-size: 0.7rem;">
-                                ${image.site}
+                            <small class="d-block" style="font-size: 0.7rem;">
+                                <span class="badge ${getCategoryBadgeClass(image.category || 'general')}" style="font-size: 0.6rem;">
+                                    ${image.site}
+                                </span>
                             </small>
                             <small class="text-truncate d-block" style="font-size: 0.7rem;" title="${image.title}">
                                 ${image.title}
@@ -4111,6 +4112,16 @@
                 
                 gallery.appendChild(col);
             });
+        }
+
+        // Función para obtener la clase de badge según la categoría
+        function getCategoryBadgeClass(category) {
+            switch(category) {
+                case 'fabricantes': return 'bg-success';
+                case 'tiendas_espana': return 'bg-primary';
+                case 'tiendas_internacionales': return 'bg-info';
+                default: return 'bg-secondary';
+            }
         }
 
         // Función para seleccionar una imagen
@@ -4277,15 +4288,32 @@
                     <div class="row mb-3">
                         <div class="col-md-8">
                             <h6>Buscando imágenes de alta resolución en:</h6>
-                            <div class="d-flex flex-wrap gap-2 mb-3">
-                                <span class="badge bg-primary">Scale75</span>
-                                <span class="badge bg-primary">Vallejo</span>
-                                <span class="badge bg-primary">Games Workshop</span>
-                                <span class="badge bg-primary">Citadel</span>
-                                <span class="badge bg-primary">AK Interactive</span>
-                                <span class="badge bg-primary">AMMO</span>
-                                <span class="badge bg-primary">Tamiya</span>
-                                <span class="badge bg-primary">Testors</span>
+                            <div class="mb-2">
+                                <small class="text-muted">Fabricantes:</small>
+                                <div class="d-flex flex-wrap gap-1 mb-2">
+                                    <span class="badge bg-success">AK Interactive</span>
+                                    <span class="badge bg-success">Scale75</span>
+                                    <span class="badge bg-success">Vallejo</span>
+                                    <span class="badge bg-success">Green Stuff World</span>
+                                </div>
+                            </div>
+                            <div class="mb-2">
+                                <small class="text-muted">Tiendas España:</small>
+                                <div class="d-flex flex-wrap gap-1 mb-2">
+                                    <span class="badge bg-primary">E-Minis</span>
+                                    <span class="badge bg-primary">GoblinTrader</span>
+                                    <span class="badge bg-primary">Bandua Wargames</span>
+                                    <span class="badge bg-primary">Atlántica Juegos</span>
+                                </div>
+                            </div>
+                            <div class="mb-2">
+                                <small class="text-muted">Tiendas Internacionales:</small>
+                                <div class="d-flex flex-wrap gap-1">
+                                    <span class="badge bg-info">PK-Pro</span>
+                                    <span class="badge bg-info">Element Games</span>
+                                    <span class="badge bg-info">Wayland Games</span>
+                                    <span class="badge bg-info">HobbyZone</span>
+                                </div>
                             </div>
                         </div>
                         <div class="col-md-4">

@@ -2827,100 +2827,143 @@ def search_high_quality_images():
         paint_id = data.get('paint_id')
         brand = data.get('brand', '')
         name = data.get('name', '')
-        color_code = data.get('color_code', '')
         
         if not paint_id:
             return jsonify({"success": False, "message": "paint_id is required"}), 400
         
-        # Crear términos de búsqueda
+        # Crear términos de búsqueda solo con marca y nombre (sin código)
         search_terms = []
         if brand:
             search_terms.append(brand)
         if name:
             search_terms.append(name)
-        if color_code:
-            search_terms.append(color_code)
+        
+        if not search_terms:
+            return jsonify({"success": False, "message": "brand or name is required for search"}), 400
         
         search_query = ' '.join(search_terms) + ' paint miniature modeling'
         print(f"🔍 [IMAGE SEARCH] Search query: {search_query}")
         
-        # Buscar imágenes usando DuckDuckGo
+        # Buscar imágenes usando DuckDuckGo en sitios específicos de modelismo
         images = []
         try:
             ddgs = DDGS()
-            # Buscar específicamente en sitios de modelismo
-            modeling_sites = [
-                'scale75.com',
-                'vallejocolor.com', 
-                'games-workshop.com',
-                'citadelcolour.com',
-                'ammoofmig.com',
-                'ak-interactive.com',
-                'mr-color.jp',
-                'tamiya.com',
-                'testors.com'
-            ]
             
-            # Primero buscar en sitios específicos de modelismo
-            for site in modeling_sites[:3]:  # Limitar a 3 sitios para no saturar
-                try:
-                    site_query = f"{search_query} site:{site}"
-                    print(f"🔍 [IMAGE SEARCH] Searching in {site}")
-                    
-                    results = ddgs.images(
-                        keywords=site_query,
-                        region="es-es",
-                        safesearch="off",
-                        size="medium",
-                        max_results=5
-                    )
-                    
-                    for result in results:
-                        if len(images) >= 15:  # Limitar a 15 imágenes total
-                            break
-                        
-                        images.append({
-                            'url': result.get('image', ''),
-                            'title': result.get('title', ''),
-                            'source': result.get('source', ''),
-                            'width': result.get('width', 0),
-                            'height': result.get('height', 0),
-                            'site': site
-                        })
-                    
-                except Exception as site_error:
-                    print(f"❌ [IMAGE SEARCH] Error searching {site}: {str(site_error)}")
-                    continue
+            # Sitios web organizados por categoría
+            modeling_sites = {
+                'fabricantes': [
+                    'ak-interactive.com',
+                    'scale75.com', 
+                    'acrylicosvallejo.com',
+                    'greenstuffworld.com'
+                ],
+                'tiendas_espana': [
+                    'e-minis.net',
+                    'goblintrader.es',
+                    'banduawargames.com',
+                    'atlanticajuegos.com',
+                    'frikland.com'
+                ],
+                'tiendas_internacionales': [
+                    'pk-pro.de',
+                    'elementgames.co.uk',
+                    'waylandgames.co.uk',
+                    'hobbyzone.pl'
+                ]
+            }
             
-            # Si no hay suficientes imágenes, buscar de forma general
-            if len(images) < 10:
-                try:
-                    print(f"🔍 [IMAGE SEARCH] General search for more images")
-                    general_results = ddgs.images(
-                        keywords=search_query,
-                        region="es-es", 
-                        safesearch="off",
-                        size="medium",
-                        max_results=10
-                    )
+            # Buscar primero en sitios de fabricantes (más probabilidad de imágenes oficiales)
+            sites_searched = 0
+            max_sites = 6  # Limitar búsquedas para no saturar
+            
+            for category, sites in modeling_sites.items():
+                if sites_searched >= max_sites:
+                    break
                     
-                    for result in general_results:
-                        if len(images) >= 20:  # Máximo 20 imágenes
-                            break
+                for site in sites[:2]:  # Máximo 2 sitios por categoría
+                    if sites_searched >= max_sites or len(images) >= 15:
+                        break
                         
-                        # Evitar duplicados
-                        if not any(img['url'] == result.get('image', '') for img in images):
-                            images.append({
-                                'url': result.get('image', ''),
-                                'title': result.get('title', ''),
-                                'source': result.get('source', ''),
-                                'width': result.get('width', 0),
-                                'height': result.get('height', 0),
-                                'site': 'general'
-                            })
+                    try:
+                        site_query = f"{search_query} site:{site}"
+                        print(f"🔍 [IMAGE SEARCH] Searching in {site} ({category})")
+                        
+                        results = ddgs.images(
+                            keywords=site_query,
+                            region="es-es",
+                            safesearch="off",
+                            size="medium",
+                            max_results=4  # Reducir para ser más eficiente
+                        )
+                        
+                        site_images_found = 0
+                        for result in results:
+                            if len(images) >= 15 or site_images_found >= 3:
+                                break
+                            
+                            # Validar que la imagen sea relevante
+                            if result.get('image') and result.get('width', 0) >= 150:
+                                images.append({
+                                    'url': result.get('image', ''),
+                                    'title': result.get('title', ''),
+                                    'source': result.get('source', ''),
+                                    'width': result.get('width', 0),
+                                    'height': result.get('height', 0),
+                                    'site': site,
+                                    'category': category
+                                })
+                                site_images_found += 1
+                        
+                        sites_searched += 1
+                        print(f"✅ [IMAGE SEARCH] Found {site_images_found} images in {site}")
+                        
+                    except Exception as site_error:
+                        print(f"❌ [IMAGE SEARCH] Error searching {site}: {str(site_error)}")
+                        continue
+            
+            # Si no hay suficientes imágenes, buscar en sitios adicionales de modelismo
+            if len(images) < 8:
+                additional_sites = [
+                    'games-workshop.com',
+                    'citadelcolour.com', 
+                    'vallejocolor.com',
+                    'ammoofmig.com'
+                ]
                 
-                except Exception as general_error:
-                    print(f"❌ [IMAGE SEARCH] Error in general search: {str(general_error)}")
+                for site in additional_sites[:2]:
+                    if len(images) >= 15:
+                        break
+                        
+                    try:
+                        site_query = f"{search_query} site:{site}"
+                        print(f"🔍 [IMAGE SEARCH] Additional search in {site}")
+                        
+                        results = ddgs.images(
+                            keywords=site_query,
+                            region="es-es",
+                            safesearch="off", 
+                            size="medium",
+                            max_results=3
+                        )
+                        
+                        for result in results:
+                            if len(images) >= 15:
+                                break
+                            
+                            if not any(img['url'] == result.get('image', '') for img in images):
+                                images.append({
+                                    'url': result.get('image', ''),
+                                    'title': result.get('title', ''),
+                                    'source': result.get('source', ''),
+                                    'width': result.get('width', 0),
+                                    'height': result.get('height', 0),
+                                    'site': site,
+                                    'category': 'additional'
+                                })
+                    
+                    except Exception as additional_error:
+                        print(f"❌ [IMAGE SEARCH] Error in additional search {site}: {str(additional_error)}")
+                        continue
         
         except Exception as search_error:
             print(f"❌ [IMAGE SEARCH] Error in search process: {str(search_error)}")
