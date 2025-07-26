@@ -3039,29 +3039,29 @@ def search_high_quality_images():
             except ImportError as import_error:
                 print(f"❌ [IMAGE SEARCH] Import error for direct search: {import_error}")
                 
-        # Estrategia 3: Si todo falla, imágenes de ejemplo/placeholder
+        # Estrategia 3: Si todo falla, usar URLs más confiables
         if len(images) == 0:
-            print(f"🔍 [IMAGE SEARCH] All methods failed, providing sample images...")
+            print(f"🔍 [IMAGE SEARCH] All methods failed, providing reliable sample images...")
             
-            # URLs de ejemplo de pinturas que suelen funcionar
+            # URLs más confiables y universales
             sample_images = [
-                f"https://acrylicosvallejo.com/wp-content/uploads/2019/10/70951.jpg",
-                f"https://www.vallejocolor.com/wp-content/uploads/2020/02/ModelColor_70951_WhiteInk.jpg",
-                f"https://cdn.webshopapp.com/shops/94414/files/54985057/vallejo-model-color-white.jpg"
+                "https://images.unsplash.com/photo-1541961017774-22349e4a1262?w=300&h=300&fit=crop",  # Paint tubes
+                "https://images.unsplash.com/photo-1513475382585-d06e58bcb0e0?w=300&h=300&fit=crop",  # Paint palette
+                "https://images.unsplash.com/photo-1578662996442-48f60103fc96?w=300&h=300&fit=crop"   # Art supplies
             ]
             
             for i, sample_url in enumerate(sample_images):
                 images.append({
                     'url': sample_url,
-                    'title': f"{brand_clean} {cleaned_name} - Imagen de ejemplo",
-                    'source': 'vallejo.com',
+                    'title': f"{brand_clean} {cleaned_name} - Referencia {i+1}",
+                    'source': 'unsplash.com',
                     'width': 300,
                     'height': 300,
-                    'site': 'Vallejo Oficial',
-                    'category': 'fabricantes'
+                    'site': 'Imagen de referencia',
+                    'category': 'general'
                 })
             
-            print(f"✅ [IMAGE SEARCH] Added {len(images)} sample images")
+            print(f"✅ [IMAGE SEARCH] Added {len(images)} reliable sample images")
         
         # Filtrar imágenes por calidad y relevancia
         filtered_images = []
