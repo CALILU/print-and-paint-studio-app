@@ -2919,149 +2919,125 @@ def search_high_quality_images():
         
         print(f"🔍 [IMAGE SEARCH] Search queries: {search_queries}")
         
-        # Buscar imágenes usando múltiples estrategias
+        # Buscar imágenes usando Google Custom Search API
         images = []
-        total_attempts = 0
         
-        # Estrategia 1: Intentar DuckDuckGo primero
+        # Configuración de Google Custom Search API
+        GOOGLE_API_KEY = "AIzaSyDRLw6cUMLuGKFeckwpd1fQMQypNkuOnTM"
+        GOOGLE_CX = "a4da551cd50f94b41"
+        
+        print(f"🔍 [IMAGE SEARCH] Using Google Custom Search API...")
+        
         try:
-            from duckduckgo_search import DDGS
-            print(f"🔍 [IMAGE SEARCH] Trying DuckDuckGo search...")
+            import requests
             
-            ddgs = DDGS()
-            
-            # Probar algunas consultas con DuckDuckGo
-            for query in search_queries[:3]:  # Solo las primeras 3 consultas
-                if len(images) >= 10:
+            # Buscar con cada consulta hasta obtener suficientes resultados
+            for query in search_queries[:3]:  # Máximo 3 consultas
+                if len(images) >= 15:
                     break
                     
-                print(f"🔍 [IMAGE SEARCH] DuckDuckGo attempt: '{query}'")
-                total_attempts += 1
+                print(f"🔍 [IMAGE SEARCH] Google API search: '{query}'")
                 
                 try:
-                    results = ddgs.images(keywords=query, max_results=8)
-                    for result in results:
-                        if len(images) >= 10:
-                            break
-                        image_url = result.get('image', '')
-                        if image_url and image_url.startswith(('http://', 'https://')):
-                            images.append({
-                                'url': image_url,
-                                'title': result.get('title', query),
-                                'source': result.get('source', ''),
-                                'width': result.get('width', 300),
-                                'height': result.get('height', 300),
-                                'site': 'DuckDuckGo',
-                                'category': 'general'
-                            })
-                    print(f"✅ [IMAGE SEARCH] DuckDuckGo found {len(images)} images so far")
-                except Exception as ddg_error:
-                    print(f"❌ [IMAGE SEARCH] DuckDuckGo error: {ddg_error}")
+                    # Llamada a Google Custom Search API
+                    api_url = "https://www.googleapis.com/customsearch/v1"
+                    params = {
+                        'key': GOOGLE_API_KEY,
+                        'cx': GOOGLE_CX,
+                        'q': query,
+                        'searchType': 'image',
+                        'num': 10,  # Máximo 10 resultados por consulta
+                        'imgSize': 'medium',  # Tamaño medio o grande
+                        'imgType': 'photo',
+                        'safe': 'off',
+                        'fields': 'items(title,link,image,displayLink)'
+                    }
+                    
+                    response = requests.get(api_url, params=params, timeout=15)
+                    
+                    if response.status_code == 200:
+                        data = response.json()
+                        items = data.get('items', [])
+                        
+                        print(f"  📸 Google API returned {len(items)} images for '{query}'")
+                        
+                        for item in items:
+                            if len(images) >= 15:
+                                break
+                            
+                            # Extraer información de la imagen
+                            image_url = item.get('link', '')
+                            title = item.get('title', '')
+                            display_link = item.get('displayLink', '')
+                            image_info = item.get('image', {})
+                            
+                            # Obtener dimensiones si están disponibles
+                            width = image_info.get('width', 400)
+                            height = image_info.get('height', 400)
+                            
+                            # Validar URL
+                            if (image_url and 
+                                image_url.startswith(('http://', 'https://')) and
+                                not any(img['url'] == image_url for img in images)):
+                                
+                                # Determinar categoría por dominio
+                                category = 'general'
+                                site_name = display_link or 'Google Images'
+                                
+                                # Categorizar según el dominio
+                                if display_link:
+                                    domain_lower = display_link.lower()
+                                    if any(d in domain_lower for d in ['vallejo', 'ak-interactive', 'scale75', 'greenstuff']):
+                                        category = 'fabricantes'
+                                    elif any(d in domain_lower for d in ['e-minis', 'goblintrader', 'bandua', 'frikland']):
+                                        category = 'tiendas_espana'
+                                    elif any(d in domain_lower for d in ['games-workshop', 'citadel', 'warhammer']):
+                                        category = 'fabricantes'
+                                
+                                images.append({
+                                    'url': image_url,
+                                    'title': title[:100] if title else f"{brand_clean} {cleaned_name}",
+                                    'source': f"https://{display_link}" if display_link else image_url,
+                                    'width': int(width) if width else 400,
+                                    'height': int(height) if height else 400,
+                                    'site': site_name[:30],  # Limitar longitud
+                                    'category': category
+                                })
+                        
+                        print(f"✅ [IMAGE SEARCH] Google API found {len(images)} total images so far")
+                        
+                    else:
+                        print(f"❌ [IMAGE SEARCH] Google API error: {response.status_code} - {response.text[:200]}")
+                        
+                except Exception as api_error:
+                    print(f"❌ [IMAGE SEARCH] Google API error for '{query}': {str(api_error)}")
                     continue
-                    
-        except Exception as ddg_import_error:
-            print(f"❌ [IMAGE SEARCH] DuckDuckGo import error: {ddg_import_error}")
+            
+        except ImportError as import_error:
+            print(f"❌ [IMAGE SEARCH] Import error: {import_error}")
         
-        # Estrategia 2: Si DuckDuckGo no funciona, usar scraping directo
-        if len(images) < 5:
-            print(f"🔍 [IMAGE SEARCH] DuckDuckGo insufficient results ({len(images)}), trying direct search...")
-            
-            try:
-                import requests
-                from urllib.parse import quote_plus
-                import json
-                import re
-                
-                # Buscar en Google Images usando scraping
-                for query in search_queries[:2]:  # Solo 2 consultas para no sobrecargar
-                    if len(images) >= 15:
-                        break
-                        
-                    print(f"🔍 [IMAGE SEARCH] Direct search attempt: '{query}'")
-                    total_attempts += 1
-                    
-                    try:
-                        # Simular búsqueda de Google Images
-                        search_url = f"https://www.google.com/search?tbm=isch&q={quote_plus(query)}"
-                        headers = {
-                            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
-                        }
-                        
-                        response = requests.get(search_url, headers=headers, timeout=10)
-                        if response.status_code == 200:
-                            # Extraer URLs de imágenes del HTML
-                            img_urls = re.findall(r',"ou":"([^"]+)"', response.text)
-                            
-                            print(f"  📸 Found {len(img_urls)} image URLs in Google search")
-                            
-                            for img_url in img_urls[:8]:  # Máximo 8 por consulta
-                                if len(images) >= 15:
-                                    break
-                                    
-                                # Validar URL
-                                if (img_url and 
-                                    img_url.startswith(('http://', 'https://')) and
-                                    not any(img['url'] == img_url for img in images)):
-                                    
-                                    # Determinar categoría por dominio
-                                    category = 'general'
-                                    site_name = 'Google Images'
-                                    
-                                    try:
-                                        domain = img_url.split('/')[2].lower()
-                                        if any(d in domain for d in ['vallejo', 'ak-interactive', 'scale75']):
-                                            category = 'fabricantes'
-                                            site_name = domain
-                                        elif any(d in domain for d in ['e-minis', 'goblintrader']):
-                                            category = 'tiendas_espana'
-                                            site_name = domain
-                                        else:
-                                            site_name = domain[:30]  # Limitar longitud
-                                    except:
-                                        pass
-                                    
-                                    images.append({
-                                        'url': img_url,
-                                        'title': f"{brand_clean} {cleaned_name}".strip(),
-                                        'source': img_url,
-                                        'width': 400,  # Valor por defecto
-                                        'height': 400,
-                                        'site': site_name,
-                                        'category': category
-                                    })
-                            
-                            print(f"✅ [IMAGE SEARCH] Direct search found {len(images)} total images")
-                            
-                    except Exception as search_error:
-                        print(f"❌ [IMAGE SEARCH] Direct search error for '{query}': {search_error}")
-                        continue
-                        
-            except ImportError as import_error:
-                print(f"❌ [IMAGE SEARCH] Import error for direct search: {import_error}")
-                
-        # Estrategia 3: Si todo falla, usar URLs más confiables
+        # Fallback: Si Google API falla completamente, usar URLs de referencia
         if len(images) == 0:
-            print(f"🔍 [IMAGE SEARCH] All methods failed, providing reliable sample images...")
+            print(f"🔍 [IMAGE SEARCH] Google API failed, providing reference images...")
             
-            # URLs más confiables y universales
-            sample_images = [
-                "https://images.unsplash.com/photo-1541961017774-22349e4a1262?w=300&h=300&fit=crop",  # Paint tubes
-                "https://images.unsplash.com/photo-1513475382585-d06e58bcb0e0?w=300&h=300&fit=crop",  # Paint palette
-                "https://images.unsplash.com/photo-1578662996442-48f60103fc96?w=300&h=300&fit=crop"   # Art supplies
+            reference_images = [
+                "https://images.unsplash.com/photo-1541961017774-22349e4a1262?w=400&h=400&fit=crop",
+                "https://images.unsplash.com/photo-1513475382585-d06e58bcb0e0?w=400&h=400&fit=crop",
+                "https://images.unsplash.com/photo-1578662996442-48f60103fc96?w=400&h=400&fit=crop"
             ]
             
-            for i, sample_url in enumerate(sample_images):
+            for i, ref_url in enumerate(reference_images):
                 images.append({
-                    'url': sample_url,
-                    'title': f"{brand_clean} {cleaned_name} - Referencia {i+1}",
+                    'url': ref_url,
+                    'title': f"{brand_clean} {cleaned_name} - Imagen de referencia {i+1}",
                     'source': 'unsplash.com',
-                    'width': 300,
-                    'height': 300,
-                    'site': 'Imagen de referencia',
+                    'width': 400,
+                    'height': 400,
+                    'site': 'Referencia',
                     'category': 'general'
                 })
             
-            print(f"✅ [IMAGE SEARCH] Added {len(images)} reliable sample images")
+            print(f"✅ [IMAGE SEARCH] Added {len(images)} reference images")
         
         # Filtrar imágenes por calidad y relevancia
         filtered_images = []
