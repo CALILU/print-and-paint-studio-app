@@ -2946,30 +2946,42 @@ def search_high_quality_images():
                         'cx': GOOGLE_CX,
                         'q': query,
                         'searchType': 'image',
-                        'num': 10,  # Máximo 10 resultados por consulta
-                        'imgSize': 'medium',  # Tamaño medio o grande
-                        'imgType': 'photo',
-                        'safe': 'off',
-                        'fields': 'items(title,link,image,displayLink)'
+                        'num': 5,  # Reducir a 5 para empezar
+                        'safe': 'off'
                     }
+                    
+                    print(f"🔍 [IMAGE SEARCH] Making API call to: {api_url}")
+                    print(f"🔍 [IMAGE SEARCH] Parameters: {params}")
                     
                     response = requests.get(api_url, params=params, timeout=15)
                     
+                    print(f"🔍 [IMAGE SEARCH] Response status: {response.status_code}")
+                    print(f"🔍 [IMAGE SEARCH] Response headers: {dict(response.headers)}")
+                    
                     if response.status_code == 200:
                         data = response.json()
+                        print(f"🔍 [IMAGE SEARCH] Response data keys: {list(data.keys())}")
+                        
                         items = data.get('items', [])
                         
                         print(f"  📸 Google API returned {len(items)} images for '{query}'")
                         
+                        if len(items) == 0:
+                            print(f"❌ [IMAGE SEARCH] No items in response. Full response: {data}")
+                        
                         for item in items:
                             if len(images) >= 15:
                                 break
+                            
+                            print(f"🔍 [IMAGE SEARCH] Processing item: {list(item.keys())}")
                             
                             # Extraer información de la imagen
                             image_url = item.get('link', '')
                             title = item.get('title', '')
                             display_link = item.get('displayLink', '')
                             image_info = item.get('image', {})
+                            
+                            print(f"  📸 Found image URL: {image_url[:100]}...")
                             
                             # Obtener dimensiones si están disponibles
                             width = image_info.get('width', 400)
@@ -3003,14 +3015,21 @@ def search_high_quality_images():
                                     'site': site_name[:30],  # Limitar longitud
                                     'category': category
                                 })
+                                
+                                print(f"  ✅ Added image from {display_link}: {title[:50]}...")
+                            else:
+                                print(f"  ❌ Skipped invalid URL: {image_url[:100]}...")
                         
                         print(f"✅ [IMAGE SEARCH] Google API found {len(images)} total images so far")
                         
                     else:
-                        print(f"❌ [IMAGE SEARCH] Google API error: {response.status_code} - {response.text[:200]}")
+                        print(f"❌ [IMAGE SEARCH] Google API HTTP error: {response.status_code}")
+                        print(f"❌ [IMAGE SEARCH] Error response: {response.text}")
                         
                 except Exception as api_error:
-                    print(f"❌ [IMAGE SEARCH] Google API error for '{query}': {str(api_error)}")
+                    print(f"❌ [IMAGE SEARCH] Google API exception for '{query}': {str(api_error)}")
+                    import traceback
+                    print(f"❌ [IMAGE SEARCH] Traceback: {traceback.format_exc()}")
                     continue
             
         except ImportError as import_error:
