@@ -2813,7 +2813,7 @@ def update_image_url():
 # Endpoint para buscar imágenes en sitios de modelismo
 @app.route('/api/paints/search-images', methods=['POST'])
 @admin_required
-def search_paint_images():
+def search_high_quality_images():
     """Buscar imágenes de alta resolución en sitios web de pinturas de modelismo"""
     try:
         print(f"🔍 [IMAGE SEARCH] Request received to search images")
