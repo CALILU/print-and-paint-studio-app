@@ -2684,45 +2684,106 @@ def mark_paints_synced():
 def update_color_preview():
     """Actualizar color_preview de una pintura desde el selector de color"""
     try:
+        print(f"🎨 [COLOR PICKER] Request received to update color preview")
+        
         data = request.get_json()
+        print(f"🎨 [COLOR PICKER] Request data: {data}")
         
         if not data:
+            print(f"❌ [COLOR PICKER] No data provided")
             return jsonify({"success": False, "message": "No data provided"}), 400
         
         paint_id = data.get('paint_id')
         color_preview = data.get('color_preview')
         
+        print(f"🎨 [COLOR PICKER] Paint ID: {paint_id}, Color: {color_preview}")
+        
         if not paint_id:
+            print(f"❌ [COLOR PICKER] paint_id is required")
             return jsonify({"success": False, "message": "paint_id is required"}), 400
         
         if not color_preview:
+            print(f"❌ [COLOR PICKER] color_preview is required")
             return jsonify({"success": False, "message": "color_preview is required"}), 400
         
         # Validar formato hexadecimal
         if not color_preview.startswith('#') or len(color_preview) != 7:
+            print(f"❌ [COLOR PICKER] Invalid hex format: {color_preview}")
             return jsonify({"success": False, "message": "color_preview must be in hex format (#RRGGBB)"}), 400
         
         # Buscar la pintura
         paint = Paint.query.get(paint_id)
         if not paint:
+            print(f"❌ [COLOR PICKER] Paint with id {paint_id} not found")
             return jsonify({"success": False, "message": f"Paint with id {paint_id} not found"}), 404
         
+        print(f"🎨 [COLOR PICKER] Found paint: {paint.name} (Brand: {paint.brand})")
+        print(f"🎨 [COLOR PICKER] Current color_preview: {paint.color_preview}")
+        
         # Actualizar color_preview
+        old_color = paint.color_preview
         paint.color_preview = color_preview
+        
+        print(f"🎨 [COLOR PICKER] Updating color_preview from {old_color} to {color_preview}")
+        
         db.session.commit()
         
-        print(f"✅ Color preview updated for paint {paint_id}: {color_preview}")
+        print(f"✅ [COLOR PICKER] Successfully updated paint {paint_id}: {old_color} → {color_preview}")
         
         return jsonify({
             "success": True,
             "message": f"Color preview updated successfully for {paint.name}",
             "paint_id": paint_id,
             "color_preview": color_preview,
-            "paint_name": paint.name
+            "paint_name": paint.name,
+            "old_color": old_color
         })
         
     except Exception as e:
-        print(f"Error updating color preview: {str(e)}")
+        print(f"❌ [COLOR PICKER] Error updating color preview: {str(e)}")
+        db.session.rollback()
+        return jsonify({"success": False, "message": str(e)}), 500
+
+# Endpoint de debug para verificar acceso a la base de datos
+@app.route('/api/debug/test-color-update/<int:paint_id>/<color>', methods=['GET'])
+@admin_required
+def debug_test_color_update(paint_id, color):
+    """Debug endpoint para probar actualización de color_preview"""
+    try:
+        print(f"🔧 [DEBUG] Testing color update for paint {paint_id} with color {color}")
+        
+        # Buscar la pintura
+        paint = Paint.query.get(paint_id)
+        if not paint:
+            return jsonify({"success": False, "message": f"Paint {paint_id} not found"}), 404
+        
+        old_color = paint.color_preview
+        test_color = f"#{color}" if not color.startswith('#') else color
+        
+        print(f"🔧 [DEBUG] Current color: {old_color}")
+        print(f"🔧 [DEBUG] Setting color to: {test_color}")
+        
+        paint.color_preview = test_color
+        db.session.commit()
+        
+        # Verificar que se guardó
+        db.session.refresh(paint)
+        new_color = paint.color_preview
+        
+        print(f"🔧 [DEBUG] Verified color in DB: {new_color}")
+        
+        return jsonify({
+            "success": True,
+            "paint_id": paint_id,
+            "paint_name": paint.name,
+            "old_color": old_color,
+            "set_color": test_color,
+            "verified_color": new_color,
+            "message": "Debug test completed successfully"
+        })
+        
+    except Exception as e:
+        print(f"❌ [DEBUG] Error in debug test: {str(e)}")
         db.session.rollback()
         return jsonify({"success": False, "message": str(e)}), 500
 
