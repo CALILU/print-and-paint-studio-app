@@ -3063,13 +3063,6 @@ def search_high_quality_images():
             
             print(f"✅ [IMAGE SEARCH] Added {len(images)} sample images")
         
-        except Exception as search_error:
-            print(f"❌ [IMAGE SEARCH] Error in search process: {str(search_error)}")
-            return jsonify({
-                "success": False, 
-                "message": f"Error searching images: {str(search_error)}"
-            }), 500
-        
         # Filtrar imágenes por calidad y relevancia
         filtered_images = []
         seen_urls = set()
