@@ -2937,6 +2937,9 @@ def search_high_quality_images():
         
         print(f"🔍 [IMAGE SEARCH] Search queries: {search_queries}")
         
+        # Guardar las queries para devolver al frontend
+        final_search_queries = search_queries.copy()
+        
         # Buscar imágenes usando Google Custom Search API
         images = []
         
@@ -3175,6 +3178,7 @@ def search_high_quality_images():
             "message": f"Found {len(filtered_images)} images for {brand} {name}",
             "paint_id": paint_id,
             "search_terms": search_terms,
+            "search_queries": final_search_queries,  # Nuevas cadenas de búsqueda utilizadas
             "images": filtered_images[:20]  # Máximo 20 imágenes para el frontend
         })
         

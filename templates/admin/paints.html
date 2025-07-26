@@ -4072,6 +4072,11 @@
                         currentSearchImages = [...currentSearchImages, ...result.images];
                     }
                     displayImageGallery(currentSearchImages);
+                    
+                    // Mostrar cadenas de búsqueda utilizadas
+                    if (result.search_queries && currentSearchPage === 1) {
+                        displaySearchQueries(result.search_queries);
+                    }
                 } else if (currentSearchPage === 1) {
                     // Solo mostrar "no results" si es la primera página
                     document.getElementById('noResults').style.display = 'block';
@@ -4092,6 +4097,30 @@
                     <i class="bi bi-exclamation-triangle text-danger" style="font-size: 2rem;"></i>
                     <p class="mt-2">Error al buscar imágenes: ${error.message}</p>
                 `;
+            }
+        }
+
+        // Función para mostrar las cadenas de búsqueda utilizadas
+        function displaySearchQueries(searchQueries) {
+            console.log('🔍 [SEARCH QUERIES] Displaying search queries:', searchQueries);
+            
+            const queriesContainer = document.getElementById('searchQueriesUsed');
+            const queriesList = document.getElementById('searchQueriesList');
+            
+            if (searchQueries && searchQueries.length > 0) {
+                queriesList.innerHTML = '';
+                
+                searchQueries.forEach((query, index) => {
+                    const badge = document.createElement('span');
+                    badge.className = 'badge bg-primary me-1 mb-1';
+                    badge.style.fontSize = '0.8rem';
+                    badge.innerHTML = `${index + 1}. "${query}"`;
+                    queriesList.appendChild(badge);
+                });
+                
+                queriesContainer.style.display = 'block';
+            } else {
+                queriesContainer.style.display = 'none';
             }
         }
 
@@ -4281,6 +4310,7 @@
             document.getElementById('noResults').style.display = 'none';
             document.getElementById('retrySearchBtn').style.display = 'none';
             document.getElementById('loadMoreContainer').style.display = 'none';
+            document.getElementById('searchQueriesUsed').style.display = 'none';
         });
     </script>
 
@@ -4375,6 +4405,14 @@
                             <div id="searchInfo" class="alert alert-info">
                                 <i class="bi bi-info-circle me-1"></i>
                                 <small>Selecciona una imagen para actualizar la URL del artículo. Se mostrarán las imágenes más grandes primero.</small>
+                            </div>
+                            
+                            <!-- Cadenas de búsqueda utilizadas -->
+                            <div id="searchQueriesUsed" class="alert alert-secondary" style="display: none;">
+                                <h6><i class="bi bi-search-heart me-1"></i>Cadenas de Búsqueda Utilizadas:</h6>
+                                <div id="searchQueriesList" class="d-flex flex-wrap gap-1">
+                                    <!-- Search queries will be displayed here -->
+                                </div>
                             </div>
                         </div>
                     </div>
