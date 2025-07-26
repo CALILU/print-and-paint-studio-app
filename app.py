@@ -2827,10 +2827,12 @@ def search_high_quality_images():
         paint_id = data.get('paint_id')
         brand = data.get('brand', '').strip()
         name = data.get('name', '').strip()
+        page = data.get('page', 1)  # Página de resultados, default 1
         
         print(f"🔍 [IMAGE SEARCH] Paint ID: {paint_id}")
         print(f"🔍 [IMAGE SEARCH] Brand received: '{brand}'")
         print(f"🔍 [IMAGE SEARCH] Name received: '{name}'")
+        print(f"🔍 [IMAGE SEARCH] Page: {page}")
         
         if not paint_id:
             return jsonify({"success": False, "message": "paint_id is required"}), 400
@@ -2942,12 +2944,17 @@ def search_high_quality_images():
             print(f"❌ [IMAGE SEARCH] API test error: {str(test_error)}")
         
         try:
+            # Calcular el índice de inicio basado en la página
+            start_index = ((page - 1) * 10) + 1  # Google usa índice basado en 1
+            max_images_per_query = 10  # Google permite máximo 10 por consulta
+            
             # Buscar con cada consulta hasta obtener suficientes resultados
+            query_index = 0
             for query in search_queries[:3]:  # Máximo 3 consultas
-                if len(images) >= 15:
+                if len(images) >= 20:  # Máximo 20 imágenes por página
                     break
                     
-                print(f"🔍 [IMAGE SEARCH] Google API search: '{query}'")
+                print(f"🔍 [IMAGE SEARCH] Google API search: '{query}' (page {page}, start {start_index + query_index * 10})")
                 
                 try:
                     # Llamada a Google Custom Search API
@@ -2957,9 +2964,12 @@ def search_high_quality_images():
                         'cx': GOOGLE_CX,
                         'q': query,
                         'searchType': 'image',
-                        'num': 5,  # Reducir a 5 para empezar
+                        'start': start_index + (query_index * 10),  # Offset para paginación
+                        'num': max_images_per_query,  # 10 resultados por consulta
                         'safe': 'off'
                     }
+                    
+                    query_index += 1
                     
                     print(f"🔍 [IMAGE SEARCH] Making API call to: {api_url}")
                     print(f"🔍 [IMAGE SEARCH] Parameters: {params}")

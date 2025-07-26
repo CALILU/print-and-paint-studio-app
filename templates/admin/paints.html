@@ -3995,6 +3995,8 @@
     <script>
         let currentSearchPaintId = null;
         let currentSearchData = null;
+        let currentSearchPage = 1;
+        let currentSearchImages = [];
 
         // Función para abrir el buscador de imágenes
         function openImageSearch(paintId, brand, name) {
@@ -4004,6 +4006,8 @@
             
             currentSearchPaintId = paintId;
             currentSearchData = { paintId, brand, name };
+            currentSearchPage = 1;  // Resetear a página 1
+            currentSearchImages = [];  // Limpiar imágenes previas
             
             // Mostrar modal
             const modal = new bootstrap.Modal(document.getElementById('imageSearchModal'));
@@ -4034,7 +4038,8 @@
                 const requestData = {
                     paint_id: currentSearchPaintId,
                     brand: currentSearchData.brand,
-                    name: currentSearchData.name
+                    name: currentSearchData.name,
+                    page: currentSearchPage
                 };
                 
                 console.log('🔍 [IMAGE SEARCH] Request data:', requestData);
@@ -4060,10 +4065,20 @@
                 document.getElementById('searchLoading').style.display = 'none';
                 
                 if (result.success && result.images && result.images.length > 0) {
-                    displayImageGallery(result.images);
-                } else {
+                    // Si es página 1, reemplazar. Si no, agregar a las existentes
+                    if (currentSearchPage === 1) {
+                        currentSearchImages = result.images;
+                    } else {
+                        currentSearchImages = [...currentSearchImages, ...result.images];
+                    }
+                    displayImageGallery(currentSearchImages);
+                } else if (currentSearchPage === 1) {
+                    // Solo mostrar "no results" si es la primera página
                     document.getElementById('noResults').style.display = 'block';
                     document.getElementById('retrySearchBtn').style.display = 'inline-block';
+                } else {
+                    // Si no hay más resultados en páginas siguientes, mostrar mensaje
+                    showNotification('No se encontraron más imágenes', 'info');
                 }
                 
             } catch (error) {
@@ -4087,6 +4102,15 @@
             
             const gallery = document.getElementById('imageGallery');
             gallery.innerHTML = '';
+            
+            // Mostrar/ocultar el botón "Buscar más"
+            const loadMoreContainer = document.getElementById('loadMoreContainer');
+            if (images.length > 0) {
+                loadMoreContainer.style.display = 'block';
+                document.getElementById('imageCount').textContent = images.length;
+            } else {
+                loadMoreContainer.style.display = 'none';
+            }
             
             images.forEach((image, index) => {
                 console.log(`🔍 [IMAGE SEARCH] Processing image ${index + 1}: ${image.url.substring(0, 100)}...`);
@@ -4234,6 +4258,15 @@
         // Función para reintentar búsqueda
         function retryImageSearch() {
             console.log('🔍 [IMAGE SEARCH] Retrying search');
+            currentSearchPage = 1;
+            currentSearchImages = [];
+            searchImages();
+        }
+        
+        // Función para cargar más imágenes
+        function loadMoreImages() {
+            console.log('🔍 [IMAGE SEARCH] Loading more images...');
+            currentSearchPage++;
             searchImages();
         }
 
@@ -4241,10 +4274,13 @@
         document.getElementById('imageSearchModal').addEventListener('hidden.bs.modal', function() {
             currentSearchPaintId = null;
             currentSearchData = null;
+            currentSearchPage = 1;
+            currentSearchImages = [];
             document.getElementById('imageGallery').innerHTML = '';
             document.getElementById('searchLoading').style.display = 'none';
             document.getElementById('noResults').style.display = 'none';
             document.getElementById('retrySearchBtn').style.display = 'none';
+            document.getElementById('loadMoreContainer').style.display = 'none';
         });
     </script>
 
@@ -4360,6 +4396,16 @@
                     <div id="noResults" class="text-center py-4" style="display: none;">
                         <i class="bi bi-exclamation-triangle text-warning" style="font-size: 2rem;"></i>
                         <p class="mt-2">No se encontraron imágenes. Intenta con términos diferentes.</p>
+                    </div>
+                    
+                    <!-- Load more button -->
+                    <div id="loadMoreContainer" class="text-center mt-4" style="display: none;">
+                        <button type="button" class="btn btn-primary" onclick="loadMoreImages()">
+                            <i class="bi bi-plus-circle me-1"></i>Buscar más imágenes
+                        </button>
+                        <p class="text-muted mt-2">
+                            <small>Mostrando <span id="imageCount">0</span> imágenes</small>
+                        </p>
                     </div>
                 </div>
                 <div class="modal-footer">
