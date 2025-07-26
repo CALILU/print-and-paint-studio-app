@@ -2678,6 +2678,54 @@ def mark_paints_synced():
         db.session.rollback()
         return jsonify({"success": False, "message": str(e)}), 500
 
+# Endpoint para actualizar color preview desde selector de color
+@app.route('/api/paints/update-color-preview', methods=['POST'])
+@admin_required
+def update_color_preview():
+    """Actualizar color_preview de una pintura desde el selector de color"""
+    try:
+        data = request.get_json()
+        
+        if not data:
+            return jsonify({"success": False, "message": "No data provided"}), 400
+        
+        paint_id = data.get('paint_id')
+        color_preview = data.get('color_preview')
+        
+        if not paint_id:
+            return jsonify({"success": False, "message": "paint_id is required"}), 400
+        
+        if not color_preview:
+            return jsonify({"success": False, "message": "color_preview is required"}), 400
+        
+        # Validar formato hexadecimal
+        if not color_preview.startswith('#') or len(color_preview) != 7:
+            return jsonify({"success": False, "message": "color_preview must be in hex format (#RRGGBB)"}), 400
+        
+        # Buscar la pintura
+        paint = Paint.query.get(paint_id)
+        if not paint:
+            return jsonify({"success": False, "message": f"Paint with id {paint_id} not found"}), 404
+        
+        # Actualizar color_preview
+        paint.color_preview = color_preview
+        db.session.commit()
+        
+        print(f"✅ Color preview updated for paint {paint_id}: {color_preview}")
+        
+        return jsonify({
+            "success": True,
+            "message": f"Color preview updated successfully for {paint.name}",
+            "paint_id": paint_id,
+            "color_preview": color_preview,
+            "paint_name": paint.name
+        })
+        
+    except Exception as e:
+        print(f"Error updating color preview: {str(e)}")
+        db.session.rollback()
+        return jsonify({"success": False, "message": str(e)}), 500
+
 # ==================== BACKUP SYSTEM - STEP 1 ====================
 
 @app.route('/admin/paints/backup', methods=['POST'])

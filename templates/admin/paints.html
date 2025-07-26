@@ -1507,7 +1507,14 @@
         }
         
         function markAllAsViewed() {
+            let modifiedCount = 0;
             allPaints.forEach(paint => {
+                // Marcar como vistos los artículos modificados (sync_status === 'pending_upload')
+                if (paint.sync_status === 'pending_upload') {
+                    markPaintAsViewed(paint.id);
+                    modifiedCount++;
+                }
+                // También marcar los artículos nuevos si los hay
                 if (isNewPaint(paint)) {
                     markPaintAsViewed(paint.id);
                 }
@@ -1517,7 +1524,11 @@
             filterAndDisplayPaints();
             
             // Mostrar notificación
-            showNotification('✓ Todos los artículos marcados como vistos', 'success');
+            if (modifiedCount > 0) {
+                showNotification(`✓ ${modifiedCount} artículos modificados marcados como vistos`, 'success');
+            } else {
+                showNotification('✓ Todos los artículos marcados como vistos', 'success');
+            }
         }
         
         function toggleNewPaintsFilter() {
@@ -1755,6 +1766,7 @@
                     <div class="paint-actions">
                         <i class="bi bi-eye action-icon" onclick="console.log('👁️ Click en ver pintura:', ${paint.id}); viewPaint(${paint.id})" title="Ver detalles"></i>
                         <i class="bi bi-pencil action-icon" onclick="console.log('🖱️ Click en editar pintura:', ${paint.id}); editPaint(${paint.id})" title="Editar"></i>
+                        <i class="bi bi-eyedropper action-icon" onclick="openColorPicker(${paint.id})" title="Seleccionar color de imagen"></i>
                         <i class="bi bi-trash action-icon" onclick="confirmDelete(${paint.id})" title="Eliminar"></i>
                         ${markViewedBtn}
                     </div>
@@ -3720,6 +3732,256 @@
     })();
     
     </script>
+
+    <!-- Color Picker Functionality -->
+    <script>
+        let currentPaintId = null;
+        let colorPickerCanvas = null;
+        let colorPickerCtx = null;
+        let selectedColor = null;
+
+        // Función para abrir el selector de color
+        function openColorPicker(paintId) {
+            currentPaintId = paintId;
+            
+            // Buscar la imagen de la pintura
+            const paintCard = document.querySelector(`[data-paint-id="${paintId}"]`);
+            const img = paintCard.querySelector('.paint-image');
+            
+            if (!img || !img.src || img.src.includes('data:image/svg+xml')) {
+                alert('No hay imagen disponible para seleccionar color');
+                return;
+            }
+
+            // Mostrar modal
+            const modal = new bootstrap.Modal(document.getElementById('colorPickerModal'));
+            modal.show();
+
+            // Configurar canvas cuando el modal se muestre
+            document.getElementById('colorPickerModal').addEventListener('shown.bs.modal', function() {
+                setupColorPickerCanvas(img.src);
+            }, { once: true });
+        }
+
+        // Configurar el canvas con la imagen
+        function setupColorPickerCanvas(imageSrc) {
+            colorPickerCanvas = document.getElementById('colorPickerCanvas');
+            colorPickerCtx = colorPickerCanvas.getContext('2d');
+            
+            const img = new Image();
+            img.crossOrigin = 'anonymous';
+            
+            img.onload = function() {
+                // Configurar tamaño del canvas
+                const maxWidth = 500;
+                const maxHeight = 400;
+                
+                let { width, height } = img;
+                
+                // Escalar si es necesario
+                if (width > maxWidth) {
+                    height = (height * maxWidth) / width;
+                    width = maxWidth;
+                }
+                if (height > maxHeight) {
+                    width = (width * maxHeight) / height;
+                    height = maxHeight;
+                }
+                
+                colorPickerCanvas.width = width;
+                colorPickerCanvas.height = height;
+                
+                // Dibujar imagen en canvas
+                colorPickerCtx.drawImage(img, 0, 0, width, height);
+                
+                // Agregar event listener para clics
+                colorPickerCanvas.addEventListener('click', handleCanvasClick);
+                colorPickerCanvas.addEventListener('mousemove', handleCanvasMouseMove);
+            };
+            
+            img.onerror = function() {
+                alert('Error al cargar la imagen para el selector de color');
+            };
+            
+            img.src = imageSrc;
+        }
+
+        // Manejar clic en canvas
+        function handleCanvasClick(event) {
+            const rect = colorPickerCanvas.getBoundingClientRect();
+            const x = Math.floor((event.clientX - rect.left) * (colorPickerCanvas.width / rect.width));
+            const y = Math.floor((event.clientY - rect.top) * (colorPickerCanvas.height / rect.height));
+            
+            selectColorAtPosition(x, y);
+        }
+
+        // Manejar movimiento del mouse (vista previa)
+        function handleCanvasMouseMove(event) {
+            const rect = colorPickerCanvas.getBoundingClientRect();
+            const x = Math.floor((event.clientX - rect.left) * (colorPickerCanvas.width / rect.width));
+            const y = Math.floor((event.clientY - rect.top) * (colorPickerCanvas.height / rect.height));
+            
+            // Mostrar vista previa del color bajo el cursor
+            const imageData = colorPickerCtx.getImageData(x, y, 1, 1);
+            const [r, g, b] = imageData.data;
+            
+            // Actualizar cursor con el color
+            const hex = rgbToHex(r, g, b);
+            colorPickerCanvas.style.borderColor = hex;
+        }
+
+        // Seleccionar color en posición específica
+        function selectColorAtPosition(x, y) {
+            const imageData = colorPickerCtx.getImageData(x, y, 1, 1);
+            const [r, g, b, a] = imageData.data;
+            
+            if (a === 0) return; // Pixel transparente
+            
+            selectedColor = { r, g, b };
+            const hex = rgbToHex(r, g, b);
+            
+            // Actualizar UI
+            document.getElementById('selectedColorPreview').style.backgroundColor = hex;
+            document.getElementById('selectedColorHex').textContent = hex;
+            document.getElementById('selectedColorRGB').textContent = `rgb(${r}, ${g}, ${b})`;
+            
+            // Habilitar botón de aplicar
+            document.getElementById('applyColorBtn').disabled = false;
+        }
+
+        // Convertir RGB a hexadecimal
+        function rgbToHex(r, g, b) {
+            return "#" + ((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1);
+        }
+
+        // Aplicar color seleccionado
+        document.getElementById('applyColorBtn').addEventListener('click', async function() {
+            if (!selectedColor || !currentPaintId) return;
+            
+            const hex = rgbToHex(selectedColor.r, selectedColor.g, selectedColor.b);
+            
+            try {
+                // Actualizar en base de datos
+                const response = await fetch('/api/paints/update-color-preview', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        paint_id: currentPaintId,
+                        color_preview: hex
+                    })
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    // Actualizar UI en la galería
+                    updateColorPreviewInGallery(currentPaintId, hex);
+                    
+                    // Cerrar modal
+                    bootstrap.Modal.getInstance(document.getElementById('colorPickerModal')).hide();
+                    
+                    // Mostrar notificación
+                    showNotification(`Color actualizado: ${hex}`, 'success');
+                } else {
+                    alert('Error al actualizar el color: ' + result.message);
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Error al conectar con el servidor');
+            }
+        });
+
+        // Actualizar vista previa de color en la galería
+        function updateColorPreviewInGallery(paintId, hex) {
+            const paintCard = document.querySelector(`[data-paint-id="${paintId}"]`);
+            if (paintCard) {
+                const colorPreview = paintCard.querySelector('.paint-color-preview');
+                if (colorPreview) {
+                    colorPreview.style.backgroundColor = hex;
+                }
+            }
+            
+            // También actualizar en la tabla si está visible
+            const tableRow = document.querySelector(`tr[data-paint-id="${paintId}"]`);
+            if (tableRow) {
+                const colorCell = tableRow.querySelector('.paint-color-preview');
+                if (colorCell) {
+                    colorCell.style.backgroundColor = hex;
+                }
+            }
+        }
+
+        // Limpiar cuando se cierra el modal
+        document.getElementById('colorPickerModal').addEventListener('hidden.bs.modal', function() {
+            if (colorPickerCanvas) {
+                colorPickerCanvas.removeEventListener('click', handleCanvasClick);
+                colorPickerCanvas.removeEventListener('mousemove', handleCanvasMouseMove);
+            }
+            
+            // Reset valores
+            currentPaintId = null;
+            selectedColor = null;
+            document.getElementById('applyColorBtn').disabled = true;
+            document.getElementById('selectedColorPreview').style.backgroundColor = '#ffffff';
+            document.getElementById('selectedColorHex').textContent = '#FFFFFF';
+            document.getElementById('selectedColorRGB').textContent = 'rgb(255, 255, 255)';
+        });
+    </script>
+
+    <!-- Color Picker Modal -->
+    <div class="modal fade" id="colorPickerModal" tabindex="-1" aria-labelledby="colorPickerModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="colorPickerModalLabel">
+                        <i class="bi bi-eyedropper me-2"></i>Seleccionar Color de Imagen
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="row">
+                        <div class="col-md-8">
+                            <div class="mb-3">
+                                <label class="form-label">Haz clic en la imagen para seleccionar un color:</label>
+                                <div class="border rounded p-2" style="background-color: #f8f9fa;">
+                                    <canvas id="colorPickerCanvas" style="max-width: 100%; cursor: crosshair; border: 1px solid #dee2e6;"></canvas>
+                                </div>
+                                <small class="text-muted">Usa el cursor como cuentagotas para seleccionar el color deseado</small>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label class="form-label">Color seleccionado:</label>
+                                <div class="d-flex align-items-center mb-2">
+                                    <div id="selectedColorPreview" style="width: 60px; height: 60px; border: 2px solid #dee2e6; border-radius: 8px; background-color: #ffffff;"></div>
+                                    <div class="ms-3">
+                                        <div class="fw-bold" id="selectedColorHex">#FFFFFF</div>
+                                        <small class="text-muted">Hexadecimal</small>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">RGB:</label>
+                                <div id="selectedColorRGB">rgb(255, 255, 255)</div>
+                            </div>
+                            <div class="alert alert-info">
+                                <i class="bi bi-info-circle me-1"></i>
+                                <small>Este color se guardará como vista previa para este artículo</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="button" class="btn btn-primary" id="applyColorBtn" disabled>
+                        <i class="bi bi-check-lg me-1"></i>Aplicar Color
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
 
 </body>
 </html>
