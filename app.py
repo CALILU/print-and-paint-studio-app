@@ -2846,50 +2846,111 @@ def search_high_quality_images():
             name = paint.name or ''
             print(f"🔍 [IMAGE SEARCH] From DB - Brand: '{brand}', Name: '{name}'")
         
-        # Crear términos de búsqueda solo con marca y nombre (sin código)
+        # Limpiar códigos numéricos del nombre
+        def clean_description(text):
+            """Eliminar códigos numéricos y caracteres no relevantes de la descripción"""
+            import re
+            if not text:
+                return ""
+            
+            # Eliminar códigos numéricos comunes (ej: "109", "70.909", "AK-123")
+            text = re.sub(r'\b\d{2,4}\b', '', text)  # Números de 2-4 dígitos
+            text = re.sub(r'\b\d+\.\d+\b', '', text)  # Números con punto (70.909)
+            text = re.sub(r'\b[A-Z]{1,3}-\d+\b', '', text)  # Códigos tipo AK-123
+            text = re.sub(r'\b[A-Z]\d+\b', '', text)  # Códigos tipo P3, C1, etc.
+            
+            # Limpiar múltiples espacios y caracteres especiales
+            text = re.sub(r'\s+', ' ', text)  # Múltiples espacios a uno
+            text = re.sub(r'[^\w\s]', ' ', text)  # Caracteres especiales a espacios
+            
+            return text.strip()
+        
+        # Limpiar y preparar términos de búsqueda
+        cleaned_name = clean_description(name)
+        brand_clean = brand.strip()
+        
+        print(f"🔍 [IMAGE SEARCH] Original name: '{name}'")
+        print(f"🔍 [IMAGE SEARCH] Cleaned name: '{cleaned_name}'")
+        print(f"🔍 [IMAGE SEARCH] Brand: '{brand_clean}'")
+        
+        # Crear términos de búsqueda solo con marca y descripción limpia (sin códigos)
         search_terms = []
-        if brand:
-            search_terms.append(brand.strip())
-        if name:
-            search_terms.append(name.strip())
+        if brand_clean:
+            search_terms.append(brand_clean)
+        if cleaned_name:
+            search_terms.append(cleaned_name)
         
         if not search_terms:
-            return jsonify({"success": False, "message": "brand or name is required for search"}), 400
+            return jsonify({"success": False, "message": "No valid search terms after cleaning"}), 400
         
         # Diferentes variaciones de búsqueda para mejores resultados
-        search_queries = [
-            f"{' '.join(search_terms)} paint miniature",
-            f"{' '.join(search_terms)} acrylic paint",
-            f"{' '.join(search_terms)} model paint",
-            f"{brand} {name}" if brand and name else ' '.join(search_terms)
-        ]
+        search_queries = []
+        
+        # Solo si tenemos descripción limpia
+        if cleaned_name:
+            search_queries.extend([
+                f"{brand_clean} {cleaned_name} paint",
+                f"{brand_clean} {cleaned_name} acrylic",
+                f"{brand_clean} {cleaned_name}",
+                f"{cleaned_name} {brand_clean} miniature",
+                f"{brand_clean} paint {cleaned_name}"
+            ])
+        
+        # Búsquedas de marca específica
+        if brand_clean:
+            if "vallejo" in brand_clean.lower():
+                search_queries.extend([
+                    "vallejo paint miniature",
+                    "vallejo acrylic paint",
+                    f"vallejo {cleaned_name}" if cleaned_name else "vallejo paint"
+                ])
+            elif "ak" in brand_clean.lower():
+                search_queries.extend([
+                    "ak interactive paint",
+                    "ak paint miniature",
+                    f"ak {cleaned_name}" if cleaned_name else "ak paint"
+                ])
+            else:
+                search_queries.append(f"{brand_clean} paint miniature")
+        
+        # Remover duplicados manteniendo orden
+        seen = set()
+        search_queries = [q for q in search_queries if not (q in seen or seen.add(q))]
         
         print(f"🔍 [IMAGE SEARCH] Search queries: {search_queries}")
         
-        # Buscar imágenes usando DuckDuckGo con búsqueda general (como Google Images)
+        # Buscar imágenes usando DuckDuckGo con múltiples estrategias
         images = []
+        total_attempts = 0
+        
         try:
+            from duckduckgo_search import DDGS
             ddgs = DDGS()
             
             # Buscar con cada variación hasta obtener suficientes resultados
-            for query in search_queries:
-                if len(images) >= 20:
+            for query_index, query in enumerate(search_queries):
+                if len(images) >= 15 or total_attempts >= 10:
                     break
                     
-                print(f"🔍 [IMAGE SEARCH] Searching: {query}")
+                print(f"🔍 [IMAGE SEARCH] Attempt {total_attempts + 1}: Searching '{query}'")
+                total_attempts += 1
                 
                 try:
+                    # Configuración más permisiva
                     results = ddgs.images(
                         keywords=query,
-                        region="es-es",
+                        region="wt-wt",  # Worldwide
                         safesearch="off",
-                        size="medium",  # medium o large para mejores imágenes
-                        max_results=15
+                        size=None,  # Any size
+                        max_results=20,
+                        type_image=None
                     )
+                    
+                    print(f"🔍 [IMAGE SEARCH] DuckDuckGo returned results for '{query}'")
                     
                     images_found_this_query = 0
                     for result in results:
-                        if len(images) >= 20 or images_found_this_query >= 8:
+                        if len(images) >= 15 or images_found_this_query >= 5:
                             break
                         
                         # Filtros para obtener mejores imágenes
@@ -2897,32 +2958,34 @@ def search_high_quality_images():
                         title = result.get('title', '')
                         width = result.get('width', 0)
                         height = result.get('height', 0)
+                        source_url = result.get('source', '')
                         
-                        # Validaciones de calidad
+                        print(f"  📸 Found image: {image_url[:100]}... ({width}x{height})")
+                        
+                        # Validaciones más permisivas
                         if (image_url and 
-                            width >= 200 and height >= 200 and  # Imágenes más grandes
-                            not any(img['url'] == image_url for img in images) and  # No duplicados
-                            not any(skip_word in image_url.lower() for skip_word in ['thumbnail', 'thumb', 'icon']) and  # No miniaturas
-                            any(format_ext in image_url.lower() for format_ext in ['.jpg', '.jpeg', '.png', '.webp'])):
+                            image_url.startswith(('http://', 'https://')) and
+                            width >= 100 and height >= 100 and  # Tamaño mínimo más bajo
+                            not any(img['url'] == image_url for img in images)):  # No duplicados
                             
                             # Determinar fuente/categoría basada en la URL
-                            source_url = result.get('source', '')
                             category = 'general'
-                            site_name = 'Google Images'
+                            site_name = 'Web'
                             
                             # Categorizar según el dominio de origen
-                            if any(domain in source_url.lower() for domain in ['vallejo', 'ak-interactive', 'scale75', 'greenstuff']):
-                                category = 'fabricantes'
-                                site_name = source_url.split('/')[2] if '/' in source_url else 'Fabricante'
-                            elif any(domain in source_url.lower() for domain in ['e-minis', 'goblintrader', 'bandua', 'frikland']):
-                                category = 'tiendas_espana'
-                                site_name = source_url.split('/')[2] if '/' in source_url else 'Tienda ES'
-                            elif source_url:
-                                site_name = source_url.split('/')[2] if '/' in source_url else 'Web'
+                            if source_url:
+                                try:
+                                    site_name = source_url.split('/')[2] if '/' in source_url else 'Web'
+                                    if any(domain in source_url.lower() for domain in ['vallejo', 'ak-interactive', 'scale75', 'greenstuff']):
+                                        category = 'fabricantes'
+                                    elif any(domain in source_url.lower() for domain in ['e-minis', 'goblintrader', 'bandua', 'frikland']):
+                                        category = 'tiendas_espana'
+                                except:
+                                    site_name = 'Web'
                             
                             images.append({
                                 'url': image_url,
-                                'title': title[:100] if title else f"{brand} {name}",  # Limitar título
+                                'title': title[:100] if title else f"{brand} {name}",
                                 'source': source_url,
                                 'width': width,
                                 'height': height,
@@ -2931,11 +2994,45 @@ def search_high_quality_images():
                             })
                             images_found_this_query += 1
                     
-                    print(f"✅ [IMAGE SEARCH] Found {images_found_this_query} images for query: {query}")
+                    print(f"✅ [IMAGE SEARCH] Found {images_found_this_query} valid images for query: {query}")
+                    
+                    # Si encontramos imágenes, continuar con las siguientes consultas
+                    if images_found_this_query > 0:
+                        continue
                     
                 except Exception as query_error:
                     print(f"❌ [IMAGE SEARCH] Error with query '{query}': {str(query_error)}")
                     continue
+                    
+            # Si no hay imágenes, intentar búsqueda más simple
+            if len(images) == 0 and total_attempts < 10:
+                simple_queries = [f"{brand}", f"{name}", "vallejo paint", "acrylic paint miniature"]
+                for simple_query in simple_queries:
+                    if len(images) >= 5 or total_attempts >= 12:
+                        break
+                    print(f"🔍 [IMAGE SEARCH] Fallback attempt {total_attempts + 1}: '{simple_query}'")
+                    total_attempts += 1
+                    
+                    try:
+                        results = ddgs.images(keywords=simple_query, max_results=10)
+                        for result in results:
+                            if len(images) >= 5:
+                                break
+                            image_url = result.get('image', '')
+                            if image_url and image_url.startswith(('http://', 'https://')):
+                                images.append({
+                                    'url': image_url,
+                                    'title': result.get('title', simple_query),
+                                    'source': result.get('source', ''),
+                                    'width': result.get('width', 300),
+                                    'height': result.get('height', 300),
+                                    'site': 'Web',
+                                    'category': 'general'
+                                })
+                        print(f"✅ [IMAGE SEARCH] Fallback found {len(images)} images")
+                    except Exception as fallback_error:
+                        print(f"❌ [IMAGE SEARCH] Fallback error: {fallback_error}")
+                        continue
         
         except Exception as search_error:
             print(f"❌ [IMAGE SEARCH] Error in search process: {str(search_error)}")
