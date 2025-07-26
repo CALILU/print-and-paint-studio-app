@@ -2868,10 +2868,45 @@ def search_high_quality_images():
             return text.strip()
         
         # Limpiar y preparar términos de búsqueda
-        # Para Vallejo, mantener los códigos porque son estándar y útiles
+        # Para Vallejo, tratamiento especial: extraer código y descripción limpia
         if brand and "vallejo" in brand.lower():
-            cleaned_name = name.strip()  # No limpiar códigos para Vallejo
-            print(f"🔍 [IMAGE SEARCH] Vallejo product - keeping codes")
+            # Para Vallejo, extraer el código completo y limpiar la descripción
+            vallejo_code = None
+            vallejo_description = name.strip()
+            
+            # Buscar código Vallejo (formato típico: 72082, 70.909, etc.)
+            import re
+            code_patterns = [
+                r'\b7[0-9]{4}\b',      # Códigos como 72082, 70909
+                r'\b7[0-9]\.[0-9]{3}\b', # Códigos como 70.909
+                r'\b[0-9]{5}\b'        # Cualquier código de 5 dígitos
+            ]
+            
+            for pattern in code_patterns:
+                code_match = re.search(pattern, name)
+                if code_match:
+                    vallejo_code = code_match.group()
+                    break
+            
+            # Limpiar la descripción eliminando códigos numéricos
+            # Ejemplo: "72082 Blanco Ink 109" -> "Blanco Ink"
+            
+            # 1. Eliminar el código principal si fue detectado
+            if vallejo_code:
+                vallejo_description = vallejo_description.replace(vallejo_code, '').strip()
+            
+            # 2. Eliminar números finales (como 109)
+            vallejo_description = re.sub(r'\s+\d{1,3}$', '', vallejo_description)
+            
+            # 3. Eliminar números en medio del texto
+            vallejo_description = re.sub(r'\s+\d{1,3}\s+', ' ', vallejo_description)
+            
+            # 4. Limpiar espacios múltiples
+            vallejo_description = re.sub(r'\s+', ' ', vallejo_description).strip()
+            
+            cleaned_name = vallejo_description  # Usar descripción limpia
+            
+            print(f"🔍 [IMAGE SEARCH] Vallejo product - Code: '{vallejo_code}', Clean description: '{vallejo_description}'")
         else:
             cleaned_name = clean_description(name)  # Limpiar códigos para otras marcas
             
@@ -2907,21 +2942,39 @@ def search_high_quality_images():
         # Búsquedas de marca específica
         if brand_clean:
             if "vallejo" in brand_clean.lower():
-                # Para Vallejo, incluir búsquedas con códigos específicos
-                search_queries.extend([
-                    f"vallejo {cleaned_name}",  # Incluye el código
-                    f"vallejo model color {cleaned_name}",
-                    f"vallejo game color {cleaned_name}",
-                    "vallejo paint miniature",
+                # Para Vallejo, búsquedas optimizadas con código completo y descripción limpia
+                vallejo_searches = []
+                
+                # 1. Búsqueda principal por código completo (máxima prioridad)
+                if 'vallejo_code' in locals() and vallejo_code:
+                    vallejo_searches.extend([
+                        f"vallejo {vallejo_code}",  # Ej: "vallejo 72082"
+                        f"vallejo {vallejo_code} {cleaned_name}",  # Ej: "vallejo 72082 Blanco Ink"
+                        f"vallejo model color {vallejo_code}",
+                        f"vallejo game color {vallejo_code}"
+                    ])
+                
+                # 2. Búsquedas por descripción limpia
+                if cleaned_name:
+                    vallejo_searches.extend([
+                        f"vallejo {cleaned_name}",  # Ej: "vallejo Blanco Ink"
+                        f"vallejo model color {cleaned_name}",  # Ej: "vallejo model color Blanco Ink"
+                        f"vallejo game color {cleaned_name}",   # Ej: "vallejo game color Blanco Ink"
+                        f"vallejo ink {cleaned_name}" if 'ink' in cleaned_name.lower() else None,
+                        f"vallejo wash {cleaned_name}" if 'wash' in cleaned_name.lower() else None
+                    ])
+                
+                # 3. Búsquedas genéricas de Vallejo
+                vallejo_searches.extend([
+                    "vallejo model color paint",
+                    "vallejo game color paint",
                     "vallejo acrylic paint"
                 ])
                 
-                # Si hay un código numérico, también buscar específicamente por él
-                import re
-                code_match = re.search(r'\b\d{2,5}\b', name)
-                if code_match:
-                    code = code_match.group()
-                    search_queries.insert(0, f"vallejo {code}")  # Priorizar búsqueda por código
+                # Filtrar None y añadir a search_queries
+                search_queries.extend([q for q in vallejo_searches if q])
+                
+                print(f"🔍 [IMAGE SEARCH] Vallejo specific searches: {len([q for q in vallejo_searches if q])} queries")
             elif "ak" in brand_clean.lower():
                 search_queries.extend([
                     "ak interactive paint",
