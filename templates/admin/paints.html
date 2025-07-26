@@ -3650,6 +3650,15 @@
             }
         }
         
+        // Verificar cambios desde Android
+        async function checkForAndroidChanges() {
+            if (typeof checkNotifications === 'function') {
+                await checkNotifications();
+            } else {
+                log('checkNotifications function not available');
+            }
+        }
+        
         // Función para refrescar datos de pinturas
         function refreshPaintData() {
             // Limpiar cache de imágenes si existe
