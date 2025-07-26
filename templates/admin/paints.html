@@ -3999,6 +3999,8 @@
         // Función para abrir el buscador de imágenes
         function openImageSearch(paintId, brand, name) {
             console.log(`🔍 [IMAGE SEARCH] Opening image search for paint ${paintId}`);
+            console.log(`🔍 [IMAGE SEARCH] Brand: "${brand}"`);
+            console.log(`🔍 [IMAGE SEARCH] Name: "${name}"`);
             
             currentSearchPaintId = paintId;
             currentSearchData = { paintId, brand, name };

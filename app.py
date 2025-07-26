@@ -2825,18 +2825,33 @@ def search_high_quality_images():
             return jsonify({"success": False, "message": "No data provided"}), 400
         
         paint_id = data.get('paint_id')
-        brand = data.get('brand', '')
-        name = data.get('name', '')
+        brand = data.get('brand', '').strip()
+        name = data.get('name', '').strip()
+        
+        print(f"🔍 [IMAGE SEARCH] Paint ID: {paint_id}")
+        print(f"🔍 [IMAGE SEARCH] Brand received: '{brand}'")
+        print(f"🔍 [IMAGE SEARCH] Name received: '{name}'")
         
         if not paint_id:
             return jsonify({"success": False, "message": "paint_id is required"}), 400
         
+        # Si no se recibieron brand/name del frontend, buscar en la base de datos
+        if not brand or not name:
+            print(f"🔍 [IMAGE SEARCH] Missing brand/name, searching in database...")
+            paint = Paint.query.get(paint_id)
+            if not paint:
+                return jsonify({"success": False, "message": f"Paint {paint_id} not found"}), 404
+            
+            brand = paint.brand or ''
+            name = paint.name or ''
+            print(f"🔍 [IMAGE SEARCH] From DB - Brand: '{brand}', Name: '{name}'")
+        
         # Crear términos de búsqueda solo con marca y nombre (sin código)
         search_terms = []
         if brand:
-            search_terms.append(brand)
+            search_terms.append(brand.strip())
         if name:
-            search_terms.append(name)
+            search_terms.append(name.strip())
         
         if not search_terms:
             return jsonify({"success": False, "message": "brand or name is required for search"}), 400
