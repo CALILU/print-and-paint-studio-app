@@ -2837,16 +2837,18 @@ def search_high_quality_images():
         if not paint_id:
             return jsonify({"success": False, "message": "paint_id is required"}), 400
         
-        # Si no se recibieron brand/name del frontend, buscar en la base de datos
-        if not brand or not name:
-            print(f"🔍 [IMAGE SEARCH] Missing brand/name, searching in database...")
-            paint = Paint.query.get(paint_id)
-            if not paint:
-                return jsonify({"success": False, "message": f"Paint {paint_id} not found"}), 404
-            
-            brand = paint.brand or ''
-            name = paint.name or ''
-            print(f"🔍 [IMAGE SEARCH] From DB - Brand: '{brand}', Name: '{name}'")
+        # Siempre obtener información completa de la base de datos para tener color_code
+        print(f"🔍 [IMAGE SEARCH] Getting complete paint info from database...")
+        paint = Paint.query.get(paint_id)
+        if not paint:
+            return jsonify({"success": False, "message": f"Paint {paint_id} not found"}), 404
+        
+        # Usar datos de la DB (más confiables) o del frontend como fallback
+        brand = paint.brand or brand or ''
+        name = paint.name or name or ''
+        color_code = paint.color_code or ''  # Campo color_code de la tabla
+        
+        print(f"🔍 [IMAGE SEARCH] From DB - Brand: '{brand}', Name: '{name}', Color Code: '{color_code}'")
         
         # Limpiar códigos numéricos del nombre
         def clean_description(text):
@@ -2868,30 +2870,17 @@ def search_high_quality_images():
             return text.strip()
         
         # Limpiar y preparar términos de búsqueda
-        # Para Vallejo, tratamiento especial: extraer código y descripción limpia
+        # Para Vallejo, tratamiento especial: usar color_code de la DB y descripción limpia
         if brand and "vallejo" in brand.lower():
-            # Para Vallejo, extraer el código completo y limpiar la descripción
-            vallejo_code = None
+            # Para Vallejo, usar color_code de la base de datos como prioridad
+            vallejo_code = color_code.strip() if color_code else None
             vallejo_description = name.strip()
-            
-            # Buscar código Vallejo (formato típico: 72082, 70.909, etc.)
-            import re
-            code_patterns = [
-                r'\b7[0-9]{4}\b',      # Códigos como 72082, 70909
-                r'\b7[0-9]\.[0-9]{3}\b', # Códigos como 70.909
-                r'\b[0-9]{5}\b'        # Cualquier código de 5 dígitos
-            ]
-            
-            for pattern in code_patterns:
-                code_match = re.search(pattern, name)
-                if code_match:
-                    vallejo_code = code_match.group()
-                    break
             
             # Limpiar la descripción eliminando códigos numéricos
             # Ejemplo: "72082 Blanco Ink 109" -> "Blanco Ink"
+            import re
             
-            # 1. Eliminar el código principal si fue detectado
+            # 1. Eliminar el color_code de la descripción si aparece
             if vallejo_code:
                 vallejo_description = vallejo_description.replace(vallejo_code, '').strip()
             
@@ -2901,12 +2890,16 @@ def search_high_quality_images():
             # 3. Eliminar números en medio del texto
             vallejo_description = re.sub(r'\s+\d{1,3}\s+', ' ', vallejo_description)
             
-            # 4. Limpiar espacios múltiples
+            # 4. Eliminar otros códigos numéricos que puedan aparecer
+            vallejo_description = re.sub(r'\b7[0-9]{4}\b', '', vallejo_description)  # Códigos Vallejo
+            vallejo_description = re.sub(r'\b7[0-9]\.[0-9]{3}\b', '', vallejo_description)  # Códigos con punto
+            
+            # 5. Limpiar espacios múltiples
             vallejo_description = re.sub(r'\s+', ' ', vallejo_description).strip()
             
             cleaned_name = vallejo_description  # Usar descripción limpia
             
-            print(f"🔍 [IMAGE SEARCH] Vallejo product - Code: '{vallejo_code}', Clean description: '{vallejo_description}'")
+            print(f"🔍 [IMAGE SEARCH] Vallejo product - Color Code: '{vallejo_code}', Clean description: '{vallejo_description}'")
         else:
             cleaned_name = clean_description(name)  # Limpiar códigos para otras marcas
             
@@ -2942,13 +2935,14 @@ def search_high_quality_images():
         # Búsquedas de marca específica
         if brand_clean:
             if "vallejo" in brand_clean.lower():
-                # Para Vallejo, búsquedas optimizadas con código completo y descripción limpia
+                # Para Vallejo, búsquedas optimizadas con color_code de la DB y descripción limpia
                 vallejo_searches = []
                 
-                # 1. Búsqueda principal por código completo (máxima prioridad)
-                if 'vallejo_code' in locals() and vallejo_code:
+                # 1. PRIMERA BÚSQUEDA: MARCA + COLOR_CODE (MÁXIMA PRIORIDAD)
+                if vallejo_code:
                     vallejo_searches.extend([
-                        f"vallejo {vallejo_code}",  # Ej: "vallejo 72082"
+                        f"VALLEJO {vallejo_code}",  # Ej: "VALLEJO 72082" - PRIMERA BÚSQUEDA
+                        f"vallejo {vallejo_code}",  # Ej: "vallejo 72082" - versión lowercase
                         f"vallejo {vallejo_code} {cleaned_name}",  # Ej: "vallejo 72082 Blanco Ink"
                         f"vallejo model color {vallejo_code}",
                         f"vallejo game color {vallejo_code}"
