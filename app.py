@@ -2919,120 +2919,149 @@ def search_high_quality_images():
         
         print(f"🔍 [IMAGE SEARCH] Search queries: {search_queries}")
         
-        # Buscar imágenes usando DuckDuckGo con múltiples estrategias
+        # Buscar imágenes usando múltiples estrategias
         images = []
         total_attempts = 0
         
+        # Estrategia 1: Intentar DuckDuckGo primero
         try:
             from duckduckgo_search import DDGS
+            print(f"🔍 [IMAGE SEARCH] Trying DuckDuckGo search...")
+            
             ddgs = DDGS()
             
-            # Buscar con cada variación hasta obtener suficientes resultados
-            for query_index, query in enumerate(search_queries):
-                if len(images) >= 15 or total_attempts >= 10:
+            # Probar algunas consultas con DuckDuckGo
+            for query in search_queries[:3]:  # Solo las primeras 3 consultas
+                if len(images) >= 10:
                     break
                     
-                print(f"🔍 [IMAGE SEARCH] Attempt {total_attempts + 1}: Searching '{query}'")
+                print(f"🔍 [IMAGE SEARCH] DuckDuckGo attempt: '{query}'")
                 total_attempts += 1
                 
                 try:
-                    # Configuración más permisiva
-                    results = ddgs.images(
-                        keywords=query,
-                        region="wt-wt",  # Worldwide
-                        safesearch="off",
-                        size=None,  # Any size
-                        max_results=20,
-                        type_image=None
-                    )
-                    
-                    print(f"🔍 [IMAGE SEARCH] DuckDuckGo returned results for '{query}'")
-                    
-                    images_found_this_query = 0
+                    results = ddgs.images(keywords=query, max_results=8)
                     for result in results:
-                        if len(images) >= 15 or images_found_this_query >= 5:
+                        if len(images) >= 10:
                             break
-                        
-                        # Filtros para obtener mejores imágenes
                         image_url = result.get('image', '')
-                        title = result.get('title', '')
-                        width = result.get('width', 0)
-                        height = result.get('height', 0)
-                        source_url = result.get('source', '')
-                        
-                        print(f"  📸 Found image: {image_url[:100]}... ({width}x{height})")
-                        
-                        # Validaciones más permisivas
-                        if (image_url and 
-                            image_url.startswith(('http://', 'https://')) and
-                            width >= 100 and height >= 100 and  # Tamaño mínimo más bajo
-                            not any(img['url'] == image_url for img in images)):  # No duplicados
-                            
-                            # Determinar fuente/categoría basada en la URL
-                            category = 'general'
-                            site_name = 'Web'
-                            
-                            # Categorizar según el dominio de origen
-                            if source_url:
-                                try:
-                                    site_name = source_url.split('/')[2] if '/' in source_url else 'Web'
-                                    if any(domain in source_url.lower() for domain in ['vallejo', 'ak-interactive', 'scale75', 'greenstuff']):
-                                        category = 'fabricantes'
-                                    elif any(domain in source_url.lower() for domain in ['e-minis', 'goblintrader', 'bandua', 'frikland']):
-                                        category = 'tiendas_espana'
-                                except:
-                                    site_name = 'Web'
-                            
+                        if image_url and image_url.startswith(('http://', 'https://')):
                             images.append({
                                 'url': image_url,
-                                'title': title[:100] if title else f"{brand} {name}",
-                                'source': source_url,
-                                'width': width,
-                                'height': height,
-                                'site': site_name,
-                                'category': category
+                                'title': result.get('title', query),
+                                'source': result.get('source', ''),
+                                'width': result.get('width', 300),
+                                'height': result.get('height', 300),
+                                'site': 'DuckDuckGo',
+                                'category': 'general'
                             })
-                            images_found_this_query += 1
-                    
-                    print(f"✅ [IMAGE SEARCH] Found {images_found_this_query} valid images for query: {query}")
-                    
-                    # Si encontramos imágenes, continuar con las siguientes consultas
-                    if images_found_this_query > 0:
-                        continue
-                    
-                except Exception as query_error:
-                    print(f"❌ [IMAGE SEARCH] Error with query '{query}': {str(query_error)}")
+                    print(f"✅ [IMAGE SEARCH] DuckDuckGo found {len(images)} images so far")
+                except Exception as ddg_error:
+                    print(f"❌ [IMAGE SEARCH] DuckDuckGo error: {ddg_error}")
                     continue
                     
-            # Si no hay imágenes, intentar búsqueda más simple
-            if len(images) == 0 and total_attempts < 10:
-                simple_queries = [f"{brand}", f"{name}", "vallejo paint", "acrylic paint miniature"]
-                for simple_query in simple_queries:
-                    if len(images) >= 5 or total_attempts >= 12:
+        except Exception as ddg_import_error:
+            print(f"❌ [IMAGE SEARCH] DuckDuckGo import error: {ddg_import_error}")
+        
+        # Estrategia 2: Si DuckDuckGo no funciona, usar scraping directo
+        if len(images) < 5:
+            print(f"🔍 [IMAGE SEARCH] DuckDuckGo insufficient results ({len(images)}), trying direct search...")
+            
+            try:
+                import requests
+                from urllib.parse import quote_plus
+                import json
+                import re
+                
+                # Buscar en Google Images usando scraping
+                for query in search_queries[:2]:  # Solo 2 consultas para no sobrecargar
+                    if len(images) >= 15:
                         break
-                    print(f"🔍 [IMAGE SEARCH] Fallback attempt {total_attempts + 1}: '{simple_query}'")
+                        
+                    print(f"🔍 [IMAGE SEARCH] Direct search attempt: '{query}'")
                     total_attempts += 1
                     
                     try:
-                        results = ddgs.images(keywords=simple_query, max_results=10)
-                        for result in results:
-                            if len(images) >= 5:
-                                break
-                            image_url = result.get('image', '')
-                            if image_url and image_url.startswith(('http://', 'https://')):
-                                images.append({
-                                    'url': image_url,
-                                    'title': result.get('title', simple_query),
-                                    'source': result.get('source', ''),
-                                    'width': result.get('width', 300),
-                                    'height': result.get('height', 300),
-                                    'site': 'Web',
-                                    'category': 'general'
-                                })
-                        print(f"✅ [IMAGE SEARCH] Fallback found {len(images)} images")
-                    except Exception as fallback_error:
-                        print(f"❌ [IMAGE SEARCH] Fallback error: {fallback_error}")
+                        # Simular búsqueda de Google Images
+                        search_url = f"https://www.google.com/search?tbm=isch&q={quote_plus(query)}"
+                        headers = {
+                            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+                        }
+                        
+                        response = requests.get(search_url, headers=headers, timeout=10)
+                        if response.status_code == 200:
+                            # Extraer URLs de imágenes del HTML
+                            img_urls = re.findall(r',"ou":"([^"]+)"', response.text)
+                            
+                            print(f"  📸 Found {len(img_urls)} image URLs in Google search")
+                            
+                            for img_url in img_urls[:8]:  # Máximo 8 por consulta
+                                if len(images) >= 15:
+                                    break
+                                    
+                                # Validar URL
+                                if (img_url and 
+                                    img_url.startswith(('http://', 'https://')) and
+                                    not any(img['url'] == img_url for img in images)):
+                                    
+                                    # Determinar categoría por dominio
+                                    category = 'general'
+                                    site_name = 'Google Images'
+                                    
+                                    try:
+                                        domain = img_url.split('/')[2].lower()
+                                        if any(d in domain for d in ['vallejo', 'ak-interactive', 'scale75']):
+                                            category = 'fabricantes'
+                                            site_name = domain
+                                        elif any(d in domain for d in ['e-minis', 'goblintrader']):
+                                            category = 'tiendas_espana'
+                                            site_name = domain
+                                        else:
+                                            site_name = domain[:30]  # Limitar longitud
+                                    except:
+                                        pass
+                                    
+                                    images.append({
+                                        'url': img_url,
+                                        'title': f"{brand_clean} {cleaned_name}".strip(),
+                                        'source': img_url,
+                                        'width': 400,  # Valor por defecto
+                                        'height': 400,
+                                        'site': site_name,
+                                        'category': category
+                                    })
+                            
+                            print(f"✅ [IMAGE SEARCH] Direct search found {len(images)} total images")
+                            
+                    except Exception as search_error:
+                        print(f"❌ [IMAGE SEARCH] Direct search error for '{query}': {search_error}")
                         continue
+                        
+            except ImportError as import_error:
+                print(f"❌ [IMAGE SEARCH] Import error for direct search: {import_error}")
+                
+        # Estrategia 3: Si todo falla, imágenes de ejemplo/placeholder
+        if len(images) == 0:
+            print(f"🔍 [IMAGE SEARCH] All methods failed, providing sample images...")
+            
+            # URLs de ejemplo de pinturas que suelen funcionar
+            sample_images = [
+                f"https://acrylicosvallejo.com/wp-content/uploads/2019/10/70951.jpg",
+                f"https://www.vallejocolor.com/wp-content/uploads/2020/02/ModelColor_70951_WhiteInk.jpg",
+                f"https://cdn.webshopapp.com/shops/94414/files/54985057/vallejo-model-color-white.jpg"
+            ]
+            
+            for i, sample_url in enumerate(sample_images):
+                images.append({
+                    'url': sample_url,
+                    'title': f"{brand_clean} {cleaned_name} - Imagen de ejemplo",
+                    'source': 'vallejo.com',
+                    'width': 300,
+                    'height': 300,
+                    'site': 'Vallejo Oficial',
+                    'category': 'fabricantes'
+                })
+            
+            print(f"✅ [IMAGE SEARCH] Added {len(images)} sample images")
         
         except Exception as search_error:
             print(f"❌ [IMAGE SEARCH] Error in search process: {str(search_error)}")
