@@ -3161,12 +3161,9 @@
             
             // Obtener URL original
             let originalUrl = img.src;
-            // Solo decodificar si es una URL proxy (contiene /proxy/ y url=)
-            if (img.src.includes('/proxy/') && img.src.includes('url=')) {
-                const urlMatch = img.src.match(/url=([^&]+)/);
-                if (urlMatch) {
-                    originalUrl = decodeURIComponent(urlMatch[1]);
-                }
+            const urlMatch = img.src.match(/url=([^&]+)/);
+            if (urlMatch) {
+                originalUrl = decodeURIComponent(urlMatch[1]);
             }
             
             // Verificar cache de fallos
@@ -3233,12 +3230,9 @@
         function handleImageSuccess(img) {
             // Obtener URL original
             let originalUrl = img.src;
-            // Solo decodificar si es una URL proxy (contiene /proxy/ y url=)
-            if (img.src.includes('/proxy/') && img.src.includes('url=')) {
-                const urlMatch = img.src.match(/url=([^&]+)/);
-                if (urlMatch) {
-                    originalUrl = decodeURIComponent(urlMatch[1]);
-                }
+            const urlMatch = img.src.match(/url=([^&]+)/);
+            if (urlMatch) {
+                originalUrl = decodeURIComponent(urlMatch[1]);
             }
             
             // Cachear como exitosa
