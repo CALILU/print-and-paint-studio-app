@@ -2868,7 +2868,13 @@ def search_high_quality_images():
             return text.strip()
         
         # Limpiar y preparar términos de búsqueda
-        cleaned_name = clean_description(name)
+        # Para Vallejo, mantener los códigos porque son estándar y útiles
+        if brand and "vallejo" in brand.lower():
+            cleaned_name = name.strip()  # No limpiar códigos para Vallejo
+            print(f"🔍 [IMAGE SEARCH] Vallejo product - keeping codes")
+        else:
+            cleaned_name = clean_description(name)  # Limpiar códigos para otras marcas
+            
         brand_clean = brand.strip()
         
         print(f"🔍 [IMAGE SEARCH] Original name: '{name}'")
@@ -2901,11 +2907,21 @@ def search_high_quality_images():
         # Búsquedas de marca específica
         if brand_clean:
             if "vallejo" in brand_clean.lower():
+                # Para Vallejo, incluir búsquedas con códigos específicos
                 search_queries.extend([
+                    f"vallejo {cleaned_name}",  # Incluye el código
+                    f"vallejo model color {cleaned_name}",
+                    f"vallejo game color {cleaned_name}",
                     "vallejo paint miniature",
-                    "vallejo acrylic paint",
-                    f"vallejo {cleaned_name}" if cleaned_name else "vallejo paint"
+                    "vallejo acrylic paint"
                 ])
+                
+                # Si hay un código numérico, también buscar específicamente por él
+                import re
+                code_match = re.search(r'\b\d{2,5}\b', name)
+                if code_match:
+                    code = code_match.group()
+                    search_queries.insert(0, f"vallejo {code}")  # Priorizar búsqueda por código
             elif "ak" in brand_clean.lower():
                 search_queries.extend([
                     "ak interactive paint",
@@ -3083,6 +3099,50 @@ def search_high_quality_images():
         filtered_images = []
         seen_urls = set()
         
+        # Palabras clave que indican sets/colecciones (no queremos estos)
+        set_keywords = [
+            'set', 'pack', 'kit', 'collection', 'colección', 'box', 'caja',
+            'bundle', 'lote', 'surtido', 'assortment', 'range', 'gama',
+            'starter', 'basic', 'complete', 'completo', 'paint set'
+        ]
+        
+        # Palabras clave que indican botes individuales (queremos estos)
+        bottle_keywords = [
+            'bottle', 'pot', 'bote', 'frasco', 'dropper', 'cuentagotas',
+            'individual', 'single', code if 'code' in locals() else '',
+            'ml', 'paint', 'color', 'colour'
+        ]
+        
+        def is_likely_single_bottle(img):
+            """Determina si una imagen es probablemente un bote individual"""
+            title = img.get('title', '').lower()
+            url = img.get('url', '').lower()
+            source = img.get('source', '').lower()
+            
+            # Verificar si contiene palabras de "set"
+            for keyword in set_keywords:
+                if keyword in title or keyword in url:
+                    return False
+            
+            # Dar prioridad si contiene palabras de "bote"
+            for keyword in bottle_keywords:
+                if keyword and (keyword in title or keyword in url):
+                    return True
+            
+            # Si tiene un código específico en el título, probablemente es individual
+            if brand_clean and "vallejo" in brand_clean.lower():
+                import re
+                if re.search(r'\b\d{2,5}\b', title):
+                    return True
+            
+            return True  # Por defecto, asumir que es válido
+        
+        # Primero filtrar por botes individuales
+        single_bottles = []
+        other_images = []
+        
+        print(f"🔍 [IMAGE SEARCH] Filtering {len(images)} images for single bottles...")
+        
         for img in images:
             # Filtrar por tamaño mínimo, URLs válidas y no duplicados
             if (img['url'] and 
@@ -3090,11 +3150,23 @@ def search_high_quality_images():
                 img['url'].startswith(('http://', 'https://')) and
                 img['width'] >= 200 and 
                 img['height'] >= 200):
-                filtered_images.append(img)
+                
+                if is_likely_single_bottle(img):
+                    single_bottles.append(img)
+                    print(f"  ✅ Single bottle: {img.get('title', '')[:60]}...")
+                else:
+                    other_images.append(img)
+                    print(f"  ❌ Likely set/pack: {img.get('title', '')[:60]}...")
                 seen_urls.add(img['url'])
         
-        # Ordenar por tamaño (las más grandes primero) para mejor calidad
-        filtered_images.sort(key=lambda x: x['width'] * x['height'], reverse=True)
+        # Combinar: primero botes individuales, luego otros (por si acaso)
+        filtered_images = single_bottles + other_images[:5]  # Máximo 5 "otros" como respaldo
+        
+        # Ordenar por relevancia y tamaño
+        filtered_images.sort(key=lambda x: (
+            1 if any(kw in x.get('title', '').lower() for kw in bottle_keywords) else 0,
+            x['width'] * x['height']
+        ), reverse=True)
         
         print(f"✅ [IMAGE SEARCH] Found {len(filtered_images)} quality images")
         
