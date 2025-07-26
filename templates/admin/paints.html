@@ -120,6 +120,8 @@
             object-fit: contain;
             margin-bottom: 15px;
             display: block;
+            position: relative;
+            z-index: 1 !important;
         }
         .paint-actions {
             opacity: 0;
@@ -130,6 +132,7 @@
             background-color: rgba(0,0,0,0.5);
             border-radius: 4px;
             padding: 5px;
+            z-index: 10 !important;
         }
         .paint-container:hover .paint-actions {
             opacity: 1;
@@ -172,6 +175,7 @@
             border-radius: 20px;
             font-size: 0.8rem;
             font-weight: bold;
+            z-index: 10 !important;
         }
         .in-stock {
             background-color: #28a745;
@@ -203,14 +207,14 @@
         .modified-badge {
             position: absolute;
             top: 10px;
-            right: 10px;
+            left: 120px;
             background-color: #28a745;
             color: white;
             padding: 4px 8px;
             border-radius: 12px;
             font-size: 0.7rem;
             font-weight: bold;
-            z-index: 10;
+            z-index: 10 !important;
         }
         @keyframes pulse-green {
             0% { box-shadow: 0 0 15px rgba(40, 167, 69, 0.3); }
