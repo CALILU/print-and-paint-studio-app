@@ -212,6 +212,20 @@
             font-weight: bold;
             z-index: 999 !important;
         }
+        
+        /* Estilos para el buscador de imágenes */
+        .image-option {
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        
+        .image-option:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        }
+        
+        .image-option:active {
+            transform: translateY(0);
+        }
         @keyframes pulse-green {
             0% { box-shadow: 0 0 15px rgba(40, 167, 69, 0.3); }
             50% { box-shadow: 0 0 25px rgba(40, 167, 69, 0.6); }
@@ -1767,6 +1781,7 @@
                         <i class="bi bi-eye action-icon" onclick="console.log('👁️ Click en ver pintura:', ${paint.id}); viewPaint(${paint.id})" title="Ver detalles"></i>
                         <i class="bi bi-pencil action-icon" onclick="console.log('🖱️ Click en editar pintura:', ${paint.id}); editPaint(${paint.id})" title="Editar"></i>
                         <i class="bi bi-eyedropper action-icon" onclick="openColorPicker(${paint.id})" title="Seleccionar color de imagen"></i>
+                        <i class="bi bi-search action-icon" onclick="openImageSearch('${paint.id}', '${paint.brand}', '${paint.name}', '${paint.color_code}')" title="Buscar mejor imagen"></i>
                         <i class="bi bi-trash action-icon" onclick="confirmDelete(${paint.id})" title="Eliminar"></i>
                         ${markViewedBtn}
                     </div>
@@ -3976,6 +3991,225 @@
         });
     </script>
 
+    <!-- Image Search Functionality -->
+    <script>
+        let currentSearchPaintId = null;
+        let currentSearchData = null;
+
+        // Función para abrir el buscador de imágenes
+        function openImageSearch(paintId, brand, name, colorCode) {
+            console.log(`🔍 [IMAGE SEARCH] Opening image search for paint ${paintId}`);
+            
+            currentSearchPaintId = paintId;
+            currentSearchData = { paintId, brand, name, colorCode };
+            
+            // Mostrar modal
+            const modal = new bootstrap.Modal(document.getElementById('imageSearchModal'));
+            modal.show();
+            
+            // Iniciar búsqueda automáticamente
+            setTimeout(() => {
+                searchImages();
+            }, 500);
+        }
+
+        // Función para buscar imágenes
+        async function searchImages() {
+            console.log('🔍 [IMAGE SEARCH] Starting image search');
+            
+            if (!currentSearchPaintId || !currentSearchData) {
+                console.error('❌ [IMAGE SEARCH] No search data available');
+                return;
+            }
+            
+            // Mostrar loading
+            document.getElementById('searchLoading').style.display = 'block';
+            document.getElementById('imageGallery').innerHTML = '';
+            document.getElementById('noResults').style.display = 'none';
+            document.getElementById('retrySearchBtn').style.display = 'none';
+            
+            try {
+                const requestData = {
+                    paint_id: currentSearchPaintId,
+                    brand: currentSearchData.brand,
+                    name: currentSearchData.name,
+                    color_code: currentSearchData.colorCode
+                };
+                
+                console.log('🔍 [IMAGE SEARCH] Request data:', requestData);
+                
+                const response = await fetch('/api/paints/search-images', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(requestData)
+                });
+                
+                console.log(`🔍 [IMAGE SEARCH] Response status: ${response.status}`);
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}`);
+                }
+                
+                const result = await response.json();
+                console.log('🔍 [IMAGE SEARCH] Response data:', result);
+                
+                // Ocultar loading
+                document.getElementById('searchLoading').style.display = 'none';
+                
+                if (result.success && result.images && result.images.length > 0) {
+                    displayImageGallery(result.images);
+                } else {
+                    document.getElementById('noResults').style.display = 'block';
+                    document.getElementById('retrySearchBtn').style.display = 'inline-block';
+                }
+                
+            } catch (error) {
+                console.error('❌ [IMAGE SEARCH] Error:', error);
+                document.getElementById('searchLoading').style.display = 'none';
+                document.getElementById('noResults').style.display = 'block';
+                document.getElementById('retrySearchBtn').style.display = 'inline-block';
+                
+                // Mostrar error específico
+                document.getElementById('noResults').innerHTML = `
+                    <i class="bi bi-exclamation-triangle text-danger" style="font-size: 2rem;"></i>
+                    <p class="mt-2">Error al buscar imágenes: ${error.message}</p>
+                `;
+            }
+        }
+
+        // Función para mostrar la galería de imágenes
+        function displayImageGallery(images) {
+            console.log(`🔍 [IMAGE SEARCH] Displaying ${images.length} images`);
+            
+            const gallery = document.getElementById('imageGallery');
+            gallery.innerHTML = '';
+            
+            images.forEach((image, index) => {
+                const col = document.createElement('div');
+                col.className = 'col-md-4 col-lg-3';
+                
+                col.innerHTML = `
+                    <div class="card h-100 image-option" style="cursor: pointer;" onclick="selectImage('${image.url}', ${index})">
+                        <img src="${image.url}" class="card-img-top" alt="${image.title}" 
+                             style="height: 200px; object-fit: cover;" 
+                             onerror="this.parentElement.innerHTML='<div class=\\'d-flex align-items-center justify-content-center\\'><i class=\\'bi bi-image text-muted\\' style=\\'font-size: 2rem;\\'></i></div>'">
+                        <div class="card-body p-2">
+                            <small class="text-muted d-block" style="font-size: 0.7rem;">
+                                ${image.width}x${image.height}px
+                            </small>
+                            <small class="text-primary d-block" style="font-size: 0.7rem;">
+                                ${image.site}
+                            </small>
+                            <small class="text-truncate d-block" style="font-size: 0.7rem;" title="${image.title}">
+                                ${image.title}
+                            </small>
+                        </div>
+                    </div>
+                `;
+                
+                gallery.appendChild(col);
+            });
+        }
+
+        // Función para seleccionar una imagen
+        async function selectImage(imageUrl, index) {
+            console.log(`🔍 [IMAGE SEARCH] Image selected: ${imageUrl}`);
+            
+            if (!currentSearchPaintId) {
+                console.error('❌ [IMAGE SEARCH] No paint ID available');
+                alert('Error: No hay ID de pintura disponible');
+                return;
+            }
+            
+            // Confirmar selección
+            if (!confirm('¿Quieres usar esta imagen como la imagen principal del artículo?')) {
+                return;
+            }
+            
+            try {
+                const requestData = {
+                    paint_id: currentSearchPaintId,
+                    image_url: imageUrl
+                };
+                
+                console.log('🔍 [IMAGE SEARCH] Updating image URL:', requestData);
+                
+                const response = await fetch('/api/paints/update-image-url', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(requestData)
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}`);
+                }
+                
+                const result = await response.json();
+                console.log('✅ [IMAGE SEARCH] Image URL updated:', result);
+                
+                if (result.success) {
+                    // Actualizar la imagen en la galería
+                    updateImageInGallery(currentSearchPaintId, imageUrl);
+                    
+                    // Cerrar modal
+                    bootstrap.Modal.getInstance(document.getElementById('imageSearchModal')).hide();
+                    
+                    // Mostrar notificación
+                    showNotification(`Imagen actualizada correctamente`, 'success');
+                } else {
+                    alert('Error al actualizar la imagen: ' + result.message);
+                }
+                
+            } catch (error) {
+                console.error('❌ [IMAGE SEARCH] Error updating image:', error);
+                alert('Error al conectar con el servidor: ' + error.message);
+            }
+        }
+
+        // Función para actualizar la imagen en la galería
+        function updateImageInGallery(paintId, imageUrl) {
+            console.log(`🔍 [IMAGE SEARCH] Updating image in gallery for paint ${paintId}`);
+            
+            const paintCard = document.querySelector(`[data-paint-id="${paintId}"]`);
+            if (paintCard) {
+                const img = paintCard.querySelector('.paint-image');
+                if (img) {
+                    img.src = imageUrl;
+                    img.setAttribute('data-src', imageUrl);
+                }
+            }
+            
+            // También actualizar en la tabla si está visible
+            const tableRow = document.querySelector(`tr[data-paint-id="${paintId}"]`);
+            if (tableRow) {
+                const imgCell = tableRow.querySelector('img');
+                if (imgCell) {
+                    imgCell.src = imageUrl;
+                }
+            }
+        }
+
+        // Función para reintentar búsqueda
+        function retryImageSearch() {
+            console.log('🔍 [IMAGE SEARCH] Retrying search');
+            searchImages();
+        }
+
+        // Limpiar cuando se cierra el modal
+        document.getElementById('imageSearchModal').addEventListener('hidden.bs.modal', function() {
+            currentSearchPaintId = null;
+            currentSearchData = null;
+            document.getElementById('imageGallery').innerHTML = '';
+            document.getElementById('searchLoading').style.display = 'none';
+            document.getElementById('noResults').style.display = 'none';
+            document.getElementById('retrySearchBtn').style.display = 'none';
+        });
+    </script>
+
     <!-- Color Picker Modal -->
     <div class="modal fade" id="colorPickerModal" tabindex="-1" aria-labelledby="colorPickerModalLabel" aria-hidden="true">
         <div class="modal-dialog modal-lg">
@@ -4023,6 +4257,68 @@
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
                     <button type="button" class="btn btn-primary" id="applyColorBtn" onclick="applySelectedColor()" disabled>
                         <i class="bi bi-check-lg me-1"></i>Aplicar Color
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Image Search Modal -->
+    <div class="modal fade" id="imageSearchModal" tabindex="-1" aria-labelledby="imageSearchModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-xl">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="imageSearchModalLabel">
+                        <i class="bi bi-search me-2"></i>Buscar Mejor Imagen
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="row mb-3">
+                        <div class="col-md-8">
+                            <h6>Buscando imágenes de alta resolución en:</h6>
+                            <div class="d-flex flex-wrap gap-2 mb-3">
+                                <span class="badge bg-primary">Scale75</span>
+                                <span class="badge bg-primary">Vallejo</span>
+                                <span class="badge bg-primary">Games Workshop</span>
+                                <span class="badge bg-primary">Citadel</span>
+                                <span class="badge bg-primary">AK Interactive</span>
+                                <span class="badge bg-primary">AMMO</span>
+                                <span class="badge bg-primary">Tamiya</span>
+                                <span class="badge bg-primary">Testors</span>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div id="searchInfo" class="alert alert-info">
+                                <i class="bi bi-info-circle me-1"></i>
+                                <small>Selecciona una imagen para actualizar la URL del artículo</small>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Loading indicator -->
+                    <div id="searchLoading" class="text-center py-4" style="display: none;">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">Buscando...</span>
+                        </div>
+                        <p class="mt-2">Buscando imágenes de alta calidad...</p>
+                    </div>
+                    
+                    <!-- Results gallery -->
+                    <div id="imageGallery" class="row g-3">
+                        <!-- Images will be loaded here -->
+                    </div>
+                    
+                    <!-- No results message -->
+                    <div id="noResults" class="text-center py-4" style="display: none;">
+                        <i class="bi bi-exclamation-triangle text-warning" style="font-size: 2rem;"></i>
+                        <p class="mt-2">No se encontraron imágenes. Intenta con términos diferentes.</p>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+                    <button type="button" class="btn btn-outline-primary" id="retrySearchBtn" onclick="retryImageSearch()" style="display: none;">
+                        <i class="bi bi-arrow-clockwise me-1"></i>Buscar de nuevo
                     </button>
                 </div>
             </div>

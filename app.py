@@ -2744,6 +2744,215 @@ def update_color_preview():
         db.session.rollback()
         return jsonify({"success": False, "message": str(e)}), 500
 
+# Endpoint para actualizar image_url desde buscador de imágenes
+@app.route('/api/paints/update-image-url', methods=['POST'])
+@admin_required
+def update_image_url():
+    """Actualizar image_url de una pintura desde el buscador de imágenes"""
+    try:
+        print(f"🖼️ [IMAGE SEARCH] Request received to update image URL")
+        
+        data = request.get_json()
+        print(f"🖼️ [IMAGE SEARCH] Request data: {data}")
+        
+        if not data:
+            print(f"❌ [IMAGE SEARCH] No data provided")
+            return jsonify({"success": False, "message": "No data provided"}), 400
+        
+        paint_id = data.get('paint_id')
+        image_url = data.get('image_url')
+        
+        print(f"🖼️ [IMAGE SEARCH] Paint ID: {paint_id}, Image URL: {image_url}")
+        
+        if not paint_id:
+            print(f"❌ [IMAGE SEARCH] paint_id is required")
+            return jsonify({"success": False, "message": "paint_id is required"}), 400
+        
+        if not image_url:
+            print(f"❌ [IMAGE SEARCH] image_url is required")
+            return jsonify({"success": False, "message": "image_url is required"}), 400
+        
+        # Validar que sea una URL válida
+        if not (image_url.startswith('http://') or image_url.startswith('https://')):
+            print(f"❌ [IMAGE SEARCH] Invalid URL format: {image_url}")
+            return jsonify({"success": False, "message": "image_url must be a valid HTTP/HTTPS URL"}), 400
+        
+        # Buscar la pintura
+        paint = Paint.query.get(paint_id)
+        if not paint:
+            print(f"❌ [IMAGE SEARCH] Paint with id {paint_id} not found")
+            return jsonify({"success": False, "message": f"Paint with id {paint_id} not found"}), 404
+        
+        print(f"🖼️ [IMAGE SEARCH] Found paint: {paint.name} (Brand: {paint.brand})")
+        print(f"🖼️ [IMAGE SEARCH] Current image_url: {paint.image_url}")
+        
+        # Actualizar image_url
+        old_url = paint.image_url
+        paint.image_url = image_url
+        
+        print(f"🖼️ [IMAGE SEARCH] Updating image_url from {old_url} to {image_url}")
+        
+        db.session.commit()
+        
+        print(f"✅ [IMAGE SEARCH] Successfully updated paint {paint_id}: image URL updated")
+        
+        return jsonify({
+            "success": True,
+            "message": f"Image URL updated successfully for {paint.name}",
+            "paint_id": paint_id,
+            "image_url": image_url,
+            "paint_name": paint.name,
+            "old_url": old_url
+        })
+        
+    except Exception as e:
+        print(f"❌ [IMAGE SEARCH] Error updating image URL: {str(e)}")
+        db.session.rollback()
+        return jsonify({"success": False, "message": str(e)}), 500
+
+# Endpoint para buscar imágenes en sitios de modelismo
+@app.route('/api/paints/search-images', methods=['POST'])
+@admin_required
+def search_paint_images():
+    """Buscar imágenes de alta resolución en sitios web de pinturas de modelismo"""
+    try:
+        print(f"🔍 [IMAGE SEARCH] Request received to search images")
+        
+        data = request.get_json()
+        print(f"🔍 [IMAGE SEARCH] Request data: {data}")
+        
+        if not data:
+            return jsonify({"success": False, "message": "No data provided"}), 400
+        
+        paint_id = data.get('paint_id')
+        brand = data.get('brand', '')
+        name = data.get('name', '')
+        color_code = data.get('color_code', '')
+        
+        if not paint_id:
+            return jsonify({"success": False, "message": "paint_id is required"}), 400
+        
+        # Crear términos de búsqueda
+        search_terms = []
+        if brand:
+            search_terms.append(brand)
+        if name:
+            search_terms.append(name)
+        if color_code:
+            search_terms.append(color_code)
+        
+        search_query = ' '.join(search_terms) + ' paint miniature modeling'
+        print(f"🔍 [IMAGE SEARCH] Search query: {search_query}")
+        
+        # Buscar imágenes usando DuckDuckGo
+        images = []
+        try:
+            ddgs = DDGS()
+            # Buscar específicamente en sitios de modelismo
+            modeling_sites = [
+                'scale75.com',
+                'vallejocolor.com', 
+                'games-workshop.com',
+                'citadelcolour.com',
+                'ammoofmig.com',
+                'ak-interactive.com',
+                'mr-color.jp',
+                'tamiya.com',
+                'testors.com'
+            ]
+            
+            # Primero buscar en sitios específicos de modelismo
+            for site in modeling_sites[:3]:  # Limitar a 3 sitios para no saturar
+                try:
+                    site_query = f"{search_query} site:{site}"
+                    print(f"🔍 [IMAGE SEARCH] Searching in {site}")
+                    
+                    results = ddgs.images(
+                        keywords=site_query,
+                        region="es-es",
+                        safesearch="off",
+                        size="medium",
+                        max_results=5
+                    )
+                    
+                    for result in results:
+                        if len(images) >= 15:  # Limitar a 15 imágenes total
+                            break
+                        
+                        images.append({
+                            'url': result.get('image', ''),
+                            'title': result.get('title', ''),
+                            'source': result.get('source', ''),
+                            'width': result.get('width', 0),
+                            'height': result.get('height', 0),
+                            'site': site
+                        })
+                    
+                except Exception as site_error:
+                    print(f"❌ [IMAGE SEARCH] Error searching {site}: {str(site_error)}")
+                    continue
+            
+            # Si no hay suficientes imágenes, buscar de forma general
+            if len(images) < 10:
+                try:
+                    print(f"🔍 [IMAGE SEARCH] General search for more images")
+                    general_results = ddgs.images(
+                        keywords=search_query,
+                        region="es-es", 
+                        safesearch="off",
+                        size="medium",
+                        max_results=10
+                    )
+                    
+                    for result in general_results:
+                        if len(images) >= 20:  # Máximo 20 imágenes
+                            break
+                        
+                        # Evitar duplicados
+                        if not any(img['url'] == result.get('image', '') for img in images):
+                            images.append({
+                                'url': result.get('image', ''),
+                                'title': result.get('title', ''),
+                                'source': result.get('source', ''),
+                                'width': result.get('width', 0),
+                                'height': result.get('height', 0),
+                                'site': 'general'
+                            })
+                
+                except Exception as general_error:
+                    print(f"❌ [IMAGE SEARCH] Error in general search: {str(general_error)}")
+        
+        except Exception as search_error:
+            print(f"❌ [IMAGE SEARCH] Error in search process: {str(search_error)}")
+            return jsonify({
+                "success": False, 
+                "message": f"Error searching images: {str(search_error)}"
+            }), 500
+        
+        # Filtrar imágenes por calidad y relevancia
+        filtered_images = []
+        for img in images:
+            # Filtrar por tamaño mínimo y URLs válidas
+            if (img['url'] and 
+                img['url'].startswith(('http://', 'https://')) and
+                img['width'] >= 100 and 
+                img['height'] >= 100):
+                filtered_images.append(img)
+        
+        print(f"✅ [IMAGE SEARCH] Found {len(filtered_images)} quality images")
+        
+        return jsonify({
+            "success": True,
+            "message": f"Found {len(filtered_images)} images",
+            "paint_id": paint_id,
+            "search_query": search_query,
+            "images": filtered_images[:15]  # Máximo 15 imágenes para el frontend
+        })
+        
+    except Exception as e:
+        print(f"❌ [IMAGE SEARCH] Error in search endpoint: {str(e)}")
+        return jsonify({"success": False, "message": str(e)}), 500
+
 # Endpoint de debug para verificar acceso a la base de datos
 @app.route('/api/debug/test-color-update/<int:paint_id>/<color>', methods=['GET'])
 @admin_required
