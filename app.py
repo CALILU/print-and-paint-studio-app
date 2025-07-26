@@ -2927,10 +2927,21 @@ def search_high_quality_images():
         GOOGLE_CX = "a4da551cd50f94b41"
         
         print(f"🔍 [IMAGE SEARCH] Using Google Custom Search API...")
+        print(f"🔍 [IMAGE SEARCH] API Key: {GOOGLE_API_KEY[:10]}...{GOOGLE_API_KEY[-4:]}")
+        print(f"🔍 [IMAGE SEARCH] CX: {GOOGLE_CX}")
         
+        # Primero, hacer una consulta de prueba para verificar la API
         try:
             import requests
-            
+            test_url = f"https://www.googleapis.com/customsearch/v1?key={GOOGLE_API_KEY}&cx={GOOGLE_CX}&q=test"
+            test_response = requests.get(test_url, timeout=5)
+            print(f"🔍 [IMAGE SEARCH] API test response: {test_response.status_code}")
+            if test_response.status_code != 200:
+                print(f"❌ [IMAGE SEARCH] API test failed: {test_response.text[:500]}")
+        except Exception as test_error:
+            print(f"❌ [IMAGE SEARCH] API test error: {str(test_error)}")
+        
+        try:
             # Buscar con cada consulta hasta obtener suficientes resultados
             for query in search_queries[:3]:  # Máximo 3 consultas
                 if len(images) >= 15:
@@ -3088,6 +3099,45 @@ def search_high_quality_images():
     except Exception as e:
         print(f"❌ [IMAGE SEARCH] Error in search endpoint: {str(e)}")
         return jsonify({"success": False, "message": str(e)}), 500
+
+# Endpoint de debug para probar Google API
+@app.route('/api/debug/test-google-api', methods=['GET'])
+@admin_required
+def debug_test_google_api():
+    """Debug endpoint para probar Google Custom Search API"""
+    try:
+        import requests
+        
+        GOOGLE_API_KEY = "AIzaSyDRLw6cUMLuGKFeckwpd1fQMQypNkuOnTM"
+        GOOGLE_CX = "a4da551cd50f94b41"
+        
+        # Test básico
+        test_url = f"https://www.googleapis.com/customsearch/v1"
+        params = {
+            'key': GOOGLE_API_KEY,
+            'cx': GOOGLE_CX,
+            'q': 'vallejo paint',
+            'searchType': 'image',
+            'num': 1
+        }
+        
+        response = requests.get(test_url, params=params, timeout=10)
+        
+        result = {
+            "api_key": f"{GOOGLE_API_KEY[:10]}...{GOOGLE_API_KEY[-4:]}",
+            "cx": GOOGLE_CX,
+            "status_code": response.status_code,
+            "headers": dict(response.headers),
+            "response": response.json() if response.status_code == 200 else response.text[:500]
+        }
+        
+        return jsonify(result)
+        
+    except Exception as e:
+        return jsonify({
+            "error": str(e),
+            "type": type(e).__name__
+        }), 500
 
 # Endpoint de debug para verificar acceso a la base de datos
 @app.route('/api/debug/test-color-update/<int:paint_id>/<color>', methods=['GET'])
