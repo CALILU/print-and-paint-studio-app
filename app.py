@@ -2922,17 +2922,7 @@ def search_high_quality_images():
         # Diferentes variaciones de búsqueda para mejores resultados
         search_queries = []
         
-        # Solo si tenemos descripción limpia
-        if cleaned_name:
-            search_queries.extend([
-                f"{brand_clean} {cleaned_name} paint",
-                f"{brand_clean} {cleaned_name} acrylic",
-                f"{brand_clean} {cleaned_name}",
-                f"{cleaned_name} {brand_clean} miniature",
-                f"{brand_clean} paint {cleaned_name}"
-            ])
-        
-        # Búsquedas de marca específica
+        # ⭐ PRIMERA PRIORIDAD: Búsquedas específicas de marca (especialmente VALLEJO con color_code)
         if brand_clean:
             if "vallejo" in brand_clean.lower():
                 # Para Vallejo, búsquedas optimizadas con color_code de la DB y descripción limpia
@@ -2940,12 +2930,43 @@ def search_high_quality_images():
                 
                 # 1. PRIMERA BÚSQUEDA: MARCA + COLOR_CODE (MÁXIMA PRIORIDAD)
                 if vallejo_code:
+                    # Generar ambas versiones: con punto y sin punto
+                    vallejo_code_with_dot = None
+                    vallejo_code_without_dot = None
+                    
+                    if '.' in vallejo_code:
+                        # Si ya tiene punto (ej: 70.950), generar versión sin punto
+                        vallejo_code_without_dot = vallejo_code.replace('.', '')  # 70.950 -> 70950
+                    elif vallejo_code.isdigit() and len(vallejo_code) == 5:
+                        # Si no tiene punto y es de 5 dígitos (ej: 72082), generar versión con punto
+                        vallejo_code_with_dot = f"{vallejo_code[:2]}.{vallejo_code[2:]}"  # 72082 -> 72.082
+                    
+                    # Búsquedas con el código original
                     vallejo_searches.extend([
-                        f"VALLEJO {vallejo_code}",  # Ej: "VALLEJO 72082" - PRIMERA BÚSQUEDA
-                        f"vallejo {vallejo_code}",  # Ej: "vallejo 72082" - versión lowercase
+                        f"VALLEJO {vallejo_code}",  # Ej: "VALLEJO 72082" o "VALLEJO 70.950" - PRIMERA BÚSQUEDA
+                        f"vallejo {vallejo_code}",  # versión lowercase
+                    ])
+                    
+                    # Búsquedas con versión alternativa (con o sin punto)
+                    alternative_code = vallejo_code_with_dot or vallejo_code_without_dot
+                    if alternative_code:
+                        vallejo_searches.extend([
+                            f"VALLEJO {alternative_code}",  # Ej: "VALLEJO 72.082" o "VALLEJO 70950"
+                            f"vallejo {alternative_code}",  # versión lowercase
+                        ])
+                    
+                    # Búsquedas combinadas con descripción
+                    vallejo_searches.extend([
                         f"vallejo {vallejo_code} {cleaned_name}",  # Ej: "vallejo 72082 Blanco Ink"
+                        f"vallejo {alternative_code} {cleaned_name}" if alternative_code else None,  # Ej: "vallejo 72.082 Blanco Ink"
+                    ])
+                    
+                    # Búsquedas por línea de producto
+                    vallejo_searches.extend([
                         f"vallejo model color {vallejo_code}",
-                        f"vallejo game color {vallejo_code}"
+                        f"vallejo model color {alternative_code}" if alternative_code else None,
+                        f"vallejo game color {vallejo_code}",
+                        f"vallejo game color {alternative_code}" if alternative_code else None
                     ])
                 
                 # 2. Búsquedas por descripción limpia
@@ -2977,6 +2998,16 @@ def search_high_quality_images():
                 ])
             else:
                 search_queries.append(f"{brand_clean} paint miniature")
+        
+        # ⭐ SEGUNDA PRIORIDAD: Búsquedas base con descripción limpia (después de las específicas de marca)
+        if cleaned_name:
+            search_queries.extend([
+                f"{brand_clean} {cleaned_name} paint",
+                f"{brand_clean} {cleaned_name} acrylic",
+                f"{brand_clean} {cleaned_name}",
+                f"{cleaned_name} {brand_clean} miniature",
+                f"{brand_clean} paint {cleaned_name}"
+            ])
         
         # Remover duplicados manteniendo orden
         seen = set()
