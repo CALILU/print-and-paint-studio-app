@@ -4083,37 +4083,61 @@
         // Función para mostrar la galería de imágenes
         function displayImageGallery(images) {
             console.log(`🔍 [IMAGE SEARCH] Displaying ${images.length} images`);
+            console.log('🔍 [IMAGE SEARCH] Image URLs:', images.map(img => img.url));
             
             const gallery = document.getElementById('imageGallery');
             gallery.innerHTML = '';
             
             images.forEach((image, index) => {
+                console.log(`🔍 [IMAGE SEARCH] Processing image ${index + 1}: ${image.url.substring(0, 100)}...`);
+                
                 const col = document.createElement('div');
                 col.className = 'col-md-4 col-lg-3';
                 
-                col.innerHTML = `
-                    <div class="card h-100 image-option" style="cursor: pointer;" onclick="selectImage('${image.url}', ${index})">
-                        <img src="${image.url}" class="card-img-top" alt="${image.title}" 
-                             style="height: 200px; object-fit: cover;" 
-                             onerror="this.parentElement.innerHTML='<div class=\\'d-flex align-items-center justify-content-center\\'><i class=\\'bi bi-image text-muted\\' style=\\'font-size: 2rem;\\'></i></div>'">
+                // Crear card con mejor manejo de errores
+                const cardHTML = `
+                    <div class="card h-100 image-option" style="cursor: pointer;" onclick="selectImage('${image.url.replace(/'/g, "\\'")}', ${index})">
+                        <div class="card-img-container" style="height: 200px; background: #f8f9fa; display: flex; align-items: center; justify-content: center;">
+                            <img src="${image.url}" 
+                                 class="card-img-top" 
+                                 alt="${(image.title || '').replace(/"/g, '&quot;')}" 
+                                 style="height: 200px; object-fit: cover; width: 100%;" 
+                                 onload="console.log('✅ Image loaded: ${image.url.substring(0, 50)}...')"
+                                 onerror="handleImageError(this, '${image.url.substring(0, 50)}...')">
+                            <div class="loading-spinner" style="position: absolute; display: none;">
+                                <div class="spinner-border spinner-border-sm" role="status"></div>
+                            </div>
+                        </div>
                         <div class="card-body p-2">
                             <small class="text-muted d-block" style="font-size: 0.7rem;">
-                                ${image.width}x${image.height}px
+                                ${image.width || 'N/A'}x${image.height || 'N/A'}px
                             </small>
                             <small class="d-block" style="font-size: 0.7rem;">
                                 <span class="badge ${getCategoryBadgeClass(image.category || 'general')}" style="font-size: 0.6rem;">
-                                    ${image.site}
+                                    ${(image.site || 'Web').substring(0, 20)}
                                 </span>
                             </small>
-                            <small class="text-truncate d-block" style="font-size: 0.7rem;" title="${image.title}">
-                                ${image.title}
+                            <small class="text-truncate d-block" style="font-size: 0.7rem;" title="${(image.title || '').replace(/"/g, '&quot;')}">
+                                ${(image.title || 'Sin título').substring(0, 50)}${(image.title || '').length > 50 ? '...' : ''}
                             </small>
                         </div>
                     </div>
                 `;
                 
+                col.innerHTML = cardHTML;
                 gallery.appendChild(col);
             });
+        }
+        
+        // Función para manejar errores de imagen
+        function handleImageError(imgElement, urlPreview) {
+            console.error(`❌ [IMAGE SEARCH] Failed to load image: ${urlPreview}`);
+            imgElement.parentElement.innerHTML = `
+                <div class="d-flex align-items-center justify-content-center flex-column" style="height: 200px; background: #f8f9fa;">
+                    <i class="bi bi-image text-muted" style="font-size: 2rem;"></i>
+                    <small class="text-muted mt-2">Error al cargar imagen</small>
+                </div>
+            `;
         }
 
         // Función para obtener la clase de badge según la categoría
