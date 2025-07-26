@@ -1520,12 +1520,15 @@
             }
         }
         
-        function markAllAsViewed() {
+        async function markAllAsViewed() {
             let modifiedCount = 0;
+            let paintsToUpdate = [];
+            
+            // Identificar artículos modificados
             allPaints.forEach(paint => {
-                // Marcar como vistos los artículos modificados (sync_status === 'pending_upload')
+                // Artículos modificados (sync_status === 'pending_upload')
                 if (paint.sync_status === 'pending_upload') {
-                    markPaintAsViewed(paint.id);
+                    paintsToUpdate.push(paint.id);
                     modifiedCount++;
                 }
                 // También marcar los artículos nuevos si los hay
@@ -1534,13 +1537,47 @@
                 }
             });
             
-            // Actualizar la visualización
-            filterAndDisplayPaints();
-            
-            // Mostrar notificación
-            if (modifiedCount > 0) {
-                showNotification(`✓ ${modifiedCount} artículos modificados marcados como vistos`, 'success');
+            // Si hay artículos modificados, actualizar su estado en el servidor
+            if (paintsToUpdate.length > 0) {
+                // Mostrar notificación de progreso
+                showNotification(`⏳ Actualizando ${modifiedCount} artículos...`, 'info');
+                
+                try {
+                    // Actualizar sync_status en el servidor para todos los artículos modificados
+                    // Usar el nuevo endpoint que actualiza múltiples artículos a la vez
+                    const response = await fetch('/api/paints/mark-as-viewed', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({ paint_ids: paintsToUpdate })
+                    });
+                    
+                    const result = await response.json();
+                    
+                    if (result.success) {
+                        // Actualizar el estado local
+                        allPaints.forEach(paint => {
+                            if (paintsToUpdate.includes(paint.id)) {
+                                paint.sync_status = 'synced';
+                                markPaintAsViewed(paint.id);
+                            }
+                        });
+                        
+                        // Actualizar la visualización inmediatamente
+                        filterAndDisplayPaints();
+                        
+                        showNotification(`✓ ${result.updated_count} artículos modificados marcados como vistos`, 'success');
+                    } else {
+                        throw new Error(result.error || 'Error desconocido');
+                    }
+                } catch (error) {
+                    console.error('Error actualizando artículos:', error);
+                    showNotification('❌ Error al marcar artículos como vistos', 'error');
+                }
             } else {
+                // Solo hay artículos nuevos
+                filterAndDisplayPaints();
                 showNotification('✓ Todos los artículos marcados como vistos', 'success');
             }
         }

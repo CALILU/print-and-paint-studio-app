@@ -2610,6 +2610,8 @@ def debug_set_sync_status(paint_id):
         if not paint:
             return jsonify({'success': False, 'error': 'Paint not found'}), 404
         
+        old_status = paint.sync_status if hasattr(paint, 'sync_status') else None
+        
         if hasattr(paint, 'sync_status'):
             paint.sync_status = status
             db.session.commit()
@@ -2618,7 +2620,7 @@ def debug_set_sync_status(paint_id):
                 'success': True,
                 'paint_id': paint_id,
                 'name': paint.name,
-                'old_status': 'synced',
+                'old_status': old_status,
                 'new_status': status
             })
         else:
@@ -2627,6 +2629,41 @@ def debug_set_sync_status(paint_id):
     except Exception as e:
         print(f"Error setting sync status: {str(e)}")
         db.session.rollback()
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+# Endpoint para marcar múltiples artículos como vistos (sync_status = 'synced')
+@app.route('/api/paints/mark-as-viewed', methods=['POST'])
+@admin_required  
+def mark_paints_as_viewed():
+    """Marcar múltiples artículos como vistos (cambiar sync_status a 'synced')"""
+    try:
+        data = request.get_json()
+        paint_ids = data.get('paint_ids', [])
+        
+        if not paint_ids:
+            return jsonify({'success': False, 'error': 'No paint IDs provided'}), 400
+        
+        # Actualizar todos los artículos en una sola transacción
+        updated_count = 0
+        paints = Paint.query.filter(Paint.id.in_(paint_ids)).all()
+        
+        for paint in paints:
+            if hasattr(paint, 'sync_status') and paint.sync_status == 'pending_upload':
+                paint.sync_status = 'synced'
+                updated_count += 1
+        
+        db.session.commit()
+        
+        return jsonify({
+            'success': True,
+            'updated_count': updated_count,
+            'total_requested': len(paint_ids),
+            'message': f'{updated_count} artículos marcados como vistos'
+        })
+        
+    except Exception as e:
+        db.session.rollback()
+        print(f"Error marking paints as viewed: {str(e)}")
         return jsonify({'success': False, 'error': str(e)}), 500
 
 # Endpoint temporal para debug - verificar notificaciones pendientes
