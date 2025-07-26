@@ -121,8 +121,6 @@
             object-fit: contain;
             margin-bottom: 15px;
             display: block;
-            position: relative;
-            z-index: 0;
         }
         .paint-actions {
             opacity: 0;
@@ -208,14 +206,13 @@
         .modified-badge {
             position: absolute;
             top: 10px;
-            left: 120px;
+            right: 10px;
             background-color: #28a745;
             color: white;
             padding: 4px 8px;
             border-radius: 12px;
             font-size: 0.7rem;
             font-weight: bold;
-            z-index: 10 !important;
         }
         @keyframes pulse-green {
             0% { box-shadow: 0 0 15px rgba(40, 167, 69, 0.3); }
