@@ -4077,6 +4077,17 @@
                     if (result.search_queries && currentSearchPage === 1) {
                         displaySearchQueries(result.search_queries);
                     }
+                    
+                    // Verificar si hay enlaces de búsqueda (indica cuota agotada)
+                    const hasSearchLinks = currentSearchImages.some(img => 
+                        img.is_search_link || 
+                        img.url.includes('google.com/search') || 
+                        img.url.includes('duckduckgo.com')
+                    );
+                    
+                    if (hasSearchLinks) {
+                        showQuotaExceededMessage();
+                    }
                 } else if (currentSearchPage === 1) {
                     // Solo mostrar "no results" si es la primera página
                     document.getElementById('noResults').style.display = 'block';
@@ -4123,6 +4134,28 @@
                 queriesContainer.style.display = 'none';
             }
         }
+        
+        // Función para mostrar mensaje de cuota agotada
+        function showQuotaExceededMessage() {
+            const alertHTML = `
+                <div class="alert alert-warning alert-dismissible fade show mt-3" role="alert">
+                    <i class="bi bi-exclamation-triangle-fill me-2"></i>
+                    <strong>Cuota de Google API Agotada</strong><br>
+                    Se han usado las 100 búsquedas diarias gratuitas. Los enlaces mostrados abajo te permitirán buscar manualmente en diferentes sitios web.
+                    La cuota se restablece automáticamente mañana.
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            `;
+            
+            // Agregar el mensaje antes de la galería
+            const gallery = document.getElementById('imageGallery');
+            if (gallery && !document.querySelector('.quota-exceeded-alert')) {
+                const alertDiv = document.createElement('div');
+                alertDiv.className = 'quota-exceeded-alert';
+                alertDiv.innerHTML = alertHTML;
+                gallery.parentNode.insertBefore(alertDiv, gallery);
+            }
+        }
 
         // Función para mostrar la galería de imágenes
         function displayImageGallery(images) {
@@ -4147,23 +4180,49 @@
                 const col = document.createElement('div');
                 col.className = 'col-md-4 col-lg-3';
                 
-                // Crear card con mejor manejo de errores
-                const cardHTML = `
-                    <div class="card h-100 image-option" style="cursor: pointer;" onclick="selectImage('${image.url.replace(/'/g, "\\'")}', ${index})">
-                        <div class="card-img-container" style="height: 200px; background: #f8f9fa; display: flex; align-items: center; justify-content: center;">
-                            <img src="${image.url}" 
-                                 class="card-img-top" 
-                                 alt="${(image.title || '').replace(/"/g, '&quot;')}" 
-                                 style="height: 200px; object-fit: cover; width: 100%;" 
-                                 onload="console.log('✅ Image loaded: ${image.url.substring(0, 50)}...')"
-                                 onerror="handleImageError(this, '${image.url.substring(0, 50)}...')">
-                            <div class="loading-spinner" style="position: absolute; display: none;">
-                                <div class="spinner-border spinner-border-sm" role="status"></div>
+                // Verificar si es un enlace de búsqueda
+                const isSearchLink = image.is_search_link || 
+                    image.url.includes('google.com/search') || 
+                    image.url.includes('duckduckgo.com') || 
+                    image.url.includes('bing.com') ||
+                    image.url.includes('acrylicosvallejo.com') ||
+                    image.url.includes('greenstuffworld.com');
+                
+                // Crear card diferente para enlaces de búsqueda
+                let cardHTML;
+                if (isSearchLink) {
+                    cardHTML = `
+                        <div class="card h-100 search-link-card" style="cursor: pointer; border: 2px dashed #007bff;" onclick="selectImage('${image.url.replace(/'/g, "\\'")}', ${index})">
+                            <div class="card-img-container" style="height: 200px; background: linear-gradient(135deg, #007bff, #0056b3); display: flex; align-items: center; justify-content: center; color: white;">
+                                <div class="text-center">
+                                    <i class="bi bi-search" style="font-size: 3rem; margin-bottom: 10px;"></i>
+                                    <h6 class="text-white">Buscar Manualmente</h6>
+                                    <small class="text-light">Haz clic para abrir búsqueda</small>
+                                </div>
                             </div>
-                        </div>
+                    `;
+                } else {
+                    cardHTML = `
+                        <div class="card h-100 image-option" style="cursor: pointer;" onclick="selectImage('${image.url.replace(/'/g, "\\'")}', ${index})">
+                            <div class="card-img-container" style="height: 200px; background: #f8f9fa; display: flex; align-items: center; justify-content: center;">
+                                <img src="${image.url}" 
+                                     class="card-img-top" 
+                                     alt="${(image.title || '').replace(/"/g, '&quot;')}" 
+                                     style="height: 200px; object-fit: cover; width: 100%;" 
+                                     onload="console.log('✅ Image loaded: ${image.url.substring(0, 50)}...')"
+                                     onerror="handleImageError(this, '${image.url.substring(0, 50)}...')">
+                                <div class="loading-spinner" style="position: absolute; display: none;">
+                                    <div class="spinner-border spinner-border-sm" role="status"></div>
+                                </div>
+                            </div>
+                    `;
+                }
+                
+                // Completar el HTML de la tarjeta
+                cardHTML += `
                         <div class="card-body p-2">
                             <small class="text-muted d-block" style="font-size: 0.7rem;">
-                                ${image.width || 'N/A'}x${image.height || 'N/A'}px
+                                ${isSearchLink ? 'Enlace de búsqueda' : `${image.width || 'N/A'}x${image.height || 'N/A'}px`}
                             </small>
                             <small class="d-block" style="font-size: 0.7rem;">
                                 <span class="badge ${getCategoryBadgeClass(image.category || 'general')}" style="font-size: 0.6rem;">
@@ -4207,6 +4266,16 @@
         // Función para seleccionar una imagen
         async function selectImage(imageUrl, index) {
             console.log(`🔍 [IMAGE SEARCH] Image selected: ${imageUrl}`);
+            
+            // Verificar si es un enlace de búsqueda (fallback por cuota agotada)
+            if (imageUrl.includes('google.com/search') || imageUrl.includes('duckduckgo.com') || 
+                imageUrl.includes('bing.com') || imageUrl.includes('acrylicosvallejo.com') ||
+                imageUrl.includes('greenstuffworld.com')) {
+                
+                console.log(`🔗 [IMAGE SEARCH] Opening search link in new tab: ${imageUrl}`);
+                window.open(imageUrl, '_blank');
+                return;
+            }
             
             if (!currentSearchPaintId) {
                 console.error('❌ [IMAGE SEARCH] No paint ID available');
@@ -4311,6 +4380,12 @@
             document.getElementById('retrySearchBtn').style.display = 'none';
             document.getElementById('loadMoreContainer').style.display = 'none';
             document.getElementById('searchQueriesUsed').style.display = 'none';
+            
+            // Limpiar alertas de cuota agotada
+            const quotaAlert = document.querySelector('.quota-exceeded-alert');
+            if (quotaAlert) {
+                quotaAlert.remove();
+            }
         });
     </script>
 

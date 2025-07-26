@@ -3144,8 +3144,20 @@ def search_high_quality_images():
                         print(f"❌ [IMAGE SEARCH] Google API HTTP error: {response.status_code}")
                         print(f"❌ [IMAGE SEARCH] Error response: {response.text}")
                         
+                        # Detectar error de cuota específicamente
+                        if response.status_code == 429 or "quota exceeded" in response.text.lower():
+                            print(f"🚫 [IMAGE SEARCH] QUOTA EXCEEDED - Google API daily limit reached (100 searches/day)")
+                            # Salir del bucle de consultas, usar fallback
+                            break
+                        
                 except Exception as api_error:
                     print(f"❌ [IMAGE SEARCH] Google API exception for '{query}': {str(api_error)}")
+                    
+                    # Detectar errores de cuota en excepciones
+                    if "quota" in str(api_error).lower() or "rate limit" in str(api_error).lower():
+                        print(f"🚫 [IMAGE SEARCH] QUOTA EXCEEDED in exception - Breaking search loop")
+                        break
+                    
                     import traceback
                     print(f"❌ [IMAGE SEARCH] Traceback: {traceback.format_exc()}")
                     continue
@@ -3153,28 +3165,63 @@ def search_high_quality_images():
         except ImportError as import_error:
             print(f"❌ [IMAGE SEARCH] Import error: {import_error}")
         
-        # Fallback: Si Google API falla completamente, usar URLs de referencia
+        # Fallback: Si Google API falla completamente, proporcionar imágenes alternativas
         if len(images) == 0:
-            print(f"🔍 [IMAGE SEARCH] Google API failed, providing reference images...")
+            print(f"🔍 [IMAGE SEARCH] Google API failed, providing fallback solutions...")
             
-            reference_images = [
-                "https://images.unsplash.com/photo-1541961017774-22349e4a1262?w=400&h=400&fit=crop",
-                "https://images.unsplash.com/photo-1513475382585-d06e58bcb0e0?w=400&h=400&fit=crop",
-                "https://images.unsplash.com/photo-1578662996442-48f60103fc96?w=400&h=400&fit=crop"
-            ]
+            # Crear URLs de búsqueda manual como fallback
+            fallback_searches = []
             
-            for i, ref_url in enumerate(reference_images):
+            # URLs de búsqueda directa en sitios específicos
+            if brand_clean and cleaned_name:
+                # Vallejo específico
+                if "vallejo" in brand_clean.lower():
+                    if vallejo_code:
+                        fallback_searches.extend([
+                            f"https://acrylicosvallejo.com/search?q={vallejo_code}",
+                            f"https://www.greenstuffworld.com/en/search?controller=search&s={vallejo_code}",
+                            f"https://www.google.com/search?q=VALLEJO+{vallejo_code}&tbm=isch",
+                            f"https://www.google.com/search?q=vallejo+{vallejo_code}+paint&tbm=isch"
+                        ])
+                
+                # Búsquedas genéricas
+                fallback_searches.extend([
+                    f"https://www.google.com/search?q={brand_clean}+{cleaned_name}+paint&tbm=isch",
+                    f"https://duckduckgo.com/?q={brand_clean}+{cleaned_name}+miniature+paint&ia=images",
+                    f"https://www.bing.com/images/search?q={brand_clean}+{cleaned_name}+acrylic"
+                ])
+            
+            # Crear "imágenes" que son en realidad enlaces de búsqueda
+            for i, search_url in enumerate(fallback_searches[:6]):
+                # Determinar el nombre del sitio
+                if "acrylicosvallejo.com" in search_url:
+                    site_name = "Vallejo Oficial"
+                    category = "fabricantes"
+                elif "greenstuffworld.com" in search_url:
+                    site_name = "Green Stuff World"
+                    category = "tiendas_espana"
+                elif "google.com" in search_url:
+                    site_name = "Google Images"
+                    category = "general"
+                elif "duckduckgo.com" in search_url:
+                    site_name = "DuckDuckGo"
+                    category = "general"
+                else:
+                    site_name = "Bing Images"
+                    category = "general"
+                
                 images.append({
-                    'url': ref_url,
-                    'title': f"{brand_clean} {cleaned_name} - Imagen de referencia {i+1}",
-                    'source': 'unsplash.com',
+                    'url': search_url,  # URL de búsqueda, no imagen directa
+                    'title': f"Buscar '{brand_clean} {cleaned_name}' en {site_name}",
+                    'source': search_url,
                     'width': 400,
                     'height': 400,
-                    'site': 'Referencia',
-                    'category': 'general'
+                    'site': site_name,
+                    'category': category,
+                    'is_search_link': True  # Indicador de que es un enlace de búsqueda
                 })
             
-            print(f"✅ [IMAGE SEARCH] Added {len(images)} reference images")
+            print(f"✅ [IMAGE SEARCH] Added {len(images)} fallback search links")
         
         # Filtrar imágenes por calidad y relevancia
         filtered_images = []
