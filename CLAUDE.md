@@ -78,11 +78,15 @@ cat "C:\Repositorio GitHub VSC\print-and-paint-studio-app\requirements.txt"
 
 ## 📊 ÚLTIMAS MODIFICACIONES IMPORTANTES
 
-### 2025-07-26: Color Picker & Image Search
+### 2025-07-26: VALLEJO Search Optimization & API Quota Management
 - **Archivos modificados**: 
-  - `app.py` (nuevos endpoints)
-  - `templates/admin/paints.html` (UI + JavaScript)
-- **Documentación**: Ver `/docs/50-*.md`
+  - `app.py` (optimización búsquedas VALLEJO, fallback Google API, batch updates)
+  - `templates/admin/paints.html` (UI mejorada, gestión de cuota)
+- **Funcionalidades implementadas**:
+  - Búsquedas VALLEJO priorizadas usando color_code de DB
+  - Sistema de fallback para cuota agotada Google API (429 errors)
+  - Actualización masiva de sync_status para eliminar badges "MODIFICADO"
+- **Documentación**: Ver `/docs/54-*.md`, `/docs/55-*.md`, `/docs/56-*.md`
 
 ### 2025-07-22: EAN Implementation
 - **Archivos modificados**: 
