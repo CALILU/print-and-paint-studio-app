@@ -4434,6 +4434,167 @@ if __name__ == '__main__':
         except Exception as e:
             print(f"Error al inicializar la base de datos: {str(e)}")
     
+# Endpoint específico para actualizar image_url usando API key (sin sesión de admin)
+@app.route('/api/paints/update-image-url-batch', methods=['POST'])
+def update_image_url_batch():
+    """Actualizar image_url de múltiples pinturas usando API key (para scripts externos)"""
+    try:
+        print(f"🖼️ [BATCH UPDATE] Request received to update image URLs")
+        
+        # Verificar API key
+        api_key = request.headers.get('X-API-Key')
+        if not api_key or api_key != 'print_and_paint_secret_key_2025':
+            print(f"❌ [BATCH UPDATE] Invalid or missing API key")
+            return jsonify({"success": False, "message": "Invalid or missing API key"}), 401
+        
+        data = request.get_json()
+        print(f"🖼️ [BATCH UPDATE] Request data: {data}")
+        
+        if not data:
+            print(f"❌ [BATCH UPDATE] No data provided")
+            return jsonify({"success": False, "message": "No data provided"}), 400
+        
+        updates = data.get('updates', [])
+        if not updates:
+            print(f"❌ [BATCH UPDATE] No updates array provided")
+            return jsonify({"success": False, "message": "updates array is required"}), 400
+        
+        updated_count = 0
+        failed_count = 0
+        results = []
+        
+        for update in updates:
+            paint_id = update.get('paint_id')
+            image_url = update.get('image_url')
+            color_code = update.get('color_code', 'Unknown')
+            
+            try:
+                if not paint_id or not image_url:
+                    results.append({
+                        'paint_id': paint_id,
+                        'color_code': color_code,
+                        'success': False,
+                        'error': 'paint_id and image_url are required'
+                    })
+                    failed_count += 1
+                    continue
+                
+                # Validar URL
+                if not (image_url.startswith('http://') or image_url.startswith('https://')):
+                    results.append({
+                        'paint_id': paint_id,
+                        'color_code': color_code,
+                        'success': False,
+                        'error': 'Invalid URL format'
+                    })
+                    failed_count += 1
+                    continue
+                
+                # Buscar la pintura
+                paint = Paint.query.get(paint_id)
+                if not paint:
+                    results.append({
+                        'paint_id': paint_id,
+                        'color_code': color_code,
+                        'success': False,
+                        'error': f'Paint with id {paint_id} not found'
+                    })
+                    failed_count += 1
+                    continue
+                
+                # Actualizar image_url
+                old_url = paint.image_url
+                paint.image_url = image_url
+                
+                print(f"🖼️ [BATCH UPDATE] Updating paint {paint_id} ({paint.color_code}): {old_url} -> {image_url}")
+                
+                db.session.commit()
+                
+                results.append({
+                    'paint_id': paint_id,
+                    'color_code': paint.color_code,
+                    'success': True,
+                    'old_url': old_url,
+                    'new_url': image_url
+                })
+                updated_count += 1
+                
+            except Exception as e:
+                print(f"❌ [BATCH UPDATE] Error updating paint {paint_id}: {str(e)}")
+                results.append({
+                    'paint_id': paint_id,
+                    'color_code': color_code,
+                    'success': False,
+                    'error': str(e)
+                })
+                failed_count += 1
+                # Rollback en caso de error
+                db.session.rollback()
+        
+        print(f"✅ [BATCH UPDATE] Completed: {updated_count} updated, {failed_count} failed")
+        
+        return jsonify({
+            "success": True,
+            "message": f"Batch update completed: {updated_count} updated, {failed_count} failed",
+            "updated_count": updated_count,
+            "failed_count": failed_count,
+            "results": results
+        }), 200
+        
+    except Exception as e:
+        print(f"❌ [BATCH UPDATE] Unexpected error: {str(e)}")
+        db.session.rollback()
+        return jsonify({
+            "success": False,
+            "message": f"Unexpected error: {str(e)}"
+        }), 500
+
+if __name__ == '__main__':
+    with app.app_context():
+        try:
+            # Crear las tablas
+            db.create_all()
+            print("✅ Tablas creadas exitosamente")
+            
+            # Crear categorías por defecto
+            default_categories = [
+                'Tutorial básico',
+                'Técnica avanzada',
+                'Pintura de miniaturas',
+                'Bases y terrenos',
+                'Efectos especiales'
+            ]
+            
+            for cat_name in default_categories:
+                existing_category = Category.query.filter_by(name=cat_name).first()
+                if not existing_category:
+                    new_category = Category(name=cat_name, description=f"Categoría: {cat_name}")
+                    db.session.add(new_category)
+            
+            # Crear usuario administrador por defecto
+            admin = User.query.filter_by(username='admin').first()
+            if not admin:
+                admin = User(
+                    username='admin',
+                    email='admin@paintscanner.com',
+                    role='admin'
+                )
+                admin.set_password('admin123')
+                db.session.add(admin)
+                db.session.commit()
+                print(f"Usuario administrador creado: admin / admin123")
+                print(f"Hash generado: {admin.password_hash}")
+            else:
+                print(f"Usuario admin ya existe: {admin.username}, {admin.email}, role: {admin.role}")
+                print(f"Hash actual: {admin.password_hash}")
+                # Actualizar contraseña para depuración
+                admin.set_password('admin123')
+                print(f"Nuevo hash: {admin.password_hash}")
+                db.session.commit()
+                print("Contraseña de administrador actualizada para pruebas")
+        except Exception as e:
+            print(f"Error al inicializar la base de datos: {str(e)}")
+    
     # Para Railway, siempre usar el puerto 5000 ya que es el que espera
     port = 5000
     if not os.environ.get('RAILWAY_ENVIRONMENT'):
