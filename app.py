@@ -1914,6 +1914,7 @@ def create_paint_android():
             price=data.get('price', 0.0),
             color_preview=data.get('color_preview', '#757575'),
             image_url=data.get('image_url', ''),
+            ean=data.get('ean', ''),
             created_at=datetime.utcnow()
         )
         
