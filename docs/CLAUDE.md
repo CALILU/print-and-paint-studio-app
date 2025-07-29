@@ -68,10 +68,7 @@ const config = {
     url: "https://print-and-paint-studio-app-production.up.railway.app",
     apiKey: "print_and_paint_secret_key_2025"
   },
-  supabase: {
-    url: "https://qzjhlktrosfrurwthvkw.supabase.co",
-    anonKey: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InF6amhsa3Ryb3NmcnVyd3Rodmt3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTI4NTExNDQsImV4cCI6MjA2ODQyNzE0NH0.s473C3yizumYy4P1a0hqleOpLp8EOENk0dPPXACqpcI",
-    serviceKey: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InF6amhsa3Ryb3NmcnVyd3Rodmt3Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1Mjg1MTE0NCwiZXhwIjoyMDY4NDI3MTQ0fQ.eanEY-q6pv2qQaF3tIsrD1Tx-cxqfyspdU4kbvTbK44",
+  
     bucket: "paint-images"
   }
 }
