@@ -1888,8 +1888,11 @@ def create_paint_android():
                 "message": f"Missing required fields: {', '.join(missing_fields)}"
             }), 400
         
-        # Verificar si ya existe una pintura con ese código
-        existing_paint = Paint.query.filter_by(color_code=data['color_code']).first()
+        # Verificar si ya existe una pintura con esa marca y código (índice único correcto)
+        existing_paint = Paint.query.filter_by(
+            brand=data['brand'], 
+            color_code=data['color_code']
+        ).first()
         if existing_paint:
             return jsonify({
                 "success": False,
@@ -1899,7 +1902,7 @@ def create_paint_android():
                     "brand": existing_paint.brand,
                     "color_code": existing_paint.color_code
                 },
-                "message": f"Paint with code {data['color_code']} already exists"
+                "message": f"Paint with brand {data['brand']} and code {data['color_code']} already exists"
             }), 409
         
         # Crear nueva pintura
