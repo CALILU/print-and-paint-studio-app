@@ -2143,6 +2143,54 @@ def get_paint_by_code_android(color_code):
             "message": f"Error retrieving paint: {str(e)}"
         }), 500
 
+# Get paint by EAN endpoint for Android
+@app.route('/api/paints/ean/<ean>', methods=['GET'])
+def get_paint_by_ean_android(ean):
+    """Get specific paint by EAN (barcode) for Android"""
+    try:
+        # Verificar API key
+        api_key = request.headers.get('X-API-Key')
+        if not api_key or api_key != API_KEY:
+            return jsonify({
+                "success": False,
+                "data": None,
+                "message": "Invalid or missing API key"
+            }), 401
+        
+        print(f"🔍 EAN Lookup Request: {ean}")
+        
+        # Buscar paint por EAN
+        paint = Paint.query.filter_by(ean=ean).first()
+        
+        if paint:
+            print(f"✅ Paint found by EAN {ean}: {paint.name} ({paint.brand})")
+            
+            # Usar to_dict() que incluye el campo EAN
+            paint_data = paint.to_dict()
+            
+            return jsonify({
+                "success": True,
+                "data": paint_data,
+                "message": f"Paint with EAN {ean} found successfully"
+            }), 200
+        else:
+            print(f"❌ No paint found with EAN: {ean}")
+            return jsonify({
+                "success": False,
+                "data": None,
+                "message": f"Paint with EAN {ean} not found"
+            }), 404
+            
+    except Exception as e:
+        print(f"Error en get_paint_by_ean_android(): {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({
+            "success": False,
+            "data": None,
+            "message": f"Error retrieving paint by EAN: {str(e)}"
+        }), 500
+
 # Upload image endpoint for Android
 @app.route('/api/upload-image', methods=['POST'])
 def upload_image():
