@@ -2191,6 +2191,39 @@ def get_paint_by_ean_android(ean):
             "message": f"Error retrieving paint by EAN: {str(e)}"
         }), 500
 
+# Debug endpoint to verify EAN endpoint deployment
+@app.route('/api/debug/ean-endpoint-status', methods=['GET'])
+def debug_ean_endpoint_status():
+    """Debug endpoint to verify EAN endpoint is deployed and working"""
+    try:
+        # Count paints with EAN
+        total_paints = Paint.query.count()
+        paints_with_ean = Paint.query.filter(Paint.ean.isnot(None), Paint.ean != '').count()
+        
+        # Get available routes with 'ean' in them
+        ean_routes = [str(rule) for rule in app.url_map.iter_rules() if 'ean' in str(rule)]
+        
+        return jsonify({
+            "success": True,
+            "message": "EAN endpoint is deployed and functional",
+            "timestamp": datetime.utcnow().isoformat(),
+            "database_stats": {
+                "total_paints": total_paints,
+                "paints_with_ean": paints_with_ean,
+                "ean_coverage": f"{(paints_with_ean/total_paints*100):.1f}%" if total_paints > 0 else "0%"
+            },
+            "available_ean_routes": ean_routes,
+            "test_suggestion": "Use GET /api/paints/ean/{ean} with X-API-Key header"
+        }), 200
+        
+    except Exception as e:
+        print(f"Error in debug_ean_endpoint_status(): {str(e)}")
+        return jsonify({
+            "success": False,
+            "message": f"Debug endpoint error: {str(e)}",
+            "timestamp": datetime.utcnow().isoformat()
+        }), 500
+
 # Upload image endpoint for Android
 @app.route('/api/upload-image', methods=['POST'])
 def upload_image():
