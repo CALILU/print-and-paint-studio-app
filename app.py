@@ -4741,6 +4741,30 @@ def receive_feedback():
         
         print(f"🚨 === END FEEDBACK ANALYSIS ===\n")
         
+        # Almacenar feedback para consulta posterior
+        global recent_feedbacks
+        feedback_summary = {
+            'timestamp': datetime.now().isoformat(),
+            'paint_code': paint_code,
+            'paint_name': paint_name,
+            'paint_brand': paint_brand,
+            'feedback_type': feedback_type,
+            'severity_level': severity_level,
+            'user_description': user_description,
+            'expected_url': expected_url,
+            'system_info': system_info,
+            'search_results_count': len(search_results),
+            'scraping_logs_count': len(scraping_logs),
+            'is_84478_issue': paint_code == '84.478',
+            'search_results': search_results[:3] if search_results else [],  # Solo primeros 3
+            'scraping_logs': scraping_logs[-5:] if scraping_logs else []  # Últimos 5
+        }
+        recent_feedbacks.append(feedback_summary)
+        
+        # Mantener solo los últimos 50 feedbacks
+        if len(recent_feedbacks) > 50:
+            recent_feedbacks = recent_feedbacks[-50:]
+        
         # Respuesta exitosa
         response_data = {
             "success": True,
@@ -4834,6 +4858,27 @@ def check_brand_code_constraint():
         return jsonify({
             'success': False,
             'message': f'Error verificando constraint: {str(e)}'
+        }), 500
+
+# Variable global para almacenar los últimos feedbacks recibidos
+recent_feedbacks = []
+
+@app.route('/admin/feedback-history', methods=['GET'])
+def get_feedback_history():
+    """Consultar los últimos feedbacks recibidos"""
+    try:
+        global recent_feedbacks
+        
+        return jsonify({
+            'success': True,
+            'total_feedbacks': len(recent_feedbacks),
+            'feedbacks': recent_feedbacks[-10:],  # Últimos 10 feedbacks
+        }), 200
+        
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'message': f'Error obteniendo historial: {str(e)}'
         }), 500
 
 if __name__ == '__main__':
