@@ -4634,6 +4634,208 @@ def update_image_url_batch():
             "message": f"Unexpected error: {str(e)}"
         }), 500
 
+# ============================================
+# ENDPOINT DE FEEDBACK PARA REPORTES DE ERRORES
+# ============================================
+
+@app.route('/api/feedback', methods=['POST'])
+def receive_feedback():
+    """
+    Endpoint para recibir feedback detallado de errores desde la aplicación Android
+    Especialmente diseñado para el problema del código 84.478 y otros errores de scraping
+    """
+    try:
+        # Verificar API key
+        api_key = request.headers.get('X-API-Key')
+        if not api_key or api_key != 'print_and_paint_secret_key_2025':
+            return jsonify({
+                "success": False,
+                "message": "Unauthorized - API key required"
+            }), 401
+        
+        # Obtener datos del feedback
+        feedback_data = request.get_json()
+        if not feedback_data:
+            return jsonify({
+                "success": False,
+                "message": "No feedback data provided"
+            }), 400
+        
+        # Extraer información crítica
+        paint_code = feedback_data.get('paintCode', 'UNKNOWN')
+        paint_name = feedback_data.get('paintName', 'UNKNOWN')
+        paint_brand = feedback_data.get('paintBrand', 'UNKNOWN')
+        feedback_type = feedback_data.get('feedbackType', 'GENERAL')
+        severity_level = feedback_data.get('severityLevel', 3)
+        user_description = feedback_data.get('userDescription', '')
+        error_context = feedback_data.get('errorContext', '')
+        expected_url = feedback_data.get('expectedProductUrl', '')
+        timestamp = feedback_data.get('timestamp', int(time.time() * 1000))
+        
+        # Log crítico para debugging
+        print(f"\n🚨 === CRITICAL FEEDBACK RECEIVED ===")
+        print(f"🎯 Paint: {paint_name} ({paint_code}) - {paint_brand}")
+        print(f"🔍 Type: {feedback_type} | Severity: {severity_level}/5")
+        print(f"👤 User Description: {user_description}")
+        print(f"🌐 Expected URL: {expected_url}")
+        print(f"📝 Context: {error_context}")
+        print(f"⏰ Timestamp: {timestamp}")
+        
+        # Información del sistema
+        system_info = feedback_data.get('systemInfo', {})
+        android_version = system_info.get('androidVersion', 'unknown')
+        app_version = system_info.get('appVersion', 'unknown')
+        device_model = system_info.get('deviceModel', 'unknown')
+        session_id = system_info.get('sessionId', 0)
+        
+        print(f"📱 System: Android {android_version}, App {app_version}, Device: {device_model}")
+        print(f"🔗 Session: {session_id}")
+        
+        # Análisis de resultados
+        results_analysis = feedback_data.get('resultsAnalysis', {})
+        total_results = results_analysis.get('totalResultsCount', 0)
+        filtered_results = results_analysis.get('filteredResultsCount', 0)
+        valid_results = results_analysis.get('validResultsCount', 0)
+        
+        print(f"📊 Results: {total_results} total, {valid_results} valid, {filtered_results} filtered")
+        
+        # Resultados detallados de búsqueda (si están disponibles)
+        search_results = feedback_data.get('searchResults', [])
+        if search_results:
+            print(f"\n🔍 === SEARCH RESULTS ANALYSIS ===")
+            for i, result in enumerate(search_results[:5]):  # Solo los primeros 5 para no saturar logs
+                store = result.get('storeName', 'Unknown')
+                title = result.get('productTitle', 'No title')
+                price = result.get('price', 0)
+                was_filtered = result.get('wasFiltered', False)
+                filter_reason = result.get('filterReason', '')
+                
+                print(f"  {i+1}. {store}: {title} - €{price}")
+                if was_filtered:
+                    print(f"     ⚠️ FILTERED: {filter_reason}")
+        
+        # Logs de scraping (si están disponibles)
+        scraping_logs = feedback_data.get('scrapingLogs', [])
+        if scraping_logs:
+            print(f"\n🕷️ === SCRAPING LOGS ===")
+            for log in scraping_logs[-10:]:  # Solo los últimos 10 logs
+                print(f"  {log}")
+        
+        # Manejo especial para el código 84.478
+        if paint_code == '84.478' or '84.478' in str(feedback_data):
+            print(f"\n🚨 === CRITICAL 84.478 ISSUE DETECTED ===")
+            print(f"🎯 This is the known issue where brushes appear instead of Medium de Transferencia")
+            print(f"🔗 User provided correct URL: {expected_url}")
+            print(f"📝 This feedback is critical for fixing the scraping logic")
+            
+            # Si hay una URL esperada, podrías hacer scraping adicional aquí para debugging
+            if expected_url and 'amazon' in expected_url.lower():
+                print(f"🌐 Amazon URL detected - this can be used to fix scraping selectors")
+        
+        # Estado del sistema (si está disponible)
+        system_state = feedback_data.get('systemState', {})
+        if system_state:
+            print(f"\n⚙️ === SYSTEM STATE ===")
+            for key, value in system_state.items():
+                print(f"  {key}: {value}")
+        
+        print(f"🚨 === END FEEDBACK ANALYSIS ===\n")
+        
+        # Respuesta exitosa
+        response_data = {
+            "success": True,
+            "message": "Feedback received and logged successfully",
+            "feedback_id": f"fb_{timestamp}_{paint_code}",
+            "received_at": datetime.now().isoformat(),
+            "analysis": {
+                "paint_info": f"{paint_name} ({paint_code}) by {paint_brand}",
+                "severity": f"{severity_level}/5",
+                "type": feedback_type,
+                "has_expected_url": bool(expected_url),
+                "has_search_results": len(search_results) > 0,
+                "has_scraping_logs": len(scraping_logs) > 0,
+                "is_84478_issue": paint_code == '84.478'
+            },
+            "next_steps": []
+        }
+        
+        # Agregar pasos específicos según el tipo de feedback
+        if paint_code == '84.478':
+            response_data["next_steps"].extend([
+                "Critical 84.478 issue logged for developer attention",
+                "Expected URL will be used to fix scraping selectors",
+                "Search results will be analyzed to improve filtering"
+            ])
+        
+        if feedback_type == 'NON_PAINT_PRODUCTS_SHOWN':
+            response_data["next_steps"].extend([
+                "Filtering logic will be reviewed and improved",
+                "Search results patterns will be analyzed"
+            ])
+        
+        if expected_url:
+            response_data["next_steps"].append("Provided URL will be used for scraping validation")
+        
+        return jsonify(response_data), 200
+        
+    except Exception as e:
+        print(f"❌ Error processing feedback: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({
+            "success": False,
+            "message": f"Error processing feedback: {str(e)}"
+        }), 500
+
+@app.route('/admin/create-constraint', methods=['POST'])
+def create_brand_code_constraint():
+    """Crear constraint único para brand+color_code"""
+    try:
+        from sqlalchemy import text
+        db.session.execute(text("""
+            ALTER TABLE paints 
+            ADD CONSTRAINT unique_brand_code 
+            UNIQUE (brand, color_code)
+        """))
+        db.session.commit()
+        
+        return jsonify({
+            'success': True,
+            'message': 'Constraint único brand+color_code creado exitosamente'
+        }), 200
+        
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({
+            'success': False,
+            'message': f'Error creando constraint: {str(e)}'
+        }), 500
+
+@app.route('/admin/check-constraint', methods=['GET'])
+def check_brand_code_constraint():
+    """Verificar si existe el constraint único"""
+    try:
+        from sqlalchemy import text
+        result = db.session.execute(text("""
+            SELECT constraint_name 
+            FROM information_schema.table_constraints 
+            WHERE table_name = 'paints' 
+            AND constraint_type = 'UNIQUE'
+            AND constraint_name LIKE '%brand%code%'
+        """)).fetchall()
+        
+        return jsonify({
+            'success': True,
+            'constraint_exists': len(result) > 0,
+            'constraints': [row[0] for row in result]
+        }), 200
+        
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'message': f'Error verificando constraint: {str(e)}'
+        }), 500
+
 if __name__ == '__main__':
     with app.app_context():
         try:
