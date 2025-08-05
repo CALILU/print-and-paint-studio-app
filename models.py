@@ -222,3 +222,75 @@ class PaintImage(db.Model):
     
     def __repr__(self):
         return f'<PaintImage {self.marca} - {self.codigo} - {self.nombre}>'
+
+class PriceSource(db.Model):
+    __tablename__ = 'price_sources'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    store_name = db.Column(db.String(255), nullable=False)
+    store_url = db.Column(db.String(500), nullable=False)
+    search_url_pattern = db.Column(db.String(500), nullable=False)
+    is_active = db.Column(db.Boolean, nullable=False, default=True)
+    priority = db.Column(db.Integer, nullable=False, default=1)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    last_used_at = db.Column(db.DateTime)
+    
+    # Relación con el historial de precios
+    price_history = db.relationship('PriceHistory', backref='source', lazy=True, cascade='all, delete-orphan')
+    
+    def to_dict(self):
+        """Convert PriceSource object to dictionary for JSON serialization"""
+        return {
+            'id': self.id,
+            'store_name': self.store_name,
+            'store_url': self.store_url,
+            'search_url_pattern': self.search_url_pattern,
+            'is_active': self.is_active,
+            'priority': self.priority,
+            'created_at': self.created_at.isoformat() if self.created_at else None,
+            'last_used_at': self.last_used_at.isoformat() if self.last_used_at else None
+        }
+    
+    def __repr__(self):
+        return f'<PriceSource {self.store_name} - {"Active" if self.is_active else "Inactive"}>'
+
+class PriceHistory(db.Model):
+    __tablename__ = 'price_history'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    paint_id = db.Column(db.Integer, db.ForeignKey('paints.id'), nullable=False)
+    source_id = db.Column(db.Integer, db.ForeignKey('price_sources.id'), nullable=False)
+    price = db.Column(db.Float)
+    product_url = db.Column(db.Text)
+    search_date = db.Column(db.DateTime, default=datetime.utcnow)
+    is_available = db.Column(db.Boolean, nullable=False, default=True)
+    currency = db.Column(db.String(3), default='EUR')
+    product_title = db.Column(db.Text)
+    
+    # Relación con Paint
+    paint = db.relationship('Paint', backref='price_history')
+    
+    # Índices para mejorar rendimiento
+    __table_args__ = (
+        db.Index('idx_price_history_paint_id', 'paint_id'),
+        db.Index('idx_price_history_source_id', 'source_id'),
+        db.Index('idx_price_history_search_date', 'search_date'),
+    )
+    
+    def to_dict(self):
+        """Convert PriceHistory object to dictionary for JSON serialization"""
+        return {
+            'id': self.id,
+            'paint_id': self.paint_id,
+            'source_id': self.source_id,
+            'price': self.price,
+            'product_url': self.product_url,
+            'search_date': self.search_date.isoformat() if self.search_date else None,
+            'is_available': self.is_available,
+            'currency': self.currency,
+            'product_title': self.product_title,
+            'source_name': self.source.store_name if self.source else None
+        }
+    
+    def __repr__(self):
+        return f'<PriceHistory Paint:{self.paint_id} Source:{self.source_id} Price:{self.price}€>'

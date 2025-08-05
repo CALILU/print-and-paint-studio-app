@@ -1,5 +1,5 @@
 from flask import Flask, render_template, request, jsonify, redirect, url_for, session, flash
-from models import db, User, Video, Favorite, Technique, Category, Paint, PaintBackup, PaintImage
+from models import db, User, Video, Favorite, Technique, Category, Paint, PaintBackup, PaintImage, PriceSource, PriceHistory
 from functools import wraps
 import os
 from datetime import datetime, timedelta
