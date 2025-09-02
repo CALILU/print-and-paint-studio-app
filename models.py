@@ -112,6 +112,7 @@ class Paint(db.Model):
     description = db.Column(db.Text)
     color_preview = db.Column(db.Text)
     ean = db.Column(db.String(13), unique=True, index=True)  # Campo EAN único con índice
+    shelf_position = db.Column(db.Integer, nullable=True)  # Posición en estantería de venta
     # New fields temporarily disabled
     # volume = db.Column(db.Integer, nullable=True)
     # hex_color = db.Column(db.String(6), default='000000')  # Hex color field
@@ -134,6 +135,7 @@ class Paint(db.Model):
             'color_preview': self.color_preview,
             'image_url': self.image_url,
             'ean': self.ean,  # Campo EAN
+            'shelf_position': self.shelf_position,  # Posición en estantería
             'sync_status': getattr(self, 'sync_status', 'synced'),  # Default to 'synced' if field doesn't exist
             # Temporarily disabled fields
             # 'volume': self.volume,

@@ -1299,7 +1299,8 @@ def add_paint():
             stock=data.get('stock', 0),
             price=data.get('price'),
             description=data.get('description'),
-            color_preview=data.get('color_preview')
+            color_preview=data.get('color_preview'),
+            shelf_position=data.get('shelf_position')
         )
         
         db.session.add(new_paint)
@@ -1393,6 +1394,7 @@ def update_paint(paint_id):
     paint.price = data.get('price', paint.price)
     paint.description = data.get('description', paint.description)
     paint.color_preview = data.get('color_preview', paint.color_preview)
+    paint.shelf_position = data.get('shelf_position', paint.shelf_position)
     
     db.session.commit()
     
@@ -1424,6 +1426,7 @@ def update_paint(paint_id):
         'price': paint.price,
         'description': paint.description,
         'color_preview': paint.color_preview,
+        'shelf_position': paint.shelf_position,
         'created_at': paint.created_at.isoformat() if paint.created_at else None
     })
 
@@ -4071,6 +4074,165 @@ def debug_search_paint_by_code(color_code):
         return jsonify({
             "success": False,
             "message": f"Debug error: {str(e)}"
+        }), 500
+
+@app.route('/admin/create-shelf-position-column', methods=['POST'])
+@admin_required
+def create_shelf_position_column():
+    """
+    Crear la columna shelf_position en la tabla paints si no existe
+    Solo accesible por administradores
+    """
+    try:
+        print("🔧 [SCHEMA] Creating shelf_position column...")
+        
+        # Verificar si la columna ya existe
+        try:
+            result = db.session.execute(
+                "SELECT column_name FROM information_schema.columns WHERE table_name = 'paints' AND column_name = 'shelf_position'"
+            ).fetchone()
+            
+            if result:
+                return jsonify({
+                    'status': 'success',
+                    'message': 'La columna shelf_position ya existe',
+                    'column_exists': True
+                }), 200
+            
+            # Crear la columna
+            db.session.execute('ALTER TABLE paints ADD COLUMN shelf_position INTEGER')
+            db.session.commit()
+            
+            print("✅ [SCHEMA] shelf_position column created successfully")
+            
+            # Verificar que se creó correctamente
+            result = db.session.execute(
+                "SELECT column_name FROM information_schema.columns WHERE table_name = 'paints' AND column_name = 'shelf_position'"
+            ).fetchone()
+            
+            if result:
+                return jsonify({
+                    'status': 'success',
+                    'message': 'Columna shelf_position creada exitosamente',
+                    'column_exists': True
+                }), 201
+            else:
+                return jsonify({
+                    'status': 'error',
+                    'message': 'Error: La columna no se creó correctamente'
+                }), 500
+                
+        except Exception as e:
+            db.session.rollback()
+            print(f"❌ [SCHEMA ERROR] {str(e)}")
+            return jsonify({
+                'status': 'error',
+                'message': f'Error creando columna: {str(e)}'
+            }), 500
+            
+    except Exception as e:
+        print(f"❌ [SCHEMA CRITICAL ERROR] {str(e)}")
+        return jsonify({
+            'status': 'error', 
+            'message': f'Error crítico: {str(e)}'
+        }), 500
+
+@app.route('/admin/migrate-shelf-positions', methods=['POST'])
+@admin_required
+def migrate_shelf_positions():
+    """
+    Endpoint especial para migrar las posiciones de estantería desde CSV
+    Primero crea la columna si no existe, luego migra los datos
+    Solo accesible por administradores
+    """
+    try:
+        print("🔧 [STEP 1] Verificando/Creando columna shelf_position...")
+        
+        # Verificar si la columna ya existe
+        try:
+            result = db.session.execute(
+                "SELECT column_name FROM information_schema.columns WHERE table_name = 'paints' AND column_name = 'shelf_position'"
+            ).fetchone()
+            
+            if not result:
+                print("📊 Columna shelf_position no existe, creándola...")
+                db.session.execute('ALTER TABLE paints ADD COLUMN shelf_position INTEGER')
+                db.session.commit()
+                print("✅ Columna shelf_position creada exitosamente")
+            else:
+                print("✅ Columna shelf_position ya existe")
+                
+        except Exception as e:
+            print(f"❌ Error verificando/creando columna: {str(e)}")
+            return jsonify({
+                'status': 'error',
+                'message': f'Error creando columna: {str(e)}'
+            }), 500
+        
+        print("🔧 [STEP 2] Iniciando migración de datos...")
+        
+        # Datos de posición desde vallejo_model_color.csv (primeros 50 como ejemplo)
+        positions_data = {
+            '70.951': 1, '70.919': 2, '70.820': 3, '70.918': 4, '70.928': 5,
+            '70.815': 6, '70.835': 7, '70.805': 8, '70.944': 9, '70.803': 10,
+            '70.745': 11, '70.845': 12, '70.804': 13, '70.843': 14, '70.876': 15,
+            '70.746': 16, '70.955': 17, '70.927': 18, '70.860': 19, '70.929': 20,
+            '70.766': 21, '70.837': 22, '70.858': 23, '70.949': 24, '70.952': 25,
+            '70.915': 26, '70.953': 27, '70.948': 28, '70.911': 29, '70.851': 30,
+            '70.956': 31, '70.909': 32, '70.908': 33, '70.926': 34, '70.747': 35,
+            '70.829': 36, '70.817': 37, '70.947': 38, '70.957': 39, '70.946': 40,
+            '70.859': 41, '70.748': 42, '70.958': 43, '70.945': 44, '70.802': 45,
+            '70.812': 46, '70.959': 47, '70.810': 48, '70.749': 49, '70.750': 50
+        }
+        
+        updated_count = 0
+        errors = []
+        not_found = []
+        
+        print(f"🚀 Iniciando migración de {len(positions_data)} posiciones de estantería")
+        
+        for color_code, shelf_position in positions_data.items():
+            try:
+                # Buscar pinturas VALLEJO con este color_code
+                paints = Paint.query.filter(
+                    Paint.brand == 'VALLEJO',
+                    Paint.color_code == color_code
+                ).all()
+                
+                if paints:
+                    for paint in paints:
+                        paint.shelf_position = shelf_position
+                        updated_count += 1
+                        print(f"  ✓ {paint.name} ({color_code}) - Posición: {shelf_position}")
+                else:
+                    not_found.append(color_code)
+                    
+            except Exception as e:
+                errors.append(f"{color_code}: {str(e)}")
+                print(f"  ❌ Error en {color_code}: {str(e)}")
+        
+        # Commit todas las actualizaciones
+        db.session.commit()
+        
+        result = {
+            'success': True,
+            'updated_count': updated_count,
+            'errors_count': len(errors),
+            'not_found_count': len(not_found),
+            'message': f'Migración completada: {updated_count} pinturas actualizadas'
+        }
+        
+        print(f"✅ Migración completada: {updated_count} actualizaciones, {len(errors)} errores, {len(not_found)} no encontrados")
+        
+        return jsonify(result), 200
+        
+    except Exception as e:
+        db.session.rollback()
+        print(f"❌ Error durante migración: {str(e)}")
+        return jsonify({
+            'success': False,
+            'error': str(e),
+            'message': 'Error durante la migración'
         }), 500
 
 @app.route('/api/debug/paint-count-by-brand', methods=['GET'])
