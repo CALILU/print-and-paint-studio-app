@@ -2037,6 +2037,17 @@ def update_paint_android(id):
                     print(f"Invalid volume value: {volume_value}, keeping existing")
             else:
                 paint.volume = None  # Allow null volumes
+        if 'shelf_position' in data:
+            # Handle shelf_position field for store display positioning
+            shelf_position_value = data['shelf_position']
+            if shelf_position_value is not None:
+                try:
+                    paint.shelf_position = int(shelf_position_value)
+                    print(f"🏪 Shelf position updated: {paint.shelf_position} for paint {paint.name} (ID: {id})")
+                except (ValueError, TypeError):
+                    print(f"Invalid shelf_position value: {shelf_position_value}, keeping existing")
+            else:
+                paint.shelf_position = None
         
         # Actualizar fecha de modificación
         paint.updated_at = datetime.utcnow()
@@ -2079,6 +2090,7 @@ def update_paint_android(id):
                 "price": paint.price,
                 "description": paint.description,
                 "color_preview": paint.color_preview,
+                "shelf_position": paint.shelf_position,  # Store display position
                 "created_at": paint.created_at.isoformat() if paint.created_at else None,
                 "updated_at": paint.updated_at.isoformat() if paint.updated_at else None,
                 "remote_id": paint.id  # Para sincronización Android
