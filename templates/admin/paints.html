@@ -1831,7 +1831,7 @@
                         loading="lazy">
                     <div class="paint-color-preview" style="background-color: ${paint.color_preview || '#cccccc'}"></div>
                     <div class="paint-title">${paint.name}</div>
-                    <div class="paint-code">${paint.color_code || ''}</div>
+                    <div class="paint-code">${paint.color_code || ''}${paint.shelf_position ? ` | Estantería: ${paint.shelf_position}` : ''}</div>
                     <div class="paint-brand mt-2">${paint.brand}</div>
                     <div class="paint-type mt-1">${paint.color_type || 'Sin tipo especificado'}</div>
                     <div class="paint-family">${paint.color_family ? `<span class="color-family-tag">${paint.color_family}</span>` : ''}</div>
@@ -1909,7 +1909,7 @@
                     <td>
                         <strong>${paint.name}</strong>
                         ${isModifiedInAndroid ? '<span class="badge bg-success ms-1">📱 Modificado</span>' : ''}
-                        <div><small class="text-muted">${paint.color_code || 'Sin código'}</small></div>
+                        <div><small class="text-muted">${paint.color_code || 'Sin código'}${paint.shelf_position ? ` | Est: ${paint.shelf_position}` : ''}</small></div>
                     </td>
                     <td>${paint.brand}</td>
                     <td>
